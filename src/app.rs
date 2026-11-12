@@ -2017,9 +2017,12 @@ impl KeelApp {
             .flex()
             .items_center()
             .justify_between()
-            .h(px(24.))
+            // IDEA 状态栏高度 = 部件上下内边距 6+6（`StatusBar.Widget.border`）
+            // 加上 13px 文字行高，约 28px。
+            .h(px(28.))
             .flex_shrink_0()
-            .text_xs()
+            // 状态栏文字用 UI 基准字号 13（`JBFont.label()`），不是更小的说明文字。
+            .text_size(px(13.))
             .bg(chrome.status_bg)
             .child(left)
             .child(div().flex().items_center().h_full().children(widgets))
