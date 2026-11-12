@@ -26,6 +26,50 @@ nsh 的定位是“Rust-first 的原生 UI 框架”，不是 WebView 壳：
 
 对 Keel 的直接价值：原生 IME/文本输入、跨平台桌面、内置编辑器/停靠/树/命令面板，减少自己实现 GPUI 组件的成本。
 
+### 1.1 源码核对（2026-11-12）
+
+源码位置：`D:\Programming\Workspace\nsh`，当前为 nightly 分支 `b37c601b`，workspace 版本仍是 `0.5.0`。
+
+已确认：
+
+- **Rust 工具链要求**：`edition = "2024"`、`rust-version = "1.97"`；本机 `rustc 1.97.1` 满足。
+- **没有内置 `nsh` CLI**：本机尚未安装，迁移时需要先安装。
+- **编辑器是完整实现**，不是占位：
+  - `crates/nsh-base/src/editor/` 包含 rope 缓冲、多光标、折叠、软换行、撤销、查找替换、诊断/装饰、语法高亮、补全、定义跳转、hover、IME；
+  - 位置模型是 0-based line + UTF-16 column，和 LSP 一致；
+  - 有 `EditorDiagnostic`、`EditorDecoration`、`EditorCompletionRequest`、`EditorDefinitionRequest` 等接口，适合接 LSP。
+- **DockArea 是 IDE 级**：
+  - `crates/nsh-base/src/dock/` 支持嵌套分栏、标签组、左右/底部停靠、拖拽标签、停靠尺寸、紧凑宽度；
+  - 面板内容按 key 保留状态，移动标签不会重建内容。
+- **主题是 shadcn 风格 token**：
+  - `crates/nsh-base/theme.rs` + `default-theme.json`；
+  - 主题文件是 `cssVars`：`light` / `dark` 两套变量 + `radius`，支持应用自定义 token；
+  - 不是 IDEA 的 key 命名，需要一层“IDEA key → nsh token”的映射。
+- **i18n 是内置能力**：
+  - `crates/nsh-i18n` 基于 `rust-i18n`，支持 `locales/` 目录、JSON/YAML/TOML、17 种语言数据；
+  - 不需要从零实现 `keel-i18n`，但 Keel 自己的词条目录仍要建。
+- **示例可直接参考**：
+  - `examples/gallery-rs`：纯 Rust 应用（无 TSX/QuickJS）；
+  - `examples/desktop/App.tsx`：自绘标题栏和桌面菜单；
+  - `examples/post-editor`：编辑器示例；
+  - `examples/tasks-rs`：带 store、页面、列表、系统弹窗和测试的 Rust 应用；
+  - `examples/embed-gpui`：nsh 嵌入 GPUI 的反向示例（nsh 有 GPUI 后端）。
+- **GPUI 关系**：nsh 仓库自带 `crates/gpui`（GPUI 后端的实现），但独立桌面应用默认走 AppKit/Win32/GTK；GPUI 只是可选后端。
+
+### 1.2 源码导读
+
+| 目标 | 入口 |
+| --- | --- |
+| 编辑器 | `crates/nsh-base/src/editor/mod.rs`、`docs/dev/editor.md` |
+| 停靠/分栏/标签组 | `crates/nsh-base/src/dock/dock_area.rs` |
+| 树/命令面板/菜单/弹层 | `crates/nsh-base/src/tree.rs`、`command.rs`、`menu.rs`、`popover.rs` |
+| 主题 | `crates/nsh-base/src/theme.rs`、`default-theme.json` |
+| i18n | `crates/nsh-i18n/src/lib.rs`、`crates/nsh-i18n/data/` |
+| Rust 应用示例 | `examples/gallery-rs/native/src/lib.rs`、`shell.rs` |
+| 桌面标题栏/菜单 | `examples/desktop/App.tsx`、`crates/nsh-platform-*/` |
+| 编辑器示例 | `examples/post-editor/` |
+| Rust 应用测试 | `examples/tasks-rs/`、`crates/nsh-testing/` |
+
 ---
 
 ## 2. 关键决策
@@ -80,9 +124,11 @@ macOS/Linux 放到后续阶段。
 | 命令面板 | `command()` |
 | 通知气泡 | `toast()` / `toast_stack()` |
 | `img()` / `svg()` | `image()` / 资源图标（需在 spike 验证 SVG 支持） |
-| `idea_theme.rs` 常量 | `nsh.json` 的 `"tailwind"` tokens + 类型化样式 |
+| `idea_theme.rs` 常量 | `nsh.json` 的 `"theme"` 文件（shadcn `cssVars` 的 light/dark + 自定义 token），加一层 IDEA key 映射 |
 | `Chrome` 色板 | 统一 token 访问，不再复制三份 |
 | `CommandId` 枚举 | `nsh` 的 action/命令注册（自建 `keel-commands`） |
+| 硬编码中文文案 | `nsh-i18n` 的 `locales/` 目录（rust-i18n），保留语义 key |
+| 自绘主题常量 | `theme.json` 的 `cssVars.light/dark` + `radius`；组件只读 token |
 | GPUI 自绘圆角/岛屿 | 原生视图的 `borderRadius`、背景、阴影、渐变；需要重新对 IDEA 度量做像素校准 |
 | `cargo build` | `nsh run` / `nsh package`（Rust 模板仍用 cargo 构建，但由 nsh 生成 runner） |
 
@@ -117,8 +163,8 @@ macOS/Linux 放到后续阶段。
   - `keel-core`：id、错误、事件、取消、命令；
   - `keel-vfs`：文件系统、监听、编码；
   - `keel-workspace`：项目快照、最近项目、会话；
-  - `keel-theme`：主题 token 加载；
-  - `keel-i18n`：文案目录、回退。
+  - `keel-theme`：IDEA token → nsh theme 的映射与加载；
+  - `keel-i18n`：包装 `nsh-i18n`，只保留 Keel 自己的词条与回退策略。
 - 现有 GPUI UI 改为调用这些 core，保证两边行为一致。
 
 ### P2：迁移工作台壳
@@ -131,9 +177,9 @@ macOS/Linux 放到后续阶段。
 ### P3：编辑器与代码智能
 
 - 用 `nsh_base::editor()` 替换 gpui-component Editor；
-- 接入 LSP（jdtls）：
+- nsh Editor 已提供 `onChange`、诊断、装饰、补全、定义、hover、查找替换、折叠、多光标等钩子，Keel 只需实现 LSP 适配层：
   - 文档同步、诊断、补全、定义、引用、hover、格式化；
-  - 语法高亮先用 nsh Editor 内置语言支持，再按需接 tree-sitter/LSP semantic tokens；
+  - 语法高亮先用 nsh Editor 内置的 syntect，再按需接 tree-sitter/LSP semantic tokens；
 - 验证大文件、多标签、查找替换、IME。
 
 ### P4：功能对齐
@@ -154,9 +200,9 @@ macOS/Linux 放到后续阶段。
 
 | 风险 | 影响 | 缓解 |
 | --- | --- | --- |
-| nsh v0.5.0 还年轻，API 可能变 | 迁移后维护成本 | 固定版本；UI 收敛到 `keel-ui` crate；关注 changelog |
+| nsh v0.5.0 还年轻，源码在 nightly 分支上继续变 | 迁移后维护成本 | 固定版本/commit；UI 收敛到 `keel-ui` crate；关注 changelog |
 | 原生后端（Win32/AppKit/GTK）与 GPUI 渲染差异 | IDEA 像素级视觉需要重调 | P0 先验证标题栏/岛屿/编辑器；保留度量表逐项校准 |
-| `nsh_base::editor` 是否满足 IDE 需求 | 编辑器是核心 | P0 就验证：大文件、IME、多光标、查找替换、诊断装饰；不足则评估自绘/嵌入 |
+| `nsh_base::editor` 与 Keel 的编辑器需求 | 编辑器是核心 | 源码已确认有 rope、多光标、折叠、查找替换、诊断/装饰、补全/定义/hover 钩子、IME；P0 仍需用真实 Java 文件验证 |
 | 主题/样式模型从 GPUI 改为 Tailwind tokens | 现有 `idea_theme.rs` 要重写 | 先把 IDEA 主题映射到 `nsh.json` 的 colors/radius/fontSize；保留 token 名 |
 | 打包/签名流程变化 | 发布链路要重做 | P0 验证 `nsh package`；后续接 CI |
 | 迁移期间两套 UI | 双份维护 | 先抽 `keel-core`，UI 只做薄层；设定切换截止点 |
