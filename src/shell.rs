@@ -134,7 +134,7 @@ pub struct Shell {
 
 impl Shell {
     pub fn new() -> Self {
-        let demo = std::env::var_os("KEEL_SPIKE_DEMO").is_some();
+        let demo = std::env::var_os("KEEL_DEMO").is_some();
         let shell = Self {
             ws: Workspace::new(),
             tools: signal(true),

@@ -138,11 +138,7 @@ pub const PROJECT_ROOT_MARKERS: [&str; 8] = [
 ///
 /// 命令行传入单个文件时用它决定打开哪个项目；找不到时调用方退回文件所在目录。
 pub fn find_project_root(path: &Path) -> Option<PathBuf> {
-    let start = if path.is_dir() {
-        path
-    } else {
-        path.parent()?
-    };
+    let start = if path.is_dir() { path } else { path.parent()? };
     start.ancestors().find_map(|dir| {
         PROJECT_ROOT_MARKERS
             .iter()
@@ -223,7 +219,7 @@ fn flatten_nodes(nodes: &[ProjectNode], expanded: &[String], depth: u32) -> Vec<
     for node in nodes {
         let folder = node.is_folder();
         let id = node.path.display().to_string();
-        let open = folder && expanded.iter().any(|item| *item == id);
+        let open = folder && expanded.contains(&id);
         rows.push(FlatRow {
             id: id.clone(),
             label: node.name.clone(),

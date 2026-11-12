@@ -1,5 +1,9 @@
 # Keel 开发大纲
 
+> **2026-11-12 起 nsh 是主线。** 默认构建、`nsh run`、测试与截图都在仓库根目录的
+> nsh 工作台；本文中的 GPUI 模块路径属于归档的 `legacy/gpui/`，仅作历史参考。
+> 当前结构见 [README.md](../README.md)，迁移细节见 [NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)。
+
 > 目标：用 **Rust + GPUI** 复刻一个 IntelliJ IDEA 风格的桌面 IDE，**优先支持 Java**。
 > 本文档用于指导后续 AI 按阶段、按任务卡推进实现，避免一次性铺开大架构或反复推翻已有工作。
 >
@@ -7,7 +11,7 @@
 > - IDEA 源码：`D:\Programming\Workspace\intellij-community`
 > - IDEA 架构参考文档：[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
 > - 复刻项目架构对照：[REPLICA_ARCHITECTURE_COMPARISON.md](./REPLICA_ARCHITECTURE_COMPARISON.md)
-> - nsh 迁移：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（P0 spike 在 `spike/keel-nsh-spike/`；GPUI 版本仍是基线）
+> - nsh 迁移：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（nsh 已是主线，仓库根目录即工作台；GPUI 归档在 `legacy/gpui/`）
 > - 另一个 IDEA 复刻品：`D:\Programming\Workspace\Lithe-IDEA`
 > - Rust 复刻参考：`D:\Programming\Workspace\openidea`
 >

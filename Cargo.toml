@@ -1,26 +1,27 @@
 [package]
-name = "keel"
+name = "nsh-app-keel"
 version = "0.1.0"
 edition = "2024"
-description = "借鉴 IntelliJ IDEA 交互范式的 Rust 原生 IDE"
+publish = false
+
+[workspace]
 
 [dependencies]
-# 主题令牌与工作区模型抽成独立 crate，供 GPUI 版本与 nsh spike 共用。
+nsh-core = "0.5.0"
+nsh-base = "0.5.0"
+# 工作区模型（目录扫描、树摊平、语言识别、项目根识别）。
+keel-workspace = { path = "crates/keel-workspace" }
+# 动作注册表：菜单、快捷键共用一份定义。
+keel-commands = { path = "crates/keel-commands" }
+# 主题配置文件（themes/idea-*.json）的加载与 nsh cssVars 生成。
 keel-theme = { path = "crates/keel-theme" }
-# gpui-ce 0.3.0 对应 GitHub 提交 58ff79777198b35e78467795eb50eb258d640eb9。
-# 组件仓库 main 仍按 crates.io 引用 gpui-ce =0.3.0，保持同一来源可避免重复 gpui 类型。
-gpui = { package = "gpui-ce", version = "=0.3.0" }
-gpui_platform = { package = "gpui_ce_platform", version = "=0.3.0" }
-# 组件源码固定为 GitHub main@d248729826757c96133ab723da3fee1cd2ed0ad6。
-gpui_component = { package = "gpui_ce_components", git = "https://github.com/gpui-ce/gpui-component", rev = "d248729826757c96133ab723da3fee1cd2ed0ad6", features = ["tree-sitter-java"] }
-gpui_component_assets = { package = "gpui_ce_components_assets", git = "https://github.com/gpui-ce/gpui-component", rev = "d248729826757c96133ab723da3fee1cd2ed0ad6" }
-rfd = "0.15"
-roxmltree = "0.20"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+env_logger = "0.11"
 
-[profile.dev]
-opt-level = 1
+[target.'cfg(target_os = "linux")'.dependencies]
+nsh-platform-linux = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }
 
-[profile.dev.package."*"]
-opt-level = 2
+[target.'cfg(target_os = "macos")'.dependencies]
+nsh-platform-macos = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+nsh-platform-windows = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }

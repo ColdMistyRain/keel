@@ -1,6 +1,10 @@
 # 构建产物
 /target
+legacy/gpui/target/
 **/*.rs.bk
+
+# nsh 生成物
+.nsh/
 
 # 编辑器与系统文件
 .idea/

@@ -81,10 +81,10 @@ impl Workspace {
         }
     }
 
-    /// 启动时打开：`KEEL_SPIKE_DEMO=1` 打开示例项目；否则用
-    /// `KEEL_SPIKE_OPEN` 或命令行里的第一个路径。
+    /// 启动时打开：`KEEL_DEMO=1` 打开示例项目；否则用
+    /// `KEEL_OPEN` 或命令行里的第一个路径。
     pub fn open_startup(&self) {
-        if std::env::var_os("KEEL_SPIKE_DEMO").is_some() {
+        if std::env::var_os("KEEL_DEMO").is_some() {
             self.open_demo();
             return;
         }
@@ -498,20 +498,15 @@ impl From<FlatRow> for TreeRow {
     }
 }
 
-/// 示例项目的位置：`nsh run` 的工作目录是应用目录，直接从仓库根运行时再退一层。
+/// 示例项目的位置：应用目录就是仓库根目录。
 fn demo_dir() -> Option<PathBuf> {
-    for candidate in ["samples/demo", "spike/keel-nsh-spike/samples/demo"] {
-        let path = PathBuf::from(candidate);
-        if path.is_dir() {
-            return Some(path);
-        }
-    }
-    None
+    let path = PathBuf::from("samples/demo");
+    path.is_dir().then_some(path)
 }
 
-/// 启动路径：`KEEL_SPIKE_OPEN` 优先，其次命令行里的第一个存在的路径。
+/// 启动路径：`KEEL_OPEN` 优先，其次命令行里的第一个存在的路径。
 fn startup_path() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("KEEL_SPIKE_OPEN") {
+    if let Some(path) = std::env::var_os("KEEL_OPEN") {
         let path = PathBuf::from(path);
         if path.exists() {
             return Some(path);

@@ -1,12 +1,12 @@
 # Keel 迁移到 Native Shell（nsh）方案
 
 > 目标：把 Keel 的 UI 框架从 GPUI 切换到 [Native Shell（nsh）](https://nsh.dev/zh-CN/)。
-> 结论：**可行，且比继续堆 GPUI 更符合长期目标**；但不建议直接推倒重写，先做 shell spike，再按阶段迁移。
+> 结论：**已切换**；nsh 版本是主线，GPUI 归档在 `legacy/gpui/`。
 > 参考版本：nsh `v0.5.0`，Apache-2.0，官方文档 `https://nsh.dev/zh-CN/`。
 >
-> **当前决策（2026-11-12）：迁移已启动。** nsh 0.5.0 已安装，P0 spike 落在
-> `spike/keel-nsh-spike/`（Rust-only UI，Windows 优先）；现有 GPUI 版本继续作为基线保留。
-> P0 的记录见 §4.1。
+> **当前状态（2026-11-12）：nsh 已提升为主线。** 工作台位于仓库根目录
+> （Rust-only UI，Windows 优先，`nsh run .`）；原 P0 spike 已整体迁移到根目录，
+> GPUI 基线归档到 `legacy/gpui/`，不再参与默认构建。P0–P2 记录见 §4.1–§4.4。
 
 ---
 
@@ -92,6 +92,9 @@ Keel 是 IDE，属于“编辑器/数据密集工具”，应选 **Rust-only**�
 
 ### 2.2 先 spike，不直接替换
 
+> 2026-11-12 更新：shell 已通过验证并提升为主线，GPUI 归档到 `legacy/gpui/`；
+> 本节保留当时的决策过程。
+
 当前已有 44 张 UI 任务卡的 GPUI 实现。直接删除会同时失去可运行基线和视觉参考。建议：
 
 - 保留现有 GPUI 版本为 `legacy`；
@@ -160,9 +163,9 @@ macOS/Linux 放到后续阶段。
 
 ### 4.1 P0 spike 记录（2026-11-12）
 
-**结论：P0 通过（Windows，nsh 0.5.0）。** spike 位于 `spike/keel-nsh-spike/`，
-纯 Rust UI，不改动仓库根目录的 GPUI 版本。运行方式与结构见
-[`spike/keel-nsh-spike/README.md`](../spike/keel-nsh-spike/README.md)。
+**结论：P0 通过（Windows，nsh 0.5.0）。** 当时的 spike 已提升为仓库根目录的
+主工程，纯 Rust UI；GPUI 版本归档在 `legacy/gpui/`。运行方式与结构见
+[`README.md`](../README.md)。
 
 已实现：
 
@@ -178,7 +181,7 @@ macOS/Linux 放到后续阶段。
   转成 nsh `cssVars` 并 `set_tokens` 注入；Rust 里没有色值常量；
 - 原生打开对话框（`pick_paths`）+ `std::fs` 读写保存，快捷键
   `mod+o` / `shift+mod+o` / `mod+s` / `mod+w`；
-- 示例项目 `samples/demo`，`KEEL_SPIKE_DEMO=1` 时启动即打开，便于截图与验收。
+- 示例项目 `samples/demo`，`KEEL_DEMO=1` 时启动即打开，便于截图与验收。
 
 截图：[浅色](screenshots/nsh-spike-light.png) · [深色](screenshots/nsh-spike-dark.png)。
 
@@ -212,7 +215,7 @@ macOS/Linux 放到后续阶段。
    否则会以内容高度塌缩。
 3. **`*_style` 闭包的类型是 `StyleRefinement -> StyleRefinement`**，不是 `Style`；
    写 `fn popup_style(s: Style) -> Style` 会编译失败。
-4. **`nsh test` 继承环境变量**：设了 `KEEL_SPIKE_DEMO` 时测试也会打开示例项目，
+4. **`nsh test` 继承环境变量**：设了 `KEEL_DEMO` 时测试也会打开示例项目，
    断言不能依赖「就绪」这类启动文案。
 5. **自定义主题令牌可以直接进类名**：`bg-editor-bg`、`text-muted-fg`
    与 `theme().color("editor-bg")` 等价，深色值由 `dark` 节点提供。
@@ -273,12 +276,12 @@ keel-core
 - `cargo test -p keel-workspace`：5 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订、项目根）；
 - `cargo test -p keel-commands`：6 通过（注册表、上下文、可用性/勾选、菜单解析、执行、快捷键）；
 - `cargo test -p keel-theme`：3 通过（配置解析、颜色/透明度、cssVars）；
-- 根 GPUI `cargo test`：14 通过；spike `nsh test`：5 通过。
+- 根 GPUI `cargo test`：迁移前 14 通过（归档在 `legacy/gpui/`）；nsh `nsh test`：5 通过。
 
 还没做的 P1 部分：
 
-- `keel-vfs` 未开始；spike 仍直接用 `std::fs`；
-- `src/project_tree.rs`、`src/model.rs` 尚未改用 `keel-workspace`（GPUI 侧仍是自己的树模型）；
+- `keel-vfs` 未开始；主线仍直接用 `std::fs`；
+- GPUI 归档（`legacy/gpui`）里仍保留它自己的树模型，不再维护；
 - 最近项目、会话（打开的文档/光标）还没有 `PersistentStateComponent` 式的持久化；
 - `keel-i18n` 未开始。
 
@@ -296,12 +299,12 @@ keel-core
 - `ActionRegistry`：注册 / 替换动作、取展示状态、执行（尊重 enabled/visible）、
   解析菜单、列出快捷键。
 
-**外壳（spike）**
+**外壳（主工程）**
 
 | 区域 | 实现 |
 | --- | --- |
 | 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；项目名；右侧搜索 / 运行 / 设置快捷图标；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
-| 启动与项目 | `KEEL_SPIKE_OPEN=<路径>`（开发）或打包产物的第一个路径参数；文件会向上识别项目根（`.git` / `pom.xml` / `Cargo.toml` 等） |
+| 启动与项目 | `KEEL_OPEN=<路径>`（开发）或打包产物的第一个路径参数；文件会向上识别项目根（`.git` / `pom.xml` / `Cargo.toml` 等） |
 | 左侧工具窗口 | 项目 / 搜索 / 版本控制；`h_resizable` + `resizable_panel`，宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏 |
 | 编辑器区 | 标签条横向滚动（溢出）、未保存圆点、关闭按钮、右键菜单（关闭 / 关闭其他 / 关闭全部 / 在项目中定位）；**预览标签**：项目树单击斜体预览、下一个预览替换、双击或编辑后固定；面包屑、`nsh_base::editor` |
 | 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable`，高度 90–360；状态栏左侧有图标切换条 |
@@ -317,8 +320,8 @@ keel-core
 
 - `cargo test -p keel-workspace`：5 通过（含项目根识别）；
 - `cargo test -p keel-commands`：6 通过；
-- spike `nsh test`：5 通过（外壳文本、视图菜单、三个截图测试在无头下自动跳过）；
-- spike `nsh test --target windows`：5 通过（真实窗口；含浅色/深色/菜单/预览截图）；
+- `nsh test`：5 通过（外壳文本、视图菜单、三个截图测试在无头下自动跳过）；
+- `nsh test --target windows`：5 通过（真实窗口；含浅色/深色/菜单/预览截图）；
 - `cargo clippy --all-targets -- -D warnings`：通过。
 
 截图：[浅色](screenshots/nsh-p2-light.png) · [深色](screenshots/nsh-p2-dark.png) ·
@@ -333,7 +336,7 @@ keel-core
 
 ### 4.4 与 IDEA 社区版（新 UI）对照
 
-| IDEA 社区版 | 当前 spike | 结论 |
+| IDEA 社区版 | 当前实现 | 结论 |
 | --- | --- | --- |
 | `IdeRootPane`：标题栏 → 工具窗口 + 编辑器 → 状态栏 | 同一结构 | 对齐 |
 | 标题栏：主菜单、项目名、主工具栏（运行 / 搜索 / 设置） | 菜单、项目名、三个快捷图标 | 基本对齐（工具栏简化为图标） |
@@ -372,8 +375,8 @@ keel-core
 
 ### P3：编辑器与代码智能
 
-- 用 `nsh_base::editor()` 替换 gpui-component Editor；
-- nsh Editor 已提供 `onChange`、诊断、装饰、补全、定义、hover、查找替换、折叠、多光标等钩子，Keel 只需实现 LSP 适配层：
+- nsh Editor 已接入（高亮、行号、折叠、多光标、查找替换、诊断/装饰钩子）；
+- Keel 只需实现 LSP 适配层：
   - 文档同步、诊断、补全、定义、引用、hover、格式化；
   - 语法高亮先用 nsh Editor 内置的 syntect，再按需接 tree-sitter/LSP semantic tokens；
 - 验证大文件、多标签、查找替换、IME。
@@ -385,10 +388,10 @@ keel-core
 
 ### P5：切换与清理
 
-- 默认构建改为 `nsh`；
-- 删除 GPUI 依赖与自绘主题常量；
-- 更新 `DEVELOPMENT_OUTLINE.md`、构建脚本、CI；
-- 保留 GPUI 分支作为历史参考，直至 nsh 版本稳定。
+- **已完成（2026-11-12）**：默认构建改为 `nsh`，工作台提升到仓库根目录；
+- GPUI 归档到 `legacy/gpui/`（独立 workspace，不参与默认构建）；
+- 待办：清理 GPUI 专属依赖/资源，更新 `DEVELOPMENT_OUTLINE.md`、构建脚本、CI；
+- 确认 nsh 稳定后删除归档。
 
 ---
 
@@ -418,9 +421,9 @@ keel-core
 
 ## 7. 当前状态
 
-**P0 / P1 已完成（2026-11-12）**：nsh 0.5.0 已安装，`spike/keel-nsh-spike/`
-是纯 Rust 的工作台 spike；`keel-core` / `keel-workspace` / `keel-theme` /
-`keel-commands` 已抽出；现有 `src/` 的 GPUI 版本保持可运行，作为迁移期基线。
+**P0 / P1 已完成（2026-11-12）**：nsh 0.5.0 已安装；`keel-core` /
+`keel-workspace` / `keel-theme` / `keel-commands` 已抽出。**nsh 工作台已提升为
+仓库根目录的主线**，GPUI 基线归档到 `legacy/gpui/`（独立 workspace，不参与默认构建）。
 
 **P2 进行中**：工作台外壳（标题栏、工具窗口、编辑器标签、底部工具窗口、
 状态栏、菜单与快捷键）已按 IDEA 的 `IdeRootPane` 结构落地，见 §4.3；
@@ -435,6 +438,6 @@ keel-core
 
 约束：
 
-- 迁移期不删除 GPUI，直到 nsh 版本功能对齐（P5）；
+- 默认构建只维护 nsh 主线；`legacy/gpui` 只作历史参考，不再加新功能；
 - 固定 nsh 版本（当前 0.5.0），升级单独做任务卡；
 - 不修改 nsh 源码，只读参考。
