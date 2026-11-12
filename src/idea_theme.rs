@@ -76,6 +76,9 @@ pub struct Tokens {
     pub separator: u32,
     /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
     pub feedback: u32,
+    /// `ScrollBar.thumbColor`：半透明滚动条滑块，轨道透明
+    pub scrollbar_thumb: u32,
+    pub scrollbar_thumb_hover: u32,
     /// `Island.arc`
     pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
@@ -112,6 +115,8 @@ pub const LIGHT: Tokens = Tokens {
     popover: 0xffffff,                 // popup-bg = layer-2-bg
     separator: 0x00000020,             // toolbar-border = transparent-black-30
     feedback: 0xffffff,                // feedback-bg = layer-2-bg
+    scrollbar_thumb: 0x73737333,       // ScrollBar.Transparent.thumbColor
+    scrollbar_thumb_hover: 0x73737347, // ScrollBar.Transparent.hoverThumbColor
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
@@ -144,6 +149,8 @@ pub const DARK: Tokens = Tokens {
     popover: 0x26282c,                 // popup-bg = layer-1-bg
     separator: 0xffffff21,             // toolbar-border = transparent-white-30
     feedback: 0x33353b,                // feedback-bg = layer-2-bg(gray-40)
+    scrollbar_thumb: 0xa6a6a647,       // ScrollBar.Transparent.thumbColor
+    scrollbar_thumb_hover: 0xa6a6a659, // ScrollBar.Transparent.hoverThumbColor
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
@@ -257,6 +264,14 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.popover_foreground = color(tokens.foreground);
         theme.tokens.popover = color(tokens.popover).into();
         theme.tokens.popover_foreground = color(tokens.foreground).into();
+
+        // 新 UI 的滚动条是透明的轨道 + 半透明滑块（`ScrollBar.Transparent.*`）。
+        theme.scrollbar = hsla(0., 0., 0., 0.);
+        theme.scrollbar_thumb = color_rgba(tokens.scrollbar_thumb);
+        theme.scrollbar_thumb_hover = color_rgba(tokens.scrollbar_thumb_hover);
+        theme.tokens.scrollbar = theme.scrollbar.into();
+        theme.tokens.scrollbar_thumb = theme.scrollbar_thumb.into();
+        theme.tokens.scrollbar_thumb_hover = theme.scrollbar_thumb_hover.into();
         theme.highlight_theme = highlight_theme(kind);
     }
     Theme::sync_base(cx);

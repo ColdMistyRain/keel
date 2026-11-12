@@ -354,6 +354,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-15：按 Islands 源码补齐遗漏令牌与度量——补 `button_primary*`（Primary 按钮不再变黑）、`selection`、`caret`、`popover`，圆角改 6/8；设置浮层补焦点与 Esc 关闭；侧边条 37px、按钮 29×32（`StripeToolbar.Button.size`）；项目面板标题 41、树行 22（`ToolWindow.Header.height`、`Tree.rowHeight.compact`）；选中标签圆角 4（`EditorTabs.underlineArc`）；状态栏部件内边距 3/4/1/4；空编辑器改为 IDEA 的六行快捷键提示（`DefaultEditorEmptyTextProvider`）
 - [x] Phase 1 · UI-16：继续按源码对齐——面包屑改为状态栏左侧部件（IDEA 的 `NAVBAR_WIDGET_KEY`），状态栏 24px；标签行 32、卡片 28、水平内边距 6/4、标签条下补 1px 分隔线；树选中改为满宽直角；面板标题字号 13；侧边条补分组分隔线（`toolbar-border`）；项目徽标与状态栏项目点改用项目色（`RecentProjectColorPalette`），窗口按钮宽 40（`TitlePane.Button.preferredSize.compact`）；面板与编辑器间距 4（`Island.borderWidth.compact`）；空编辑器文字改用 `Label.infoForeground`（text-secondary）；深色悬停改 `#FFFFFF10`
 - [x] Phase 1 · UI-17：按配色方案补齐编辑区细节——编辑器文本选中色改为 `SELECTION_BACKGROUND`（浅色 `#A6D2FF`、深色 Darcula `#214283`，与列表选中的 blue-140/blue-50 区分）；深色当前行高亮改 `CARET_ROW_COLOR` `#1F2024`、缩进参考线 `#323438`；项目树根节点名称加粗；通知气泡改用 `feedback-bg` + 阴影（`Notification` 规范）
+- [x] Phase 1 · UI-18：滚动条改用 `ScrollBar.Transparent.*`（透明轨道 + 半透明滑块，浅色 20%/深色 28%）；设置对话框改为 IDEA 的 900×700（`SettingsDialog` 最小尺寸），左侧分类占 20%（`settings.editor.splitter.proportion`）、行高 24，选中态改用树选中色而非品牌蓝
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

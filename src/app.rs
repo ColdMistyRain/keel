@@ -2088,13 +2088,17 @@ impl KeelApp {
             nav_items.push(
                 div()
                     .id(("settings-nav", item as usize))
-                    .px_3()
-                    .py_2()
-                    .rounded_md()
+                    .h(px(24.))
+                    .px_2()
+                    .flex()
+                    .items_center()
+                    .rounded(px(4.))
                     .cursor_pointer()
                     .text_sm()
+                    // IDEA 的设置有左侧列表用树选中色（`selection-bg-active`），
+                    // 不是品牌蓝的实心按钮。
                     .when(is_active, |row| {
-                        row.bg(chrome.accent).text_color(chrome.accent_fg)
+                        row.bg(chrome.selection).text_color(chrome.selection_fg)
                     })
                     .when(!is_active, |row| {
                         row.text_color(chrome.panel_fg)
@@ -2221,8 +2225,9 @@ impl KeelApp {
             .on_action(cx.listener(Self::on_close_settings))
             .child(
                 div()
-                    .w(px(640.))
-                    .h(px(400.))
+                    // IDEA 的 `SettingsDialog` 最小尺寸是 900×700。
+                    .w(px(900.))
+                    .h(px(700.))
                     .flex()
                     .flex_row()
                     .overflow_hidden()
@@ -2234,7 +2239,8 @@ impl KeelApp {
                     .shadow_lg()
                     .child(
                         div()
-                            .w(px(150.))
+                            // 左侧分类占 20%（`settings.editor.splitter.proportion`）。
+                            .w(px(180.))
                             .h_full()
                             .flex_shrink_0()
                             .flex()
