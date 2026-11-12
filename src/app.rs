@@ -10,7 +10,7 @@ use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{
     Copy, Cut, EditorState, Input, InputEvent, InputState, Paste, Redo, SelectAll, TabSize, Undo,
 };
-use gpui_component::menu::{DropdownMenu as _, PopupMenu};
+use gpui_component::menu::PopupMenu;
 use gpui_component_assets::IconName;
 
 use crate::actions::{
@@ -33,6 +33,8 @@ pub struct Chrome {
     pub canvas: Hsla,
     /// 编辑器/工具窗口岛内部底色。
     pub bg: Hsla,
+    /// 弹层（菜单、提示）的 1px 描边色（`Popup.borderColor`）。
+    pub popup_border: Hsla,
     pub fg: Hsla,
     pub border: Hsla,
     pub panel: Hsla,
@@ -75,6 +77,7 @@ impl Chrome {
         Self {
             canvas: crate::idea_theme::color(tokens.canvas),
             bg: crate::idea_theme::color(tokens.content),
+            popup_border: crate::idea_theme::color(tokens.popup_border),
             fg: theme.foreground,
             border: crate::idea_theme::color(tokens.border),
             panel: crate::idea_theme::color(tokens.tool_window_header),
@@ -1758,36 +1761,44 @@ impl KeelApp {
             .unwrap_or_else(|| "Keel".to_string());
         let badge_color = crate::idea_theme::project_badge(self.theme_kind, &seed);
 
-        let menu = Button::new("main-menu")
-            .ghost()
-            .small()
-            .w(px(28.))
-            .h(px(28.))
-            .p_0()
-            .icon(IconName::Menu)
-            .tooltip("主菜单")
-            .dropdown_menu(build_main_menu);
+        let menu = crate::menu::dropdown_menu(
+            "main-menu",
+            chrome.popup_border,
+            Button::new("main-menu")
+                .ghost()
+                .small()
+                .w(px(28.))
+                .h(px(28.))
+                .p_0()
+                .icon(IconName::Menu)
+                .tooltip("主菜单"),
+            build_main_menu,
+        );
 
-        let app_logo = Button::new("app-logo")
-            .ghost()
-            .small()
-            .w(px(28.))
-            .h(px(28.))
-            .p_0()
-            .tooltip("主菜单")
-            .child(
-                div()
-                    .size(px(20.))
-                    .rounded(px(4.))
-                    .bg(chrome.accent)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_color(chrome.accent_fg)
-                    .text_xs()
-                    .child("K"),
-            )
-            .dropdown_menu(build_main_menu);
+        let app_logo = crate::menu::dropdown_menu(
+            "app-logo",
+            chrome.popup_border,
+            Button::new("app-logo")
+                .ghost()
+                .small()
+                .w(px(28.))
+                .h(px(28.))
+                .p_0()
+                .tooltip("主菜单")
+                .child(
+                    div()
+                        .size(px(20.))
+                        .rounded(px(4.))
+                        .bg(chrome.accent)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_color(chrome.accent_fg)
+                        .text_xs()
+                        .child("K"),
+                ),
+            build_main_menu,
+        );
 
         let project_widget = div()
             .id("title-project")

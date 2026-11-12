@@ -4,6 +4,7 @@ mod assets;
 mod editor;
 mod file_icons;
 mod idea_theme;
+mod menu;
 mod model;
 mod panels;
 mod project;

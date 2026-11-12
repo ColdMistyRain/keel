@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
-use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
+use gpui_component::menu::{ContextMenuExt as _, PopupMenuItem};
 use gpui_component_assets::IconName;
 
 use crate::actions::{
@@ -25,7 +25,9 @@ impl KeelApp {
             .gap_1()
             .flex_shrink_0()
             .bg(chrome.header)
-            .child(
+            .child(crate::menu::dropdown_menu(
+                "project-title",
+                chrome.popup_border,
                 Button::new("project-title")
                     .ghost()
                     .small()
@@ -34,22 +36,25 @@ impl KeelApp {
                     // 标题字号跟随 `ToolWindow.Header.font.size.offset=0`，即 13px。
                     .text_size(px(13.))
                     .label("项目")
-                    .icon(IconName::ChevronDown)
-                    .dropdown_menu(|menu, _, _| {
-                        menu.menu("在项目中定位", Box::new(LocateInProject))
-                            .separator()
-                            .menu("折叠全部", Box::new(CollapseProjectTree))
-                            .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
-                    }),
-            )
+                    .icon(IconName::ChevronDown),
+                |menu, _, _| {
+                    menu.menu("在项目中定位", Box::new(LocateInProject))
+                        .separator()
+                        .menu("折叠全部", Box::new(CollapseProjectTree))
+                        .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
+                },
+            ))
             .child(div().flex_1())
             .child({
                 let new_app = cx.entity().downgrade();
                 let file_dir = root.clone().unwrap_or_default();
                 let folder_dir = file_dir.clone();
-                crate::app::icon_button("project-new", icon("plus"), chrome.muted_fg)
-                    .tooltip("新建")
-                    .dropdown_menu(move |menu, _, _| {
+                crate::menu::dropdown_menu(
+                    "project-new",
+                    chrome.popup_border,
+                    crate::app::icon_button("project-new", icon("plus"), chrome.muted_fg)
+                        .tooltip("新建"),
+                    move |menu, _, _| {
                         let file_app = new_app.clone();
                         let file_dir = file_dir.clone();
                         let folder_app = new_app.clone();
@@ -72,7 +77,8 @@ impl KeelApp {
                                     .ok();
                             }),
                         )
-                    })
+                    },
+                )
             })
             .child(div().w(px(1.)).h(px(16.)).mx_1().bg(chrome.border))
             .child(
@@ -89,15 +95,17 @@ impl KeelApp {
                         cx.listener(|this, _event, _window, cx| this.refresh_project_tree(cx)),
                     ),
             )
-            .child(
-                crate::app::icon_button("project-options", icon("more"), chrome.muted_fg)
-                    .dropdown_menu(|menu, _, _| {
-                        menu.menu("从磁盘重新加载", Box::new(RefreshProjectTree))
-                            .menu("折叠全部", Box::new(CollapseProjectTree))
-                            .separator()
-                            .menu("隐藏工具窗口", Box::new(ToggleProjectPanel))
-                    }),
-            )
+            .child(crate::menu::dropdown_menu(
+                "project-options",
+                chrome.popup_border,
+                crate::app::icon_button("project-options", icon("more"), chrome.muted_fg),
+                |menu, _, _| {
+                    menu.menu("从磁盘重新加载", Box::new(RefreshProjectTree))
+                        .menu("折叠全部", Box::new(CollapseProjectTree))
+                        .separator()
+                        .menu("隐藏工具窗口", Box::new(ToggleProjectPanel))
+                },
+            ))
             .child(
                 crate::app::icon_button("project-hide", icon("chevron_left"), chrome.muted_fg)
                     .tooltip("隐藏到侧边条")

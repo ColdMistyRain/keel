@@ -72,6 +72,8 @@ pub struct Tokens {
     pub editor_selection: u32,
     /// `popup-bg`：弹层背景
     pub popover: u32,
+    /// `Popup.borderColor`：弹层的 1px 描边（Windows 用 `popup-border-windows`）
+    pub popup_border: u32,
     /// `toolbar-border`：侧边条分组、工具栏分隔线
     pub separator: u32,
     /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
@@ -113,6 +115,7 @@ pub const LIGHT: Tokens = Tokens {
     caret: 0x000000,                   // CARET_COLOR（浅色方案未覆盖，取默认黑）
     editor_selection: 0xa6d2ff,        // expUI_lightScheme.xml / SELECTION_BACKGROUND
     popover: 0xffffff,                 // popup-bg = layer-2-bg
+    popup_border: 0xd1d3d9,            // popup-border-windows = gray-130
     separator: 0x00000020,             // toolbar-border = transparent-black-30
     feedback: 0xffffff,                // feedback-bg = layer-2-bg
     scrollbar_thumb: 0x73737333,       // ScrollBar.Transparent.thumbColor
@@ -147,6 +150,7 @@ pub const DARK: Tokens = Tokens {
     caret: 0xced0d6,                   // CARET_COLOR（expUI_darkScheme.xml）
     editor_selection: 0x214283,        // Darcula 配色方案的 SELECTION_BACKGROUND
     popover: 0x26282c,                 // popup-bg = layer-1-bg
+    popup_border: 0x33353b,            // popup-border = layer-1-border(gray-40)
     separator: 0xffffff21,             // toolbar-border = transparent-white-30
     feedback: 0x33353b,                // feedback-bg = layer-2-bg(gray-40)
     scrollbar_thumb: 0xa6a6a647,       // ScrollBar.Transparent.thumbColor

@@ -4,7 +4,7 @@ use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{Editor, EditorState};
-use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
+use gpui_component::menu::{ContextMenuExt as _, PopupMenuItem};
 use gpui_component_assets::IconName;
 
 use crate::app::{Chrome, KeelApp, empty_editor_state};
@@ -496,12 +496,15 @@ impl KeelApp {
 
         // 标签超出宽度时横向滚动；右侧按钮提供完整的已打开文件列表。
         let overflow_app = app.clone();
-        let overflow = Button::new("editor-tab-overflow")
-            .small()
-            .ghost()
-            .icon(IconName::ChevronDown)
-            .tooltip("已打开的文件")
-            .dropdown_menu(move |menu, _, _| {
+        let overflow = crate::menu::dropdown_menu(
+            "editor-tab-overflow",
+            chrome.popup_border,
+            Button::new("editor-tab-overflow")
+                .small()
+                .ghost()
+                .icon(IconName::ChevronDown)
+                .tooltip("已打开的文件"),
+            move |menu, _, _| {
                 let mut menu = menu;
                 for (path, title, dirty) in documents.clone() {
                     let item_app = overflow_app.clone();
@@ -513,7 +516,8 @@ impl KeelApp {
                     }));
                 }
                 menu
-            });
+            },
+        );
 
         let tracker_app = app.clone();
         let tracker = canvas(
