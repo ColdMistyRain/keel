@@ -142,7 +142,7 @@ serde_json = "1"
 
 已经抽出的独立 crate（GPUI 与 nsh 共用）：
 
-- `crates/keel-theme`：IDEA Islands 主题令牌（`ThemeKind` / `Tokens` / `LIGHT` / `DARK`）；
+- `crates/keel-theme`：读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），生成 GPUI 用的令牌与 nsh 的 `cssVars`；
 - `crates/keel-workspace`：项目目录扫描、树摊平、语言识别。
 
 ```

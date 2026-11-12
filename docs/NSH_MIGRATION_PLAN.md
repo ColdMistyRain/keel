@@ -173,7 +173,9 @@ macOS/Linux 放到后续阶段。
   数据来自真实目录扫描，可展开 / 收起、单击选中、双击打开；
 - 编辑器区：自绘标签页、面包屑、`nsh_base::editor`（Java 高亮、行号、折叠）；
 - 状态栏：分支、提示、语言、编码、换行、缩进、光标位置；
-- `theme.json`：IDEA Islands Light/Dark → shadcn `cssVars`，组件不写字面色值；
+- 主题：颜色、圆角、编辑器语法配色、最近项目调色板全部来自仓库根目录的
+  `themes/idea-light.json`、`themes/idea-dark.json`，启动时由 `keel-theme`
+  转成 nsh `cssVars` 并 `set_tokens` 注入；Rust 里没有色值常量；
 - 原生打开对话框（`pick_paths`）+ `std::fs` 读写保存，快捷键
   `mod+o` / `shift+mod+o` / `mod+s` / `mod+w`；
 - 示例项目 `samples/demo`，`KEEL_SPIKE_DEMO=1` 时启动即打开，便于截图与验收。
@@ -191,7 +193,7 @@ macOS/Linux 放到后续阶段。
 | 标签页 / 面包屑 / 状态栏 | 通过 | 截图与 headless 均确认 |
 | 项目树 | 通过（自绘） | 展开到 `Main.java` 的层级、选中高亮、单击展开、双击打开 |
 | `nsh_base::Tree` | **不可用** | headless 里行已挂载，但 Windows 窗口不绘制（父视口虚拟列表）；已改用自绘列表 |
-| 主题令牌 | 通过 | 浅色 / 深色截图归档；外观按钮调用 `set_color_scheme` |
+| 主题配置 | 通过 | 颜色/度量来自 `themes/idea-*.json`，运行时注入；浅色 / 深色截图归档 |
 | 编辑与保存 | 通过 | 编辑器输入 → `Ctrl+S` → 磁盘内容更新（测试后已还原示例） |
 | 中文输入 | 基本通过 | `SendKeys` 注入「中文输入」并保存成功；IME 组合（拼音候选）仍需人工验证 |
 | `nsh test` | 通过 | `1 test: 1 passed`（headless，Rust 根组件从 TypeScript 侧打开） |
@@ -225,12 +227,12 @@ macOS/Linux 放到后续阶段。
 
 | crate | 内容 | 当前消费者 |
 | --- | --- | --- |
-| [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | `ThemeKind`、`Tokens`、`LIGHT`/`DARK`（IDEA Islands 数值） | GPUI 的 `src/idea_theme.rs`（只做 `u32 → Hsla` 与组件库写入） |
+| [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | 读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），提供 `ThemeKind` / `Tokens`，生成 nsh `cssVars` | GPUI 的 `src/idea_theme.rs`；nsh spike（启动时 `set_tokens`） |
 | [`crates/keel-workspace`](../crates/keel-workspace/src/lib.rs) | `ProjectNode`、`scan_project`、`flatten`、`language_name`/`language_label` | nsh spike 的 `src/workspace.rs`（只加信号与文档状态） |
 
 验证：
 
-- `cargo test -p keel-theme`：3 通过（浅/深差异、选中色、枚举取值）；
+- `cargo test -p keel-theme`：3 通过（两套配置解析、颜色/透明度、cssVars 输出）；
 - `cargo test -p keel-workspace`：3 通过（语言识别、忽略规则、临时目录扫描 + 摊平）；
 - 根 GPUI 版本 `cargo check` / `cargo test`：通过（14 个测试）；
 - spike `nsh test`：1 通过；项目树截图与 P0 一致。
@@ -238,7 +240,6 @@ macOS/Linux 放到后续阶段。
 还没做的 P1 部分：
 
 - `src/project_tree.rs`、`src/model.rs` 尚未改用 `keel-workspace`（GPUI 侧仍是自己的树模型）；
-- `spike/.../theme.json` 仍是手写映射，尚未由 `keel-theme` 生成；
 - `keel-core` / `keel-vfs` / `keel-i18n` 未开始；
 - GPUI 与 nsh 的文档状态（打开的文件、光标、保存）还没有共享的 `keel-workspace` 会话模型。
 

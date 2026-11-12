@@ -11,6 +11,8 @@ nsh-core = "0.5.0"
 nsh-base = "0.5.0"
 # 与 GPUI 版本共用的工作区模型（目录扫描、树摊平、语言识别）。
 keel-workspace = { path = "../../crates/keel-workspace" }
+# 主题配置文件（themes/idea-*.json）的加载与 nsh cssVars 生成。
+keel-theme = { path = "../../crates/keel-theme" }
 env_logger = "0.11"
 
 [target.'cfg(target_os = "linux")'.dependencies]

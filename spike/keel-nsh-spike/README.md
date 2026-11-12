@@ -37,8 +37,11 @@ nsh package --target windows
 | 编辑器区 | 自绘标签页 + 面包屑 + `nsh_base::editor`（Java 高亮、行号、折叠） |
 | 状态栏 | 分支、提示、语言、编码、换行、缩进、光标位置 |
 
-配色全部来自 `theme.json`（IDEA Islands Light/Dark 的 shadcn `cssVars` 令牌），
-组件里不写字面色值。外观跟随系统，标题栏右侧可切换「自动 / 浅色 / 深色」。
+配色、圆角、编辑器语法配色和最近项目调色板全部来自仓库根目录的
+[`themes/idea-light.json`](../../themes/idea-light.json) 与
+[`themes/idea-dark.json`](../../themes/idea-dark.json)：启动时由 `keel-theme`
+转成 nsh 的 shadcn `cssVars`，再通过 `set_tokens` 注入，Rust 代码里没有色值常量。
+外观跟随系统，标题栏右侧可切换「自动 / 浅色 / 深色」。
 
 ## 代码结构
 
@@ -46,9 +49,11 @@ nsh package --target windows
 src/lib.rs        界面：标题栏、工具窗口、项目树、标签页、编辑器、状态栏
 src/workspace.rs  nsh 侧状态：把 keel-workspace 的模型包成信号，管理文档与保存
 samples/demo/     Java 示例项目（pom.xml + Main.java + Greeter.java）
-theme.json        IDEA 令牌 → nsh 主题
-nsh.json          应用配置：窗口尺寸、隐藏标题栏、主题
+nsh.json          应用配置：窗口尺寸、隐藏标题栏（主题不在这里）
 ```
+
+主题配置在仓库根目录的 `themes/idea-light.json`、`themes/idea-dark.json`，
+由 `keel-theme` 读取；spike 没有自己的主题文件。
 
 `workspace.rs` 只持有 nsh 信号；目录扫描、树摊平、语言识别来自仓库里的
 [`keel-workspace`](../../crates/keel-workspace/src/lib.rs)，与 GPUI 版本共用。

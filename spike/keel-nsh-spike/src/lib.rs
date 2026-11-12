@@ -72,6 +72,12 @@ fn native(registry: &mut Registry) {
 /// 应用根组件，由 `nsh.json` 的 `"root": "App"` 指定。
 #[component]
 pub fn App() -> impl IntoElement {
+    // 主题全部来自 themes/idea-*.json：启动时转成 nsh 的 shadcn 令牌，
+    // 不再依赖 nsh.json 的 "theme" 或 Rust 里的色值常量。
+    if let Ok(tokens) = nsh_base::tokens_of(Some(&keel_theme::nsh_theme_json())) {
+        set_tokens(tokens);
+    }
+
     let shell = Shell {
         ws: Workspace::new(),
         tools: signal(true),

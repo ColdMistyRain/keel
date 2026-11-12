@@ -1959,6 +1959,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "keel-theme"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "keel-workspace"
 version = "0.1.0"
 
@@ -2252,6 +2259,7 @@ name = "nsh-app-keel"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "keel-theme",
  "keel-workspace",
  "nsh-base",
  "nsh-core",

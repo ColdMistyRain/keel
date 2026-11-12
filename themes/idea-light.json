@@ -1,0 +1,89 @@
+{
+  "name": "IntelliJ Light (Keel)",
+  "dark": false,
+  "colors": {
+    "canvas": "#E9EAEE",
+    "content": "#FFFFFF",
+    "foreground": "#000000",
+    "border": "#E9EAEE",
+    "indent_guide": "#EBECF0",
+    "muted": "#5F6269",
+    "secondary": "#73767C",
+    "selection": "#D0DFFE",
+    "selection_fg": "#000000",
+    "hover": "#00000008",
+    "control_hover": "#00000012",
+    "tool_window_header": "#FFFFFF",
+    "tab_underline": "#A7C5FF",
+    "tool_window_tab_underline": "#4083C9",
+    "tab_background": "#FFFFFF",
+    "tab_selected_background": "#E3EBFE",
+    "status_bar": "#E9EAEE",
+    "brand": "#3871E1",
+    "brand_hover": "#2F5EB9",
+    "brand_active": "#2E4D89",
+    "on_brand": "#FFFFFF",
+    "caret": "#000000",
+    "editor_selection": "#A6D2FF",
+    "popover": "#FFFFFF",
+    "popup_border": "#D1D3D9",
+    "separator": "#00000020",
+    "separator_line": "#CDCDCD",
+    "feedback": "#FFFFFF",
+    "feedback_border": "#D1D3D9",
+    "scrollbar_thumb": "#73737333",
+    "scrollbar_thumb_hover": "#73737347",
+    "destructive": "#DB3D3C",
+    "active_line": "#F5F8FE",
+    "line_number": "#AEB3C2",
+    "active_line_number": "#767A8A"
+  },
+  "metrics": {
+    "unselected_blend": 0.9,
+    "unselected_alpha": 0.75,
+    "island_arc": 20.0,
+    "dark_icons": false,
+    "radius": 4.0,
+    "island_radius": 8.0,
+    "tab_height": 34.0,
+    "status_bar_height": 24.0
+  },
+  "palettes": {
+    "project_gradient": [
+      "#F7D7CB", "#F5E6B8", "#E2F2C9", "#CBE4F7", "#D4D2FC",
+      "#ECD3F5", "#E4D3F5", "#CEF0E9", "#CEEDD4"
+    ],
+    "project_badge": [
+      "#DB3D3C", "#F57236", "#2BC8BB", "#359AF2", "#8379FB",
+      "#7E54B5", "#D63CC8", "#954294", "#E75371"
+    ]
+  },
+  "syntax": {
+    "name": "Keel Light",
+    "appearance": "light",
+    "style": {
+      "editor.background": "#FFFFFF",
+      "editor.foreground": "#000000",
+      "editor.active_line.background": "#F5F8FE",
+      "editor.line_number": "#AEB3C2",
+      "editor.active_line_number": "#767A8A",
+      "editor.gutter.background": "#FFFFFF",
+      "syntax": {
+        "keyword": { "color": "#0033B3" },
+        "string": { "color": "#067D17" },
+        "string.escape": { "color": "#0037A6" },
+        "number": { "color": "#1750EB" },
+        "comment": { "color": "#8C8C8C", "font_style": "italic" },
+        "comment.doc": { "color": "#8C8C8C", "font_style": "italic" },
+        "constant": { "color": "#871094", "font_style": "italic" },
+        "function": { "color": "#00627A" },
+        "type": { "color": "#000000" },
+        "variable": { "color": "#000000" },
+        "property": { "color": "#871094" },
+        "attribute": { "color": "#9E880D" },
+        "operator": { "color": "#000000" },
+        "punctuation": { "color": "#000000" }
+      }
+    }
+  }
+}

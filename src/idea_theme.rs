@@ -81,10 +81,10 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         // 实际半径是一半（`RectanglePainter2D` / `DarculaButtonPainter`）。
         // 组件库的 `radius` 是半径，直接取 4 才能和 IDEA 的按钮、输入框、
         // 菜单选中块一致。
-        theme.radius = px(4.);
+        theme.radius = px(tokens.radius);
         // 弹层/对话框表面的圆角仍是 8（`PopupMenu.borderCornerRadius`），
         // 与控件内部高亮的 4 区分开。
-        theme.radius_lg = px(8.);
+        theme.radius_lg = px(tokens.island_radius);
 
         theme.background = color(tokens.canvas);
         theme.foreground = color(tokens.foreground);
@@ -97,7 +97,7 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
 
         theme.muted_foreground = color(tokens.muted);
         theme.primary = color(tokens.brand);
-        theme.primary_foreground = color(0xffffff);
+        theme.primary_foreground = color(tokens.on_brand);
         theme.primary_hover = color(tokens.brand_hover);
         theme.primary_active = color(tokens.brand_active);
         theme.accent = color(tokens.selection);
@@ -109,11 +109,11 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.button_primary = color(tokens.brand);
         theme.button_primary_hover = color(tokens.brand_hover);
         theme.button_primary_active = color(tokens.brand_active);
-        theme.button_primary_foreground = color(0xffffff);
+        theme.button_primary_foreground = color(tokens.on_brand);
         theme.tokens.button_primary = color(tokens.brand).into();
         theme.tokens.button_primary_hover = color(tokens.brand_hover).into();
         theme.tokens.button_primary_active = color(tokens.brand_active).into();
-        theme.tokens.button_primary_foreground = color(0xffffff).into();
+        theme.tokens.button_primary_foreground = color(tokens.on_brand).into();
         // 组件库的菜单项/列表项用 `tokens.accent` 画悬停与选中块
         // （`MenuItemElement` 读的是 `tokens.accent`，不是 `theme.accent`）。
         // 不覆盖时会落回组件库自带的灰色 accent，而不是 IDEA 的蓝色
@@ -121,7 +121,7 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.tokens.primary = color(tokens.brand).into();
         theme.tokens.primary_hover = color(tokens.brand_hover).into();
         theme.tokens.primary_active = color(tokens.brand_active).into();
-        theme.tokens.primary_foreground = color(0xffffff).into();
+        theme.tokens.primary_foreground = color(tokens.on_brand).into();
         theme.tokens.accent = color(tokens.selection).into();
         theme.tokens.accent_foreground = color(tokens.selection_fg).into();
         theme.tokens.selection = color(tokens.editor_selection).into();
@@ -152,29 +152,24 @@ fn ui_font_family() -> &'static str {
 
 /// IDEA 顶部工具栏的项目色渐变，来自 `RecentProject.ColorN.MainToolbarGradientStart`。
 pub fn project_gradient(kind: ThemeKind, seed: &str) -> Hsla {
-    const LIGHT: [u32; 9] = [
-        0xf7d7cb, 0xf5e6b8, 0xe2f2c9, 0xcbe4f7, 0xd4d2fc, 0xecd3f5, 0xe4d3f5, 0xcef0e9, 0xceedd4,
-    ];
-    const DARK: [u32; 9] = [
-        0x664832, 0x5e4724, 0x45522f, 0x335661, 0x394773, 0x613861, 0x503d70, 0x325959, 0x365439,
-    ];
-    let palette = if kind.is_dark() { &DARK } else { &LIGHT };
-    color(palette[project_color_index(seed)])
+    let palette = &kind.tokens().project_gradient;
+    color(
+        palette
+            .get(project_color_index(seed))
+            .copied()
+            .unwrap_or(kind.tokens().brand),
+    )
 }
 
-/// 项目徽标的底色。
-///
-/// 徽标用的是 `RecentProjectColorPalette` 里的高饱和色（主题文件只为渐变提供了
-/// 浅色覆盖，徽标仍取代码里的默认值）。
+/// 项目徽标的底色，来自 `RecentProjectColorPalette`。
 pub fn project_badge(kind: ThemeKind, seed: &str) -> Hsla {
-    const LIGHT: [u32; 9] = [
-        0xdb3d3c, 0xf57236, 0x2bc8bb, 0x359af2, 0x8379fb, 0x7e54b5, 0xd63cc8, 0x954294, 0xe75371,
-    ];
-    const DARK: [u32; 9] = [
-        0xce443c, 0xe27237, 0x2dbcad, 0x3895e1, 0x7b75e8, 0x7854ad, 0x8f4593, 0xc840b9, 0xd75370,
-    ];
-    let palette = if kind.is_dark() { &DARK } else { &LIGHT };
-    color(palette[project_color_index(seed)])
+    let palette = &kind.tokens().project_badge;
+    color(
+        palette
+            .get(project_color_index(seed))
+            .copied()
+            .unwrap_or(kind.tokens().brand),
+    )
 }
 
 /// 由项目路径算出的调色板下标，同一项目在工具栏渐变与徽标上保持一致。
@@ -185,77 +180,10 @@ fn project_color_index(seed: &str) -> usize {
         % 9
 }
 
-/// 编辑器配色，取自 IDEA 的 `expUI_lightScheme.xml`。
-const LIGHT_SYNTAX: &str = r##"
-{
-  "name": "Keel Light",
-  "appearance": "light",
-  "style": {
-    "editor.background": "#FFFFFF",
-    "editor.foreground": "#000000",
-    "editor.active_line.background": "#F5F8FE",
-    "editor.line_number": "#AEB3C2",
-    "editor.active_line_number": "#767A8A",
-    "editor.gutter.background": "#FFFFFF",
-    "syntax": {
-      "keyword": { "color": "#0033B3" },
-      "string": { "color": "#067D17" },
-      "string.escape": { "color": "#0037A6" },
-      "number": { "color": "#1750EB" },
-      "comment": { "color": "#8C8C8C", "font_style": "italic" },
-      "comment.doc": { "color": "#8C8C8C", "font_style": "italic" },
-      "constant": { "color": "#871094", "font_style": "italic" },
-      "function": { "color": "#00627A" },
-      "type": { "color": "#000000" },
-      "variable": { "color": "#000000" },
-      "property": { "color": "#871094" },
-      "attribute": { "color": "#9E880D" },
-      "operator": { "color": "#000000" },
-      "punctuation": { "color": "#000000" }
-    }
-  }
-}
-"##;
-
-/// 编辑器配色，取自 IDEA 的 `expUI_darkScheme.xml`。
-const DARK_SYNTAX: &str = r##"
-{
-  "name": "Keel Dark",
-  "appearance": "dark",
-  "style": {
-    "editor.background": "#191A1C",
-    "editor.foreground": "#BCBEC4",
-    "editor.active_line.background": "#1F2024",
-    "editor.line_number": "#4B5059",
-    "editor.active_line_number": "#A1A3AB",
-    "editor.gutter.background": "#191A1C",
-    "syntax": {
-      "keyword": { "color": "#CF8E6D" },
-      "string": { "color": "#6AAB73" },
-      "string.escape": { "color": "#2AACB8" },
-      "number": { "color": "#2AACB8" },
-      "comment": { "color": "#7A7E85", "font_style": "italic" },
-      "comment.doc": { "color": "#7A7E85", "font_style": "italic" },
-      "constant": { "color": "#C77DBB", "font_style": "italic" },
-      "function": { "color": "#56A8F5" },
-      "type": { "color": "#D1D3D9" },
-      "variable": { "color": "#D1D3D9" },
-      "property": { "color": "#C77DBB" },
-      "attribute": { "color": "#BABABA" },
-      "operator": { "color": "#D1D3D9" },
-      "punctuation": { "color": "#D1D3D9" }
-    }
-  }
-}
-"##;
-
+/// 编辑器配色来自 `themes/idea-*.json` 的 `syntax` 节点。
 fn highlight_theme(kind: ThemeKind) -> Arc<HighlightTheme> {
-    let json = if kind.is_dark() {
-        DARK_SYNTAX
-    } else {
-        LIGHT_SYNTAX
-    };
-    serde_json::from_str(json).unwrap_or_else(|_| {
+    let json = keel_theme::theme(kind).syntax_json();
+    serde_json::from_str(&json).unwrap_or_else(|_| {
         if kind.is_dark() {
             HighlightTheme::default_dark()
         } else {
@@ -267,7 +195,6 @@ fn highlight_theme(kind: ThemeKind) -> Arc<HighlightTheme> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keel_theme::{DARK, LIGHT};
 
     #[test]
     fn 十六进制颜色转换保持明度与饱和度() {
@@ -278,15 +205,15 @@ mod tests {
         let black = color(0x000000);
         assert!((black.color.lightness - 0.0).abs() < 0.001);
 
-        let panel = color(LIGHT.canvas);
+        let panel = color(ThemeKind::Light.tokens().canvas);
         assert!((panel.color.lightness - 0.92).abs() < 0.03);
         assert!(panel.color.saturation < 0.3);
     }
 
     #[test]
     fn 蓝色系颜色落在预期色相范围() {
-        for tokens in [&LIGHT, &DARK] {
-            let selection = color(tokens.selection);
+        for kind in [ThemeKind::Light, ThemeKind::Dark] {
+            let selection = color(kind.tokens().selection);
             let hue_degrees = selection.color.hue.into_degrees().rem_euclid(360.0);
             assert!(
                 hue_degrees > 190.0 && hue_degrees < 230.0,
@@ -297,7 +224,8 @@ mod tests {
 
     #[test]
     fn 深色主题背景比前景暗() {
-        for tokens in [&LIGHT, &DARK] {
+        for kind in [ThemeKind::Light, ThemeKind::Dark] {
+            let tokens = kind.tokens();
             let content = color(tokens.content).color.lightness;
             let foreground = color(tokens.foreground).color.lightness;
             assert!(
@@ -305,7 +233,8 @@ mod tests {
                 "content={content} foreground={foreground}"
             );
         }
-        assert!(color(DARK.content).color.lightness < 0.3);
-        assert!(color(DARK.foreground).color.lightness > 0.6);
+        let dark = ThemeKind::Dark.tokens();
+        assert!(color(dark.content).color.lightness < 0.3);
+        assert!(color(dark.foreground).color.lightness > 0.6);
     }
 }

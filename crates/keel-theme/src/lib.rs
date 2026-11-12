@@ -1,17 +1,23 @@
-//! Keel 的主题令牌：取 src/idea_theme.rs 里的 IDEA Islands 数值，抽成不依赖 UI 框架的 crate。
+//! Keel 的主题配置加载：IDEA Islands 的全部颜色与度量都在
+//! `themes/idea-light.json`、`themes/idea-dark.json`，Rust 里不再写死任何色值。
 //!
-//! - GPUI 版本：`src/idea_theme.rs` 把这里的 `u32` 颜色转成 `Hsla` 后写进组件库主题；
-//! - nsh 版本：`spike/keel-nsh-spike/theme.json` 是同一组令牌的 shadcn `cssVars` 表达。
+//! - GPUI 版本：`src/idea_theme.rs` 读取 `ThemeKind::tokens()`，把 `u32` 转成 `Hsla`；
+//! - nsh 版本：`nsh_theme_json()` 输出 shadcn `cssVars`，运行时交给 nsh 的
+//!   `set_tokens`。
 //!
-//! 这里只放数据，不放任何渲染或 UI 框架类型，两个 UI 才能共用。
+//! 两个 UI 共用同一份配置文件，但都不依赖对方。
+
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+const LIGHT_JSON: &str = include_str!("../../../themes/idea-light.json");
+const DARK_JSON: &str = include_str!("../../../themes/idea-dark.json");
 
 /// 支持的 IDEA 主题。
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum ThemeKind {
-    /// IntelliJ Light
     #[default]
     Light,
-    /// Darcula
     Dark,
 }
 
@@ -20,192 +26,331 @@ impl ThemeKind {
         self == ThemeKind::Dark
     }
 
+    /// 这套主题的令牌（来自配置文件）。
     pub fn tokens(self) -> &'static Tokens {
-        match self {
-            ThemeKind::Light => &LIGHT,
-            ThemeKind::Dark => &DARK,
-        }
+        theme(self).tokens()
     }
 }
 
-/// 一套主题的颜色令牌，取值全部来自 IDEA 2026 默认的 Islands 主题。
-pub struct Tokens {
-    /// `MainWindow.background`（岛屿之间的画布）
-    pub canvas: u32,
-    /// `editor-bg`（编辑器岛内部）
-    pub content: u32,
-    /// `text-default`
-    pub foreground: u32,
-    /// `editor-border` / `dialog-border`
-    pub border: u32,
-    /// 编辑器缩进参考线颜色（`INDENT_GUIDE`）。
-    pub indent_guide: u32,
-    /// `text-muted`：状态栏部件、树中的次要文字
-    pub muted: u32,
-    /// `text-secondary`：更次要的文字
-    pub secondary: u32,
-    /// `selection-bg-active`
-    pub selection: u32,
-    /// 选中态文字色
-    pub selection_fg: u32,
-    /// `selection-bg-hovered`：列表/树的悬停
-    pub hover: u32,
-    /// `toolbar-bg-hovered`：控件（按钮、侧边条、状态栏部件）的悬停
-    pub control_hover: u32,
-    /// `ToolWindow.background`
-    pub tool_window_header: u32,
-    /// `tab-selected-border-active`
-    pub tab_underline: u32,
-    /// 工具窗口标签选中下划线（`ToolWindow.HeaderTab.underlineColor`，默认 `DefaultTabs.underlineColor`）
-    pub tool_window_tab_underline: u32,
-    /// `EditorTabs.background`
-    pub tab_background: u32,
-    /// `tab-selected-bg-active`
-    pub tab_selected_background: u32,
-    /// `StatusBar.background`
-    pub status_bar: u32,
-    /// `accent-brand-bg`
-    pub brand: u32,
-    /// 品牌色的悬停/按下态（blue-70 / blue-60）
-    pub brand_hover: u32,
-    pub brand_active: u32,
-    /// `CARET_COLOR`：编辑器光标
-    pub caret: u32,
-    /// 编辑器文本选中色（配色方案里的 `SELECTION_BACKGROUND`，比列表选中更饱和）
-    pub editor_selection: u32,
-    /// `popup-bg`：弹层背景
-    pub popover: u32,
-    /// `Popup.borderColor`：弹层的 1px 描边（Windows 用 `popup-border-windows`）
-    pub popup_border: u32,
-    /// `toolbar-border`：侧边条分组、工具栏分隔线
-    pub separator: u32,
-    /// `Separator.separatorColor`：菜单/设置页里的单线分隔条。
-    pub separator_line: u32,
-    /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
-    pub feedback: u32,
-    /// `Notification.borderColor` → `feedback-border`（浅色 layer-0-border，深色与底色相同）
-    pub feedback_border: u32,
-    /// `ScrollBar.thumbColor`：半透明滚动条滑块，轨道透明
-    pub scrollbar_thumb: u32,
-    pub scrollbar_thumb_hover: u32,
-    /// `EditorTabs.unselectedBlend`：未选中标签的文字混入背景的比例。
-    pub unselected_blend: f32,
-    /// `EditorTabs.unselectedAlpha`：未选中标签图标的透明度。
-    pub unselected_alpha: f32,
-    /// `Island.arc`
-    pub island_arc: f32,
-    /// 图标资源是否使用 `_dark` 变体。
-    pub dark_icons: bool,
+/// 一套解析后的主题。
+pub struct Theme {
+    name: String,
+    dark: bool,
+    tokens: Tokens,
+    /// 配置里的原始颜色字符串（`#RRGGBB` / `#RRGGBBAA`），供 nsh 的 cssVars 输出。
+    raw: HashMap<String, String>,
+    /// 编辑器语法配色的原始对象（gpui-component 的 HighlightTheme 格式）。
+    syntax: serde_json::Value,
 }
 
-/// Islands Light 主题令牌。
-///
-/// 取值来自 intellij-community 源码：
-/// `platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`
-/// 及其 gray-*/blue-* 调色板。
-pub const LIGHT: Tokens = Tokens {
-    canvas: 0xe9eaee,       // gray-150 / main-window-bg
-    content: 0xffffff,      // layer-2-bg / editor-bg
-    foreground: 0x000000,   // text-default
-    border: 0xe9eaee,       // layer-2-border / editor-border
-    indent_guide: 0xebecf0, // INDENT_GUIDE
-    muted: 0x5f6269,        // gray-70 / text-muted
-    secondary: 0x73767c,    // gray-80 / text-secondary
-    selection: 0xd0dffe,    // blue-140 / selection-bg-active
-    selection_fg: 0x000000,
-    hover: 0x00000008,                   // transparent-black-10（8/255 透明度）
-    control_hover: 0x00000012,           // transparent-black-20
-    tool_window_header: 0xffffff,        // tool-window-bg
-    tab_underline: 0xa7c5ff,             // blue-120 / tab-selected-border-active
-    tool_window_tab_underline: 0x4083c9, // DefaultTabs.underlineColor（浅色）
-    tab_background: 0xffffff,            // editor-bg
-    tab_selected_background: 0xe3ebfe,   // blue-150
-    status_bar: 0xe9eaee,                // main-window-bg
-    brand: 0x3871e1,                     // blue-80
-    brand_hover: 0x2f5eb9,               // blue-70
-    brand_active: 0x2e4d89,              // blue-60
-    caret: 0x000000,                     // CARET_COLOR（浅色方案未覆盖，取默认黑）
-    editor_selection: 0xa6d2ff,          // expUI_lightScheme.xml / SELECTION_BACKGROUND
-    popover: 0xffffff,                   // popup-bg = layer-2-bg
-    popup_border: 0xd1d3d9,              // popup-border-windows = gray-130
-    separator: 0x00000020,               // toolbar-border = transparent-black-30
-    separator_line: 0xcdcdcd,            // Separator.separatorColor 未覆盖时回退 Gray.xCD
-    feedback: 0xffffff,                  // feedback-bg = layer-2-bg
-    feedback_border: 0xd1d3d9,           // feedback-border = layer-0-border(gray-130)
-    scrollbar_thumb: 0x73737333,         // ScrollBar.Transparent.thumbColor
-    scrollbar_thumb_hover: 0x73737347,   // ScrollBar.Transparent.hoverThumbColor
-    unselected_blend: 0.9,               // EditorTabs.unselectedBlend（浅色）
-    unselected_alpha: 0.75,              // EditorTabs.unselectedAlpha
-    island_arc: 20.,                     // Island.arc（默认密度）
-    dark_icons: false,
-};
+impl Theme {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 
-/// Islands Dark 主题令牌。
+    pub fn is_dark(&self) -> bool {
+        self.dark
+    }
+
+    pub fn tokens(&self) -> &Tokens {
+        &self.tokens
+    }
+
+    /// 令牌 `key` 的 CSS 颜色（大写、带 `#`）。
+    pub fn css(&self, key: &str) -> String {
+        css(self.raw.get(key).map(String::as_str).unwrap_or("#000000"))
+    }
+
+    /// 编辑器语法配色（gpui-component `HighlightTheme` 的 JSON）。
+    pub fn syntax_json(&self) -> String {
+        serde_json::to_string(&self.syntax).unwrap_or_else(|_| "{}".to_owned())
+    }
+}
+
+/// 主题的数值令牌。
 ///
-/// 取值来自 `ManyIslandsDark.theme.json`。
-pub const DARK: Tokens = Tokens {
-    canvas: 0x26282c,       // gray-30 / main-window-bg(layer-1)
-    content: 0x191a1c,      // gray-10 / editor-bg(layer-0)
-    foreground: 0xd1d3d9,   // gray-130 / text-default
-    border: 0x26282c,       // gray-30 / editor-border
-    indent_guide: 0x323438, // IslandSchemeDark.xml / INDENT_GUIDE
-    muted: 0x9fa2a8,        // gray-100 / text-muted
-    secondary: 0x73767c,    // gray-80 / text-secondary
-    selection: 0x2a4371,    // blue-50 / selection-bg-active
-    selection_fg: 0xd1d3d9,
-    hover: 0xffffff10,                   // transparent-white-10
-    control_hover: 0xffffff17,           // transparent-white-20
-    tool_window_header: 0x191a1c,        // tool-window-bg(layer-0)
-    tab_underline: 0x2e4d89,             // blue-60 / tab-selected-border-active
-    tool_window_tab_underline: 0x4a88c7, // DefaultTabs.underlineColor（深色）
-    tab_background: 0x191a1c,            // editor-bg
-    tab_selected_background: 0x233558,   // blue-40
-    status_bar: 0x26282c,                // main-window-bg(layer-1)
-    brand: 0x3871e1,                     // blue-80
-    brand_hover: 0x2f5eb9,               // blue-70
-    brand_active: 0x2e4d89,              // blue-60
-    caret: 0xced0d6,                     // CARET_COLOR（expUI_darkScheme.xml）
-    editor_selection: 0x214283,          // Darcula 配色方案的 SELECTION_BACKGROUND
-    popover: 0x26282c,                   // popup-bg = layer-1-bg
-    popup_border: 0x33353b,              // popup-border = layer-1-border(gray-40)
-    separator: 0xffffff21,               // toolbar-border = transparent-white-30
-    separator_line: 0x33353b,            // Separator.separatorColor = popup-border（gray-40）
-    feedback: 0x33353b,                  // feedback-bg = layer-2-bg(gray-40)
-    feedback_border: 0x33353b,           // feedback-border = layer-2-bg，与底色相同
-    scrollbar_thumb: 0xa6a6a647,         // ScrollBar.Transparent.thumbColor
-    scrollbar_thumb_hover: 0xa6a6a659,   // ScrollBar.Transparent.hoverThumbColor
-    unselected_blend: 0.7,               // EditorTabs.unselectedBlend（深色）
-    unselected_alpha: 0.75,              // EditorTabs.unselectedAlpha
-    island_arc: 20.,                     // Island.arc（默认密度）
-    dark_icons: true,
-};
+/// 6 位颜色保持 `0xRRGGBB`，带透明度的 8 位颜色是 `0xRRGGBBAA`，
+/// 与 GPUI 的 `color` / `color_rgba` 约定一致；nsh 侧直接使用配置里的原始字符串。
+pub struct Tokens {
+    pub canvas: u32,
+    pub content: u32,
+    pub foreground: u32,
+    pub border: u32,
+    pub indent_guide: u32,
+    pub muted: u32,
+    pub secondary: u32,
+    pub selection: u32,
+    pub selection_fg: u32,
+    pub hover: u32,
+    pub control_hover: u32,
+    pub tool_window_header: u32,
+    pub tab_underline: u32,
+    pub tool_window_tab_underline: u32,
+    pub tab_background: u32,
+    pub tab_selected_background: u32,
+    pub status_bar: u32,
+    pub brand: u32,
+    pub brand_hover: u32,
+    pub brand_active: u32,
+    /// 品牌色上的文字 / 图标。
+    pub on_brand: u32,
+    pub caret: u32,
+    pub editor_selection: u32,
+    pub popover: u32,
+    pub popup_border: u32,
+    pub separator: u32,
+    pub separator_line: u32,
+    pub feedback: u32,
+    pub feedback_border: u32,
+    pub scrollbar_thumb: u32,
+    pub scrollbar_thumb_hover: u32,
+    pub destructive: u32,
+    pub active_line: u32,
+    pub line_number: u32,
+    pub active_line_number: u32,
+    pub unselected_blend: f32,
+    pub unselected_alpha: f32,
+    pub island_arc: f32,
+    /// 控件圆角（按钮、输入框）。
+    pub radius: f32,
+    /// 岛屿 / 弹层圆角。
+    pub island_radius: f32,
+    pub tab_height: f32,
+    pub status_bar_height: f32,
+    pub dark_icons: bool,
+    /// 最近项目工具栏渐变与徽标的备选色。
+    pub project_gradient: Vec<u32>,
+    pub project_badge: Vec<u32>,
+}
+
+static LIGHT: OnceLock<Theme> = OnceLock::new();
+static DARK: OnceLock<Theme> = OnceLock::new();
+
+/// 读取一套主题文件（编译期内嵌；文件缺失或格式错误会直接 panic，由测试兜住）。
+pub fn theme(kind: ThemeKind) -> &'static Theme {
+    match kind {
+        ThemeKind::Light => LIGHT.get_or_init(|| parse(LIGHT_JSON)),
+        ThemeKind::Dark => DARK.get_or_init(|| parse(DARK_JSON)),
+    }
+}
+
+fn parse(json: &str) -> Theme {
+    let value: serde_json::Value =
+        serde_json::from_str(json).expect("themes/idea-*.json 不是合法 JSON");
+    let name = value["name"].as_str().unwrap_or("Keel").to_owned();
+    let dark = value["dark"].as_bool().unwrap_or(false);
+    let colors = &value["colors"];
+    let metrics = &value["metrics"];
+    let mut raw = HashMap::new();
+    if let Some(entries) = colors.as_object() {
+        for (key, value) in entries {
+            if let Some(text) = value.as_str() {
+                raw.insert(key.clone(), text.to_owned());
+            }
+        }
+    }
+
+    let color = |key: &str| parse_color(raw.get(key).map(String::as_str).unwrap_or("#000000"));
+    let number = |key: &str| metrics[key].as_f64().unwrap_or(0.0) as f32;
+    let flag = |key: &str| metrics[key].as_bool().unwrap_or(false);
+    let palette = |key: &str| {
+        value["palettes"][key]
+            .as_array()
+            .map(|colors| {
+                colors
+                    .iter()
+                    .filter_map(|color| color.as_str())
+                    .map(parse_color)
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
+    let tokens = Tokens {
+        canvas: color("canvas"),
+        content: color("content"),
+        foreground: color("foreground"),
+        border: color("border"),
+        indent_guide: color("indent_guide"),
+        muted: color("muted"),
+        secondary: color("secondary"),
+        selection: color("selection"),
+        selection_fg: color("selection_fg"),
+        hover: color("hover"),
+        control_hover: color("control_hover"),
+        tool_window_header: color("tool_window_header"),
+        tab_underline: color("tab_underline"),
+        tool_window_tab_underline: color("tool_window_tab_underline"),
+        tab_background: color("tab_background"),
+        tab_selected_background: color("tab_selected_background"),
+        status_bar: color("status_bar"),
+        brand: color("brand"),
+        brand_hover: color("brand_hover"),
+        brand_active: color("brand_active"),
+        on_brand: color("on_brand"),
+        caret: color("caret"),
+        editor_selection: color("editor_selection"),
+        popover: color("popover"),
+        popup_border: color("popup_border"),
+        separator: color("separator"),
+        separator_line: color("separator_line"),
+        feedback: color("feedback"),
+        feedback_border: color("feedback_border"),
+        scrollbar_thumb: color("scrollbar_thumb"),
+        scrollbar_thumb_hover: color("scrollbar_thumb_hover"),
+        destructive: color("destructive"),
+        active_line: color("active_line"),
+        line_number: color("line_number"),
+        active_line_number: color("active_line_number"),
+        unselected_blend: number("unselected_blend"),
+        unselected_alpha: number("unselected_alpha"),
+        island_arc: number("island_arc"),
+        radius: number("radius"),
+        island_radius: number("island_radius"),
+        tab_height: number("tab_height"),
+        status_bar_height: number("status_bar_height"),
+        dark_icons: flag("dark_icons"),
+        project_gradient: palette("project_gradient"),
+        project_badge: palette("project_badge"),
+    };
+
+    Theme {
+        name,
+        dark,
+        raw,
+        syntax: value["syntax"].clone(),
+        tokens,
+    }
+}
+
+/// `#RRGGBB` → `0xRRGGBB`，`#RRGGBBAA` → `0xRRGGBBAA`。
+fn parse_color(value: &str) -> u32 {
+    let hex = value.trim().trim_start_matches('#');
+    u32::from_str_radix(hex, 16).unwrap_or(0)
+}
+
+fn css(value: &str) -> String {
+    format!(
+        "#{}",
+        value.trim().trim_start_matches('#').to_ascii_uppercase()
+    )
+}
+
+/// 把两套 IDEA 配置转换成 nsh 的 shadcn `cssVars` 主题。
+pub fn nsh_theme_json() -> String {
+    let light = theme(ThemeKind::Light);
+    let dark = theme(ThemeKind::Dark);
+    let metrics = light.tokens();
+    format!(
+        r#"{{"cssVars":{{"theme":{{"radius":"{}px","font-sans":"Inter, Segoe UI, sans-serif","font-mono":"JetBrains Mono, Consolas, monospace","island-radius":"{}px","tab-height":"{}px","status-bar-height":"{}px"}},"light":{{{}}},"dark":{{{}}}}}}}"#,
+        metrics.radius,
+        metrics.island_radius,
+        metrics.tab_height,
+        metrics.status_bar_height,
+        nsh_vars(light),
+        nsh_vars(dark)
+    )
+}
+
+fn nsh_vars(t: &Theme) -> String {
+    format!(
+        concat!(
+            r##""background":"{background}","foreground":"{foreground}","##,
+            r##""card":"{content}","card-foreground":"{foreground}","##,
+            r##""popover":"{popover}","popover-foreground":"{foreground}","##,
+            r##""primary":"{brand}","primary-foreground":"{on_brand}","##,
+            r##""secondary":"{canvas}","secondary-foreground":"{foreground}","##,
+            r##""muted":"{feedback}","muted-foreground":"{muted}","##,
+            r##""accent":"{selection}","accent-foreground":"{selection_fg}","##,
+            r##""destructive":"{destructive}","border":"{separator}","input":"{popup_border}","ring":"{brand}","##,
+            r##""sidebar":"{tool_window_header}","sidebar-foreground":"{foreground}","##,
+            r##""sidebar-primary":"{brand}","sidebar-primary-foreground":"{on_brand}","##,
+            r##""sidebar-accent":"{selection}","sidebar-accent-foreground":"{selection_fg}","##,
+            r##""sidebar-border":"{border}","sidebar-ring":"{brand}","##,
+            r##""selection":"{editor_selection}","##,
+            r##""canvas":"{canvas}","island-bg":"{tool_window_header}","##,
+            r##""editor-bg":"{content}","editor-fg":"{foreground}","header-bg":"{tool_window_header}","##,
+            r##""tab-bg":"{tab_background}","tab-selected-bg":"{tab_selected_background}","##,
+            r##""tab-underline":"{tab_underline}","status-bar":"{status_bar}","##,
+            r##""muted-fg":"{muted}","secondary-fg":"{secondary}","##,
+            r##""hover-overlay":"{hover}","control-hover":"{control_hover}","##,
+            r##""popup-border":"{popup_border}","separator-line":"{separator_line}","##,
+            r##""feedback":"{feedback}","scrollbar-thumb":"{scrollbar_thumb}","##,
+            r##""active-line":"{active_line}","line-number":"{line_number}","##,
+            r##""active-line-number":"{active_line_number}","indent-guide":"{indent_guide}","##,
+            r##""brand":"{brand}","brand-hover":"{brand_hover}""##
+        ),
+        background = t.css("canvas"),
+        foreground = t.css("foreground"),
+        content = t.css("content"),
+        popover = t.css("popover"),
+        brand = t.css("brand"),
+        on_brand = t.css("on_brand"),
+        canvas = t.css("canvas"),
+        feedback = t.css("feedback"),
+        muted = t.css("muted"),
+        selection = t.css("selection"),
+        selection_fg = t.css("selection_fg"),
+        destructive = t.css("destructive"),
+        separator = t.css("separator"),
+        popup_border = t.css("popup_border"),
+        tool_window_header = t.css("tool_window_header"),
+        border = t.css("border"),
+        editor_selection = t.css("editor_selection"),
+        tab_background = t.css("tab_background"),
+        tab_selected_background = t.css("tab_selected_background"),
+        tab_underline = t.css("tab_underline"),
+        status_bar = t.css("status_bar"),
+        secondary = t.css("secondary"),
+        hover = t.css("hover"),
+        control_hover = t.css("control_hover"),
+        separator_line = t.css("separator_line"),
+        scrollbar_thumb = t.css("scrollbar_thumb"),
+        active_line = t.css("active_line"),
+        line_number = t.css("line_number"),
+        active_line_number = t.css("active_line_number"),
+        indent_guide = t.css("indent_guide"),
+        brand_hover = t.css("brand_hover"),
+    )
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn light_and_dark_differ_on_surfaces() {
-        assert_ne!(LIGHT.canvas, DARK.canvas);
-        assert_ne!(LIGHT.content, DARK.content);
-        assert!(LIGHT.canvas > DARK.canvas);
-        assert!(LIGHT.content > DARK.content);
+    fn loads_both_theme_files() {
+        let light = theme(ThemeKind::Light);
+        let dark = theme(ThemeKind::Dark);
+        assert!(!light.is_dark());
+        assert!(dark.is_dark());
+        assert_ne!(light.tokens().canvas, dark.tokens().canvas);
+        assert_eq!(light.tokens().canvas, 0xE9EAEE);
+        assert_eq!(dark.tokens().canvas, 0x26282C);
+        assert_eq!(light.tokens().brand, 0x3871E1);
+        assert!(dark.tokens().dark_icons);
+        assert_eq!(light.tokens().project_gradient.len(), 9);
+        assert_eq!(dark.tokens().project_badge.len(), 9);
+        assert!(light.syntax_json().contains("keyword"));
     }
 
     #[test]
-    fn selection_colors_stay_blue() {
-        for tokens in [&LIGHT, &DARK] {
-            let r = (tokens.selection >> 16) & 0xff;
-            let b = tokens.selection & 0xff;
-            assert!(b > r, "selection should be blue-ish");
-        }
+    fn parses_colors_with_alpha() {
+        assert_eq!(parse_color("#00000008"), 0x0000_0008);
+        assert_eq!(parse_color("#FFFFFF10"), 0xFFFF_FF10);
+        assert_eq!(parse_color("#F5F8FE"), 0xF5F8FE);
+        assert_eq!(css("#f5f8fe"), "#F5F8FE");
+        assert_eq!(css("#00000008"), "#00000008");
+        assert_eq!(theme(ThemeKind::Light).css("canvas"), "#E9EAEE");
     }
 
     #[test]
-    fn theme_kind_selects_tokens() {
-        assert_eq!(ThemeKind::Light.tokens().canvas, LIGHT.canvas);
-        assert_eq!(ThemeKind::Dark.tokens().canvas, DARK.canvas);
-        assert!(!ThemeKind::Light.is_dark());
-        assert!(ThemeKind::Dark.is_dark());
+    fn nsh_theme_has_both_schemes_and_custom_tokens() {
+        let json = nsh_theme_json();
+        assert!(json.contains("\"light\""));
+        assert!(json.contains("\"dark\""));
+        assert!(json.contains("\"editor-bg\""));
+        assert!(json.contains("\"active-line\""));
+        assert!(json.contains("#3871E1"));
     }
 }

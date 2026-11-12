@@ -1,0 +1,89 @@
+{
+  "name": "Darcula (Keel)",
+  "dark": true,
+  "colors": {
+    "canvas": "#26282C",
+    "content": "#191A1C",
+    "foreground": "#D1D3D9",
+    "border": "#26282C",
+    "indent_guide": "#323438",
+    "muted": "#9FA2A8",
+    "secondary": "#73767C",
+    "selection": "#2A4371",
+    "selection_fg": "#D1D3D9",
+    "hover": "#FFFFFF10",
+    "control_hover": "#FFFFFF17",
+    "tool_window_header": "#191A1C",
+    "tab_underline": "#2E4D89",
+    "tool_window_tab_underline": "#4A88C7",
+    "tab_background": "#191A1C",
+    "tab_selected_background": "#233558",
+    "status_bar": "#26282C",
+    "brand": "#3871E1",
+    "brand_hover": "#2F5EB9",
+    "brand_active": "#2E4D89",
+    "on_brand": "#FFFFFF",
+    "caret": "#CED0D6",
+    "editor_selection": "#214283",
+    "popover": "#26282C",
+    "popup_border": "#33353B",
+    "separator": "#FFFFFF21",
+    "separator_line": "#33353B",
+    "feedback": "#33353B",
+    "feedback_border": "#33353B",
+    "scrollbar_thumb": "#A6A6A647",
+    "scrollbar_thumb_hover": "#A6A6A659",
+    "destructive": "#DB5C5C",
+    "active_line": "#1F2024",
+    "line_number": "#4B5059",
+    "active_line_number": "#A1A3AB"
+  },
+  "metrics": {
+    "unselected_blend": 0.7,
+    "unselected_alpha": 0.75,
+    "island_arc": 20.0,
+    "dark_icons": true,
+    "radius": 4.0,
+    "island_radius": 8.0,
+    "tab_height": 34.0,
+    "status_bar_height": 24.0
+  },
+  "palettes": {
+    "project_gradient": [
+      "#664832", "#5E4724", "#45522F", "#335661", "#394773",
+      "#613861", "#503D70", "#325959", "#365439"
+    ],
+    "project_badge": [
+      "#CE443C", "#E27237", "#2DBCAD", "#3895E1", "#7B75E8",
+      "#7854AD", "#8F4593", "#C840B9", "#D75370"
+    ]
+  },
+  "syntax": {
+    "name": "Keel Dark",
+    "appearance": "dark",
+    "style": {
+      "editor.background": "#191A1C",
+      "editor.foreground": "#BCBEC4",
+      "editor.active_line.background": "#1F2024",
+      "editor.line_number": "#4B5059",
+      "editor.active_line_number": "#A1A3AB",
+      "editor.gutter.background": "#191A1C",
+      "syntax": {
+        "keyword": { "color": "#CF8E6D" },
+        "string": { "color": "#6AAB73" },
+        "string.escape": { "color": "#2AACB8" },
+        "number": { "color": "#2AACB8" },
+        "comment": { "color": "#7A7E85", "font_style": "italic" },
+        "comment.doc": { "color": "#7A7E85", "font_style": "italic" },
+        "constant": { "color": "#C77DBB", "font_style": "italic" },
+        "function": { "color": "#56A8F5" },
+        "type": { "color": "#D1D3D9" },
+        "variable": { "color": "#D1D3D9" },
+        "property": { "color": "#C77DBB" },
+        "attribute": { "color": "#BABABA" },
+        "operator": { "color": "#D1D3D9" },
+        "punctuation": { "color": "#D1D3D9" }
+      }
+    }
+  }
+}
