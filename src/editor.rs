@@ -374,8 +374,17 @@ impl KeelApp {
                         .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
-                // 标签上的文件类型图标保留 expUI 的多色配色。
-                .child(img(icon_path).size(px(16.)))
+                // 标签上的文件类型图标保留 expUI 的多色配色；未选中且未悬停时
+                // 按 `getIconAlpha()` 的 `EditorTabs.unselectedAlpha`(0.75) 变淡。
+                .child(
+                    img(icon_path)
+                        .size(px(16.))
+                        .opacity(if is_active || is_hovered {
+                            1.0
+                        } else {
+                            chrome.tab_icon_alpha
+                        }),
+                )
                 .child(div().whitespace_nowrap().child(title))
                 .on_mouse_down(
                     MouseButton::Left,

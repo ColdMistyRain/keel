@@ -63,8 +63,11 @@ pub struct Chrome {
     pub tab_bg: Hsla,
     /// 选中标签的浅蓝底色。
     pub tab_selected_bg: Hsla,
-    /// 未选中标签的文字色（前景色 75% 透明，`EditorTabs.unselectedAlpha`）。
+    /// 未选中标签的文字色（`EditorTabs.unselectedBlend`：浅色向背景混入 10%，
+    /// 深色混入 30%）。
     pub tab_fg_unselected: Hsla,
+    /// 未选中标签的图标透明度（`EditorTabs.unselectedAlpha`）。
+    pub tab_icon_alpha: f32,
     pub status_bg: Hsla,
     /// 岛屿卡片的圆角半径（`Island.arc`）。
     pub island_arc: Pixels,
@@ -103,12 +106,15 @@ impl Chrome {
             tab_bg: crate::idea_theme::color(tokens.tab_background),
             tab_selected_bg: crate::idea_theme::color(tokens.tab_selected_background),
             tab_fg_unselected: {
-                // `EditorTabs.unselectedBlend = 0.9`：未选中的标签文字只是向背景
-                // 混入 10%，等价于 90% 不透明的前景色。
+                // `EditorTabbedContainer.editLabelForeground()` 用
+                // `ColorUtil.blendColorsInRgb(effectiveBackground, baseForeground, blend)`
+                // 把前景色按 `unselectedBlend` 混入标签栏底色；标签栏底色就是
+                // 编辑器底色，等价的写法是按同一比例给前景色加透明度。
                 let mut color = theme.foreground;
-                color.alpha = 0.9;
+                color.alpha = tokens.unselected_blend;
                 color
             },
+            tab_icon_alpha: tokens.unselected_alpha,
             status_bg: crate::idea_theme::color(tokens.status_bar),
             island_arc: px(tokens.island_arc),
             icon_suffix: if tokens.dark_icons { "_dark" } else { "" },

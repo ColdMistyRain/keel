@@ -85,6 +85,10 @@ pub struct Tokens {
     /// `ScrollBar.thumbColor`：半透明滚动条滑块，轨道透明
     pub scrollbar_thumb: u32,
     pub scrollbar_thumb_hover: u32,
+    /// `EditorTabs.unselectedBlend`：未选中标签的文字混入背景的比例。
+    pub unselected_blend: f32,
+    /// `EditorTabs.unselectedAlpha`：未选中标签图标的透明度。
+    pub unselected_alpha: f32,
     /// `Island.arc`
     pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
@@ -126,6 +130,8 @@ pub const LIGHT: Tokens = Tokens {
     feedback_border: 0xd1d3d9,           // feedback-border = layer-0-border(gray-130)
     scrollbar_thumb: 0x73737333,         // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0x73737347,   // ScrollBar.Transparent.hoverThumbColor
+    unselected_blend: 0.9,               // EditorTabs.unselectedBlend（浅色）
+    unselected_alpha: 0.75,              // EditorTabs.unselectedAlpha
     island_arc: 20.,                     // Island.arc（默认密度）
     dark_icons: false,
 };
@@ -163,6 +169,8 @@ pub const DARK: Tokens = Tokens {
     feedback_border: 0x33353b,           // feedback-border = layer-2-bg，与底色相同
     scrollbar_thumb: 0xa6a6a647,         // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0xa6a6a659,   // ScrollBar.Transparent.hoverThumbColor
+    unselected_blend: 0.7,               // EditorTabs.unselectedBlend（深色）
+    unselected_alpha: 0.75,              // EditorTabs.unselectedAlpha
     island_arc: 20.,                     // Island.arc（默认密度）
     dark_icons: true,
 };
