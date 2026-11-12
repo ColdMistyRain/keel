@@ -5,7 +5,7 @@
 
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use keel_workspace::{FlatRow, ProjectSnapshot, flatten, scan_snapshot};
@@ -97,7 +97,8 @@ impl Workspace {
             .join("demo")
             .join("Main.java");
         if main.is_file() {
-            self.open_files(vec![main]);
+            self.open_files(vec![main.clone()]);
+            self.reveal(&main);
         }
     }
 
@@ -211,11 +212,115 @@ impl Workspace {
         }
     }
 
+    /// 关闭除 `index` 外的所有标签页（标签页右键菜单）。
+    pub fn close_others(&self, index: usize) {
+        let len = self.docs.with(|docs| docs.len());
+        if index >= len {
+            return;
+        }
+        let kept = self.docs.with(|docs| docs[index].clone());
+        self.docs.update(|docs| {
+            docs.clear();
+            docs.push(kept);
+        });
+        self.active.set(Some(0));
+        self.say("已关闭其他标签页");
+    }
+
+    /// 关闭全部标签页（标签页右键菜单）。
+    pub fn close_all(&self) {
+        let count = self.docs.with(|docs| docs.len());
+        if count == 0 {
+            return;
+        }
+        self.docs.update(|docs| docs.clear());
+        self.active.set(None);
+        self.say(format!("已关闭 {count} 个标签页"));
+    }
+
+    /// 激活 `path` 对应的标签页；没有打开时返回 `false`。
+    pub fn activate_path(&self, path: &Path) -> bool {
+        if let Some(index) = self
+            .docs
+            .with(|docs| docs.iter().position(|doc| doc.path == path))
+        {
+            self.active.set(Some(index));
+            true
+        } else {
+            false
+        }
+    }
+
+    /// 关闭 `path` 对应的标签页。
+    pub fn close_path(&self, path: &Path) {
+        if let Some(index) = self
+            .docs
+            .with(|docs| docs.iter().position(|doc| doc.path == path))
+        {
+            self.close_doc(index);
+        }
+    }
+
+    /// 重新扫描当前项目，保留展开状态（工具窗口标题栏的刷新按钮）。
+    pub fn refresh_project(&self) {
+        let Some(root) = self.root.get_untracked() else {
+            self.say("未打开项目");
+            return;
+        };
+        let snapshot = scan_snapshot(&root);
+        self.tree.set(Arc::new(snapshot));
+        self.say("已刷新项目");
+    }
+
+    /// 在项目树里展开并选中 `path`（Navigate → 在项目中定位）。
+    pub fn reveal(&self, path: &Path) -> bool {
+        let Some(root) = self.root.get_untracked() else {
+            self.say("未打开项目");
+            return false;
+        };
+        if !path.starts_with(&root) {
+            self.say("文件不在当前项目中");
+            return false;
+        }
+        let mut ancestors = Vec::new();
+        let mut current = path.parent();
+        while let Some(dir) = current {
+            if dir == root {
+                break;
+            }
+            if !dir.starts_with(&root) {
+                break;
+            }
+            ancestors.push(dir.display().to_string());
+            current = dir.parent();
+        }
+        ancestors.reverse();
+        self.expanded.update(|ids| {
+            for id in ancestors {
+                if !ids.iter().any(|item| item.as_ref() == id) {
+                    ids.push(id.into());
+                }
+            }
+        });
+        self.selected.set(Some(path.display().to_string().into()));
+        true
+    }
+
     /// 当前激活的文档（克隆一份文本，供编辑器绑定）。
     pub fn active_doc(&self) -> Option<Doc> {
         let index = self.active.get_untracked();
         self.docs
             .with(|docs| index.and_then(|index| docs.get(index).cloned()))
+    }
+
+    /// 当前激活文档的路径。
+    pub fn active_path(&self) -> Option<PathBuf> {
+        self.active_doc().map(|doc| doc.path)
+    }
+
+    /// 打开的文档数。
+    pub fn open_docs(&self) -> usize {
+        self.docs.with(|docs| docs.len())
     }
 
     /// 把编辑器的新文本写回当前文档。

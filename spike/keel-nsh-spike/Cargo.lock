@@ -1959,6 +1959,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "keel-commands"
+version = "0.1.0"
+
+[[package]]
 name = "keel-core"
 version = "0.1.0"
 
@@ -2266,6 +2270,7 @@ name = "nsh-app-keel"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "keel-commands",
  "keel-theme",
  "keel-workspace",
  "nsh-base",

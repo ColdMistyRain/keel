@@ -218,8 +218,11 @@ macOS/Linux 放到后续阶段。
    与 `theme().color("editor-bg")` 等价，深色值由 `dark` 节点提供。
 6. Windows 上窗口尺寸默认值要小于屏幕可用高度（本机 1280×720），否则窗口按钮
    会被挤出屏幕。
+7. **`resizable_panel_group` 要放在有确定高度的容器里**：组自身 `size_full`，
+   外面再包一层 `view().flex_1().h_full()`；否则 100% 高度按内容塌缩，
+   底部面板和状态栏会被挤出窗口（P2 实测，见 §4.3）。
 
-下一步（P1）已开始，见 §4.2。
+下一步（P1）见 §4.2；P2 外壳进展见 §4.3。
 
 ### 4.2 P1 进展：按 IDEA 架构分层（2026-11-12）
 
@@ -234,12 +237,12 @@ P1 的目标不是“抽几个工具 crate”，而是照
 | MessageBus / Topic | `keel-core::MessageBus` + 类型化 `Topic`，订阅句柄自动退订 | 已落地 |
 | Workspace Model（不可变快照 + 变更广播） | `keel-workspace`：`ProjectModel` / `ProjectSnapshot` / `PROJECT_MODEL_CHANGED` | 已落地 |
 | Theme JSON + 编辑器 scheme | `themes/idea-*.json` + `keel-theme` | 已落地 |
-| Action / Command + DataContext | `keel-commands`：菜单、工具栏、快捷键、命令面板共用一份动作定义 | 下一步 |
+| Action / Command + DataContext | `keel-commands`：菜单、工具栏、快捷键、命令面板共用一份动作定义 | 已落地基础，命令面板待做 |
 | VFS（`VirtualFile`） | `keel-vfs`：本地/远程/归档统一抽象，UI 不再直接 `std::fs` | 下一步 |
 | Document / PSI / Index | `keel-document` → `keel-syntax` → `keel-index` | P3 |
-| ToolWindowManager / ToolWindowPane | nsh `dock_area` 的工具窗口 + 条纹 | P2 |
-| FileEditorManager / EditorsSplitters | nsh 编辑器标签组 + 分栏 | P2 |
-| IdeRootPane / MainToolbar / StatusBar / LayeredPane | nsh 自绘壳（标题栏、工具条、状态栏、弹层） | P0/P2 |
+| ToolWindowManager / ToolWindowPane | `resizable_panel` + 自绘条纹；`dock_area` 待评估 | P2 已落地核心 |
+| FileEditorManager / EditorsSplitters | 单编辑器组 + 标签页；分栏 / 拖拽标签待做 | P2 已落地核心 |
+| IdeRootPane / MainToolbar / StatusBar / LayeredPane | nsh 自绘壳（标题栏、工具窗口、底部窗口、状态栏、弹层） | P0/P2 已落地 |
 | PersistentStateComponent / Configurable | `keel-settings`：统一持久化，设置页 `reset/apply/isModified` | P4 |
 | JPS 外部构建 | 不照搬，直接调用 Maven/Gradle | Phase 4/5 |
 | Swing / EDT / LAF | 不照搬，用 nsh 原生视图（GPUI 只作迁移期基线） | 永久 |
@@ -261,21 +264,69 @@ keel-core
 | --- | --- |
 | [`crates/keel-core`](../crates/keel-core/src/lib.rs) | 服务容器、Disposable、MessageBus / Topic |
 | [`crates/keel-workspace`](../crates/keel-workspace/src/lib.rs) | `ProjectModel` + 不可变 `ProjectSnapshot` + 变更事件、树摊平、语言识别 |
+| [`crates/keel-commands`](../crates/keel-commands/src/lib.rs) | 动作注册表：`Action` / `ActionGroup` / `DataContext` / `MenuNode` |
 | [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | 读取 `themes/idea-*.json`，生成 GPUI 令牌与 nsh `cssVars` |
 
 验证：
 
 - `cargo test -p keel-core`：3 通过（懒加载服务、逆序清理、类型化事件）；
 - `cargo test -p keel-workspace`：4 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订）；
+- `cargo test -p keel-commands`：6 通过（注册表、上下文、可用性/勾选、菜单解析、执行、快捷键）；
 - `cargo test -p keel-theme`：3 通过（配置解析、颜色/透明度、cssVars）；
-- 根 GPUI `cargo test`：14 通过；spike `nsh test`：1 通过。
+- 根 GPUI `cargo test`：14 通过；spike `nsh test`：4 通过。
 
 还没做的 P1 部分：
 
-- `keel-commands`、`keel-vfs` 未开始；spike 的菜单与快捷键仍是手写，下一步改成动作注册表；
+- `keel-vfs` 未开始；spike 仍直接用 `std::fs`；
 - `src/project_tree.rs`、`src/model.rs` 尚未改用 `keel-workspace`（GPUI 侧仍是自己的树模型）；
 - 最近项目、会话（打开的文档/光标）还没有 `PersistentStateComponent` 式的持久化；
 - `keel-i18n` 未开始。
+
+### 4.3 P2 进展：工作台外壳（2026-11-12）
+
+按“优先实现外壳”的决策，P2 先落地 IDEA 的 `IdeRootPane` 结构；动作、
+菜单和快捷键共用 `keel-commands` 的注册表。
+
+**`keel-commands`（新增）**
+
+- `Action` 稳定 ID + `update(DataContext, Presentation)` + `perform`；`CallbackAction`
+  用闭包定义动作，可挂可用性 / 勾选谓词；
+- `ActionGroup` 支持动作、分隔符、嵌套子菜单；`MenuNode` 是解析后的菜单树；
+- `DataContext` 按类型存值并可带父上下文（IDEA 的 `DataContext` 链）；
+- `ActionRegistry`：注册 / 替换动作、取展示状态、执行（尊重 enabled/visible）、
+  解析菜单、列出快捷键。
+
+**外壳（spike）**
+
+| 区域 | 实现 |
+| --- | --- |
+| 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
+| 左侧工具窗口 | 项目 / 搜索 / 版本控制；`h_resizable` + `resizable_panel`，宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏 |
+| 编辑器区 | 标签条横向滚动（溢出）、未保存圆点、关闭按钮、右键菜单（关闭 / 关闭其他 / 关闭全部 / 在项目中定位）；面包屑、`nsh_base::editor` |
+| 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable`，高度 90–360；状态栏左侧有切换条 |
+| 状态栏 | 底部窗口条、提示、分支、语言、编码、换行、缩进、光标位置 |
+| 动作状态 | 可用性与勾选态来自 `UiState`：无文档时禁用保存/关闭，工具窗口与外观菜单显示勾选 |
+
+**布局注意事项**（补进 §4.1 的坑）
+
+- `resizable_panel_group` 自身是 `size_full`，放进 `flex_1` 的行/列里时，外面要再包一层
+  `view().flex_1().h_full()`；否则组的 100% 高度会按内容塌缩，底部面板和状态栏被挤出窗口。
+
+**验证**
+
+- `cargo test -p keel-commands`：6 通过；
+- spike `nsh test`：4 通过（外壳文本、视图菜单、两个截图测试在无头下自动跳过）；
+- spike `nsh test --target windows`：4 通过（真实窗口；含浅色/深色/菜单截图）；
+- `cargo clippy --all-targets -- -D warnings`：通过。
+
+截图：[浅色](screenshots/nsh-p2-light.png) · [深色](screenshots/nsh-p2-dark.png) · [文件菜单](screenshots/nsh-p2-menu.png)。
+
+还没做的 P2 部分：
+
+- 编辑器分栏 / 拖拽标签（`EditorsSplitters` 的多组编辑器）；标签重排；
+- `nsh_base::dock_area` 的可停靠布局未采用（当前 `resizable_panel` 已够用，继续评估）；
+- 命令面板（`mod+shift+a`）尚未接入注册表；
+- 工具窗口内容的拖放、浮动、最大化，最近项目与会话持久化。
 
 ### P1：抽 `keel-core`
 
@@ -289,6 +340,8 @@ keel-core
 - 现有 GPUI UI 改为调用这些 core，保证两边行为一致。
 
 ### P2：迁移工作台壳
+
+> 核心外壳已落地，记录见 §4.3；下面保留原计划。
 
 - 标题栏、工具窗口条、项目面板、编辑器标签、状态栏、面包屑；
 - 用 nsh 的 `dock_area`/`resizable_panel_group` 取代自研分栏；
@@ -343,14 +396,18 @@ keel-core
 
 ## 7. 当前状态
 
-**P0 已完成（2026-11-12）**：nsh 0.5.0 已安装，`spike/keel-nsh-spike/`
-是纯 Rust 的工作台 spike；现有 `src/` 的 GPUI 版本保持可运行，作为迁移期基线。
+**P0 / P1 已完成（2026-11-12）**：nsh 0.5.0 已安装，`spike/keel-nsh-spike/`
+是纯 Rust 的工作台 spike；`keel-core` / `keel-workspace` / `keel-theme` /
+`keel-commands` 已抽出；现有 `src/` 的 GPUI 版本保持可运行，作为迁移期基线。
+
+**P2 进行中**：工作台外壳（标题栏、工具窗口、编辑器标签、底部工具窗口、
+状态栏、菜单与快捷键）已按 IDEA 的 `IdeRootPane` 结构落地，见 §4.3。
 
 进行中的工作：
 
-- 待桌面解锁后补：项目树修复后的截图、深色主题截图、中文 IME 手动输入验证；
-- P1：抽 `keel-workspace` / `keel-theme`，让 GPUI 与 nsh 两个 UI 共用；
-- P2：用 `nsh_base::dock` 替换自研分栏与工具窗口。
+- 中文 IME 组合（拼音候选）仍需人工在窗口里验证；
+- P2 剩余：编辑器分栏 / 拖拽标签、命令面板、`dock_area` 评估、会话持久化；
+- P3：LSP 适配层、文档模型与索引。
 
 约束：
 
