@@ -364,6 +364,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-25：通知气泡对齐 IDEA——圆角由 `rounded_md` 改为 12（`NotificationBalloonRoundShadowBorderProvider.CORNER_RADIUS` = `Notification.arc`，默认 12）；补 1px 描边并新增 `Tokens.feedback_border`（`Notification.borderColor`：浅色 `feedback-border` = layer-0-border gray-130 `#D1D3D9`，深色 `feedback-border` = layer-2-bg，与底色相同、等价于无描边）
 - [x] Phase 1 · UI-26：底部工具窗口标题栏高度 28 → 41——新 UI 的 `ToolWindowHeader.getUnscaledHeight()` 直接返回 `JBUI.CurrentTheme.ToolWindow.headerHeight()`（`ToolWindow.Header.height`，默认 41），底部面板与项目面板的标题栏高度一致；标签仍为 13px、水平内边距 12（`TabbedPane.tabInsets=0,12,0,12`）
 - [x] Phase 1 · UI-27：右键菜单也补上 1px 描边——组件库 `ContextMenuExt` 不暴露菜单表面样式，改为 Keel 自绘右键菜单层：`KeelApp::open_context_menu` 用组件库 `PopupMenu` 构建菜单并在鼠标位置渲染（`deferred` + `anchored`，优先级 `POPUP_PRIORITY`），表面复用 `menu::bordered_surface` 的 1px `popup-border` 描边；项目树行与编辑器标签的菜单迁到该实现，`DismissEvent` 只清理当前这份菜单，Esc/方向键/回车仍由 `PopupMenu` 处理（菜单在渲染时持有焦点）
+- [x] Phase 1 · UI-28：底部面板选中标签下划线对齐工具窗口规范——由 2px 蓝色下边框改为 3px 圆角（4px）短条：高度取 `ToolWindow.HeaderTab.underlineHeight`（默认 `DefaultTabs.underlineHeight`=3），圆角 `ToolWindow.HeaderTab.underlineArc`=4，颜色取 `ToolWindow.HeaderTab.underlineColor`（Islands 未覆盖，回落到 `DefaultTabs.underlineColor` 的 `#4083C9` / 深色 `#4A88C7`），新增 `Tokens.tool_window_tab_underline`
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

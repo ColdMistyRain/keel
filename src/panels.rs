@@ -19,9 +19,18 @@ impl KeelApp {
                     .text_size(px(13.))
                     .cursor_pointer()
                     .when(is_active, |tab| {
-                        tab.text_color(chrome.fg)
-                            .border_b_2()
-                            .border_color(chrome.tab_underline)
+                        // 选中标签的 3px 下划线：`ToolWindow.HeaderTab.underlineHeight`
+                        // 默认取 `DefaultTabs.underlineHeight`=3，圆角 `underlineArc`=4。
+                        tab.text_color(chrome.fg).child(
+                            div()
+                                .absolute()
+                                .bottom_0()
+                                .left_0()
+                                .right_0()
+                                .h(px(3.))
+                                .rounded(px(4.))
+                                .bg(chrome.tool_window_tab_underline),
+                        )
                     })
                     .when(!is_active, |tab| {
                         tab.text_color(chrome.muted_fg)

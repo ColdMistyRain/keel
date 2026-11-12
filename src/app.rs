@@ -58,6 +58,8 @@ pub struct Chrome {
     pub selection: Hsla,
     pub selection_fg: Hsla,
     pub tab_underline: Hsla,
+    /// 工具窗口标签（底部面板）选中下划线。
+    pub tool_window_tab_underline: Hsla,
     pub tab_bg: Hsla,
     /// 选中标签的浅蓝底色。
     pub tab_selected_bg: Hsla,
@@ -97,6 +99,7 @@ impl Chrome {
             selection: crate::idea_theme::color(tokens.selection),
             selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
+            tool_window_tab_underline: crate::idea_theme::color(tokens.tool_window_tab_underline),
             tab_bg: crate::idea_theme::color(tokens.tab_background),
             tab_selected_bg: crate::idea_theme::color(tokens.tab_selected_background),
             tab_fg_unselected: {

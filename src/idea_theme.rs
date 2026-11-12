@@ -55,6 +55,8 @@ pub struct Tokens {
     pub tool_window_header: u32,
     /// `tab-selected-border-active`
     pub tab_underline: u32,
+    /// 工具窗口标签选中下划线（`ToolWindow.HeaderTab.underlineColor`，默认 `DefaultTabs.underlineColor`）
+    pub tool_window_tab_underline: u32,
     /// `EditorTabs.background`
     pub tab_background: u32,
     /// `tab-selected-bg-active`
@@ -104,26 +106,27 @@ pub const LIGHT: Tokens = Tokens {
     secondary: 0x73767c,    // gray-80 / text-secondary
     selection: 0xd0dffe,    // blue-140 / selection-bg-active
     selection_fg: 0x000000,
-    hover: 0x00000008,                 // transparent-black-10（8/255 透明度）
-    control_hover: 0x00000012,         // transparent-black-20
-    tool_window_header: 0xffffff,      // tool-window-bg
-    tab_underline: 0xa7c5ff,           // blue-120 / tab-selected-border-active
-    tab_background: 0xffffff,          // editor-bg
-    tab_selected_background: 0xe3ebfe, // blue-150
-    status_bar: 0xe9eaee,              // main-window-bg
-    brand: 0x3871e1,                   // blue-80
-    brand_hover: 0x2f5eb9,             // blue-70
-    brand_active: 0x2e4d89,            // blue-60
-    caret: 0x000000,                   // CARET_COLOR（浅色方案未覆盖，取默认黑）
-    editor_selection: 0xa6d2ff,        // expUI_lightScheme.xml / SELECTION_BACKGROUND
-    popover: 0xffffff,                 // popup-bg = layer-2-bg
-    popup_border: 0xd1d3d9,            // popup-border-windows = gray-130
-    separator: 0x00000020,             // toolbar-border = transparent-black-30
-    feedback: 0xffffff,                // feedback-bg = layer-2-bg
-    feedback_border: 0xd1d3d9,         // feedback-border = layer-0-border(gray-130)
-    scrollbar_thumb: 0x73737333,       // ScrollBar.Transparent.thumbColor
-    scrollbar_thumb_hover: 0x73737347, // ScrollBar.Transparent.hoverThumbColor
-    island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
+    hover: 0x00000008,                   // transparent-black-10（8/255 透明度）
+    control_hover: 0x00000012,           // transparent-black-20
+    tool_window_header: 0xffffff,        // tool-window-bg
+    tab_underline: 0xa7c5ff,             // blue-120 / tab-selected-border-active
+    tool_window_tab_underline: 0x4083c9, // DefaultTabs.underlineColor（浅色）
+    tab_background: 0xffffff,            // editor-bg
+    tab_selected_background: 0xe3ebfe,   // blue-150
+    status_bar: 0xe9eaee,                // main-window-bg
+    brand: 0x3871e1,                     // blue-80
+    brand_hover: 0x2f5eb9,               // blue-70
+    brand_active: 0x2e4d89,              // blue-60
+    caret: 0x000000,                     // CARET_COLOR（浅色方案未覆盖，取默认黑）
+    editor_selection: 0xa6d2ff,          // expUI_lightScheme.xml / SELECTION_BACKGROUND
+    popover: 0xffffff,                   // popup-bg = layer-2-bg
+    popup_border: 0xd1d3d9,              // popup-border-windows = gray-130
+    separator: 0x00000020,               // toolbar-border = transparent-black-30
+    feedback: 0xffffff,                  // feedback-bg = layer-2-bg
+    feedback_border: 0xd1d3d9,           // feedback-border = layer-0-border(gray-130)
+    scrollbar_thumb: 0x73737333,         // ScrollBar.Transparent.thumbColor
+    scrollbar_thumb_hover: 0x73737347,   // ScrollBar.Transparent.hoverThumbColor
+    island_arc: 16.,                     // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
 
@@ -140,26 +143,27 @@ pub const DARK: Tokens = Tokens {
     secondary: 0x73767c,    // gray-80 / text-secondary
     selection: 0x2a4371,    // blue-50 / selection-bg-active
     selection_fg: 0xd1d3d9,
-    hover: 0xffffff10,                 // transparent-white-10
-    control_hover: 0xffffff17,         // transparent-white-20
-    tool_window_header: 0x191a1c,      // tool-window-bg(layer-0)
-    tab_underline: 0x2e4d89,           // blue-60 / tab-selected-border-active
-    tab_background: 0x191a1c,          // editor-bg
-    tab_selected_background: 0x233558, // blue-40
-    status_bar: 0x26282c,              // main-window-bg(layer-1)
-    brand: 0x3871e1,                   // blue-80
-    brand_hover: 0x2f5eb9,             // blue-70
-    brand_active: 0x2e4d89,            // blue-60
-    caret: 0xced0d6,                   // CARET_COLOR（expUI_darkScheme.xml）
-    editor_selection: 0x214283,        // Darcula 配色方案的 SELECTION_BACKGROUND
-    popover: 0x26282c,                 // popup-bg = layer-1-bg
-    popup_border: 0x33353b,            // popup-border = layer-1-border(gray-40)
-    separator: 0xffffff21,             // toolbar-border = transparent-white-30
-    feedback: 0x33353b,                // feedback-bg = layer-2-bg(gray-40)
-    feedback_border: 0x33353b,         // feedback-border = layer-2-bg，与底色相同
-    scrollbar_thumb: 0xa6a6a647,       // ScrollBar.Transparent.thumbColor
-    scrollbar_thumb_hover: 0xa6a6a659, // ScrollBar.Transparent.hoverThumbColor
-    island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
+    hover: 0xffffff10,                   // transparent-white-10
+    control_hover: 0xffffff17,           // transparent-white-20
+    tool_window_header: 0x191a1c,        // tool-window-bg(layer-0)
+    tab_underline: 0x2e4d89,             // blue-60 / tab-selected-border-active
+    tool_window_tab_underline: 0x4a88c7, // DefaultTabs.underlineColor（深色）
+    tab_background: 0x191a1c,            // editor-bg
+    tab_selected_background: 0x233558,   // blue-40
+    status_bar: 0x26282c,                // main-window-bg(layer-1)
+    brand: 0x3871e1,                     // blue-80
+    brand_hover: 0x2f5eb9,               // blue-70
+    brand_active: 0x2e4d89,              // blue-60
+    caret: 0xced0d6,                     // CARET_COLOR（expUI_darkScheme.xml）
+    editor_selection: 0x214283,          // Darcula 配色方案的 SELECTION_BACKGROUND
+    popover: 0x26282c,                   // popup-bg = layer-1-bg
+    popup_border: 0x33353b,              // popup-border = layer-1-border(gray-40)
+    separator: 0xffffff21,               // toolbar-border = transparent-white-30
+    feedback: 0x33353b,                  // feedback-bg = layer-2-bg(gray-40)
+    feedback_border: 0x33353b,           // feedback-border = layer-2-bg，与底色相同
+    scrollbar_thumb: 0xa6a6a647,         // ScrollBar.Transparent.thumbColor
+    scrollbar_thumb_hover: 0xa6a6a659,   // ScrollBar.Transparent.hoverThumbColor
+    island_arc: 16.,                     // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
 
