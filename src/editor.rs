@@ -345,25 +345,26 @@ impl KeelApp {
 
             let mut tab = div()
                 .id(("editor-tab", ix))
-                // COMPACT 密度下标签卡片高 24（`IslandsTabPainter` 的 `fullHeight`），
-                // 在 28 高的标签行里上下各留 2px。
-                .h(px(24.))
+                // 标签卡片高 = `rect.height`(28) − `minVOffset`(8) = 20，
+                // 上下各留 4px（`IslandsTabPainter.paintTab` 默认密度）。
+                .h(px(20.))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
                 .gap_1()
-                // 卡片左右各留 2px（`IslandsTabPainter.getHOffsetUnscaled`）。
-                .mx(px(2.))
-                // `EditorTabs.tabInsets.compact` 是 "-2,6,-2,4"。
-                .pl(px(6.))
-                .pr(px(4.))
+                // 卡片左右各留 4px（`IslandsTabPainter.getHOffsetUnscaled` 默认密度）。
+                .mx(px(4.))
+                // `EditorTabs.tabInsets` = "-6,8,-6,8"。
+                .pl(px(8.))
+                .pr(px(8.))
+                // 圆角半径 = `MainToolbar.Button.arc`(12) / 2。
+                .rounded(px(6.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
                     // 选中标签是一张带 1px 蓝边（`EditorTabs.underlinedBorderColor`）的
-                    // 浅蓝卡片，圆角取 `MainToolbar.Button.arc.compact`（8px）。
+                    // 浅蓝卡片。
                     tab.bg(chrome.tab_selected_bg)
                         .text_color(chrome.fg)
-                        .rounded(px(8.))
                         .border_1()
                         .border_color(chrome.tab_underline)
                 })

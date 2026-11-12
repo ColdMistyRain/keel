@@ -1865,7 +1865,7 @@ impl KeelApp {
             crate::menu::dropdown_menu(
                 "main-menu",
                 chrome.popup_border,
-                // `MainToolbar.Button.size` = 30、`iconSize` = 20、`arc` = 12；
+                // `MainToolbar.Button.size` = 30、`iconSize` = 20、`arc` = 12（半径 6）；
                 // Windows 上的汉堡图标是 expUI 的 `windowsMenu@20x20`（四条横线）。
                 Button::new("main-menu")
                     .ghost()
@@ -1873,7 +1873,7 @@ impl KeelApp {
                     .w(px(30.))
                     .h(px(30.))
                     .p_0()
-                    .rounded(px(12.))
+                    .rounded(px(6.))
                     .child(
                         svg()
                             .path(SharedString::from(icon("menu_20")))
@@ -1891,14 +1891,14 @@ impl KeelApp {
             .id("title-project")
             // 下拉部件与工具栏按钮同高 30（`MainToolbar.Button.size`），
             // 内边距取 `MainToolbar.Dropdown.borderInsets` 新 UI 的 (5,10,5,6)，
-            // 悬停圆角取 `MainToolbar.Dropdown.arc` = 12。
+            // 悬停圆角半径 = `MainToolbar.Dropdown.arc`(12) / 2 = 6。
             .h(px(30.))
             .ml(px(10.))
             .pl(px(10.))
             .pr(px(6.))
             .flex()
             .items_center()
-            .rounded(px(12.))
+            .rounded(px(6.))
             .cursor_pointer()
             .hover(|style| style.bg(chrome.control_hover))
             .child(
@@ -1934,7 +1934,7 @@ impl KeelApp {
                 .pr(px(6.))
                 .flex()
                 .items_center()
-                .rounded(px(12.))
+                .rounded(px(6.))
                 .text_color(chrome.muted_fg)
                 .hover(|style| style.bg(chrome.control_hover))
                 .child(
@@ -1955,7 +1955,7 @@ impl KeelApp {
                 .w(px(30.))
                 .h(px(30.))
                 .p_0()
-                .rounded(px(12.))
+                .rounded(px(6.))
                 .icon(IconName::ExternalLink)
                 .on_click(cx.listener(|this, _event, _window, _cx| {
                     this.open_project_in_file_manager();
@@ -1994,7 +1994,7 @@ impl KeelApp {
                 .child(glyph)
         };
 
-        // `MainToolbar.Button`：30×30 按钮、20px 图标、圆角 12，
+        // `MainToolbar.Button`：30×30 按钮、20px 图标、圆角半径 6（arc 12），
         // 图标内边距取主题里的 `MainToolbar.Icon.insets` = "6,5,4,5"。
         let toolbar_button = |id: &'static str, icon_path: String| {
             Button::new(id)
@@ -2003,7 +2003,7 @@ impl KeelApp {
                 .w(px(30.))
                 .h(px(30.))
                 .p_0()
-                .rounded(px(12.))
+                .rounded(px(6.))
                 .child(
                     svg()
                         .path(SharedString::from(icon_path))

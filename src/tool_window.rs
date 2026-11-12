@@ -150,14 +150,14 @@ impl KeelApp {
             .child(
                 div()
                     // 高亮块 = 按钮尺寸减去 `StripeToolbar.Button.leftStripeIcon.padding`
-                    // "5,5,5,2"：37-5-2 = 30、40-5-5 = 30；圆角取
-                    // `Button.ToolWindow.arc`（非紧凑密度）12。
+                    // "5,5,5,2"：37-5-2 = 30、40-5-5 = 30；圆角半径 =
+                    // `Button.ToolWindow.arc`(12) / 2 = 6。
                     .w(px(30.))
                     .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(12.))
+                    .rounded(px(6.))
                     .when(active, |item| item.bg(chrome.accent).text_color(icon_color))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
@@ -201,13 +201,13 @@ impl KeelApp {
             .child(
                 div()
                     // 与侧边条图标按钮同一套度量（`StripeToolbar.Button` 37×40、
-                    // 高亮块 30×30、圆角 12）。
+                    // 高亮块 30×30、圆角半径 6）。
                     .w(px(30.))
                     .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(12.))
+                    .rounded(px(6.))
                     .when(active, |item| item.bg(chrome.accent))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
@@ -277,13 +277,13 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    // 与侧边条图标按钮同一套度量（高亮块 30×30、圆角 12）。
+                    // 与侧边条图标按钮同一套度量（高亮块 30×30、圆角半径 6）。
                     .w(px(30.))
                     .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(12.))
+                    .rounded(px(6.))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
                     .child(render_icon(icon_color)),
