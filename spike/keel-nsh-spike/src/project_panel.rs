@@ -158,11 +158,18 @@ fn tree_row(ws: Workspace, row: TreeRow) -> impl IntoElement {
             ws.selected.set(Some(select_id.clone()));
             if folder {
                 toggle_expanded(ws, &select_id);
-            } else if event.clicks >= 2 {
-                let path = PathBuf::from(select_id.as_ref());
-                if path.is_file() {
-                    ws.open_files(vec![path]);
-                }
+                return;
+            }
+            let path = PathBuf::from(select_id.as_ref());
+            if !path.is_file() {
+                return;
+            }
+            if event.clicks >= 2 {
+                // 双击固定标签。
+                ws.open_files(vec![path]);
+            } else {
+                // 单击预览（IDEA 的 preview tab）。
+                ws.preview_file(path);
             }
         })
         .child(
@@ -175,11 +182,11 @@ fn tree_row(ws: Workspace, row: TreeRow) -> impl IntoElement {
                     text(if !folder {
                         ""
                     } else if open {
-                        "−"
+                        "▾"
                     } else {
-                        "+"
+                        "▸"
                     })
-                    .text_size(px(10.0))
+                    .text_size(px(9.0))
                     .text_color(move || color_of("muted-fg")),
                 ),
         )
@@ -202,10 +209,10 @@ fn toggle_expanded(ws: Workspace, id: &SharedString) {
     });
 }
 
-/// 文件类型徽标：一个带底色的字母，先代替 IDEA 的文件图标。
+/// 文件类型徽标：文件夹用方块，文件用首字母，先代替 IDEA 的文件图标。
 fn file_badge(path: &str, folder: bool) -> impl IntoElement {
     let letter = if folder {
-        "D".to_owned()
+        "▣".to_owned()
     } else {
         Path::new(path)
             .extension()

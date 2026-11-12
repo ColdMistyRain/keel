@@ -14,13 +14,16 @@ irm https://nsh.dev/install.ps1 | iex
 # 启动工作台
 nsh run .
 
+# 启动时打开一个文件夹或文件（开发环境；打包产物直接用第一个路径参数）
+$env:KEEL_SPIKE_OPEN = "d:\path\to\project"; nsh run .
+
 # 自动打开内置示例项目（截图/验收用）
 $env:KEEL_SPIKE_DEMO = "1"; nsh run .
 
 # 无头测试
 nsh test
 
-# 真实 Windows 窗口测试，并刷新 docs/screenshots 下的浅色 / 深色 / 菜单截图
+# 真实 Windows 窗口测试，并刷新 docs/screenshots 下的截图
 $env:KEEL_SPIKE_DEMO = "1"; nsh test --target windows
 
 # 打包 Windows 产物（release 构建约 2 分半；安装包需要本机装 Inno Setup 6）
@@ -33,19 +36,19 @@ nsh package --target windows
 
 | 区域 | 实现 |
 | --- | --- |
-| 标题栏 | 自绘 40px 标题栏，`.window_drag(true)` 拖动窗口，右侧给系统窗口按钮留白（`title_bar().right`） |
+| 标题栏 | 自绘 40px 标题栏，`.window_drag(true)` 拖动窗口，右侧给系统窗口按钮留白（`title_bar().right`）；菜单、项目名、搜索/运行/设置快捷图标 |
 | 应用菜单 | 文件 / 视图 / 导航 / 帮助，全部来自 `keel-commands` 的动作注册表；快捷键也从注册表绑定 |
 | 工具窗口条 | 左侧 40px 竖条：项目、搜索、版本控制 |
 | 项目面板 | `resizable_panel` 宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏；树用自绘 `scroll` 列表 |
-| 编辑器区 | 横向滚动的标签条（未保存圆点、关闭、右键菜单）、面包屑、`nsh_base::editor` |
-| 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable` 高度 90–360；状态栏左侧有切换条 |
+| 编辑器区 | 横向滚动的标签条、预览标签（单击斜体、双击固定）、未保存圆点、关闭、右键菜单；面包屑、`nsh_base::editor` |
+| 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable` 高度 90–360；状态栏左侧有图标切换条 |
 | 状态栏 | 提示、分支、语言、编码、换行、缩进、光标位置 |
 
 配色、圆角、编辑器语法配色和最近项目调色板全部来自仓库根目录的
 [`themes/idea-light.json`](../../themes/idea-light.json) 与
 [`themes/idea-dark.json`](../../themes/idea-dark.json)：启动时由 `keel-theme`
 转成 nsh 的 shadcn `cssVars`，再通过 `set_tokens` 注入，Rust 代码里没有色值常量。
-外观跟随系统，标题栏右侧可切换「自动 / 浅色 / 深色」，视图菜单里也有带勾选的三项。
+外观跟随系统，可在「视图 → 外观」里切换「跟随系统 / 浅色 / 深色」（带勾选）。
 
 ## 代码结构
 
@@ -87,16 +90,18 @@ P2 外壳（2026-11-12）：
 | 项 | 结果 |
 | --- | --- |
 | `cargo clippy --all-targets -- -D warnings` | 通过 |
-| `nsh test`（无头） | 4 通过：外壳文本、视图菜单、两个截图测试自动跳过 |
-| `nsh test --target windows` | 4 通过：真实窗口中的菜单交互与截图 |
+| `nsh test`（无头） | 5 通过：外壳文本、视图菜单、三个截图测试自动跳过 |
+| `nsh test --target windows` | 5 通过：真实窗口中的菜单交互、预览标签与截图 |
 | 左侧工具窗口 | 可拖宽、可折叠；刷新 / 收起全部 / 隐藏可用 |
-| 标签页 | 溢出横向滚动、未保存圆点、关闭、右键菜单可用 |
-| 底部工具窗口 | 问题 / 运行 / 终端切换与拖高可用；状态栏切换条同步 |
+| 标签页 | 溢出横向滚动、预览标签（单击）、双击固定、未保存圆点、关闭、右键菜单 |
+| 底部工具窗口 | 问题 / 运行 / 终端切换与拖高可用；状态栏图标条同步 |
 | 动作状态 | 无文档时保存 / 关闭变灰；工具窗口与外观菜单显示勾选 |
+| 打开项目 | 菜单 / 欢迎页对话框、`KEEL_SPIKE_OPEN`、打包产物路径参数；文件向上识别项目根 |
 
 截图：[浅色](../../docs/screenshots/nsh-p2-light.png) ·
 [深色](../../docs/screenshots/nsh-p2-dark.png) ·
-[文件菜单](../../docs/screenshots/nsh-p2-menu.png)。
+[文件菜单](../../docs/screenshots/nsh-p2-menu.png) ·
+[预览标签](../../docs/screenshots/nsh-p2-preview.png)。
 
 ## 已知缺口
 

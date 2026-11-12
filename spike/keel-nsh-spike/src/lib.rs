@@ -15,8 +15,8 @@ mod workspace;
 use nsh_base::{h_resizable, resizable_panel, theme, v_resizable};
 use nsh_core::{element::desktop::title_bar, prelude::*};
 
-use crate::shell::Shell;
-use crate::ui::color_of;
+use crate::shell::{Bottom, Shell, Tool};
+use crate::ui::{color_of, icon_button};
 
 /// 注册给 TSX 入口的 Rust 组件集合。
 #[native_module("keel/native")]
@@ -75,35 +75,23 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
                 .pr(px(8.0)),
         )
         .children(menus)
-        .child(view().flex_1())
         .child(
             text(move || shell.ws.root_name())
                 .text_size(px(12.0))
                 .text_color(move || color_of("muted-fg"))
-                .pr(px(8.0)),
+                .number_of_lines(1)
+                .pl(px(8.0)),
         )
-        .child(appearance_button(shell))
-}
-
-fn appearance_button(shell: Shell) -> impl IntoElement {
-    view()
-        .h(px(28.0))
-        .px(px(8.0))
-        .items_center()
-        .rounded(px(4.0))
-        .hover(|s| s.bg(move || color_of("control-hover")))
-        .role(AccessibilityRole::Button)
-        .label("切换外观")
-        .on_press(move || shell.cycle_appearance())
-        .child(
-            text(move || match shell.appearance.get() {
-                Appearance::System => "外观：自动",
-                Appearance::Light => "外观：浅色",
-                Appearance::Dark => "外观：深色",
-            })
-            .text_size(px(12.0))
-            .text_color(move || color_of("muted-fg")),
-        )
+        .child(view().flex_1())
+        .child(icon_button("⌕", "搜索", move || {
+            shell.toggle_tool(Tool::Search)
+        }))
+        .child(icon_button("▷", "运行", move || {
+            shell.toggle_bottom(Bottom::Run)
+        }))
+        .child(icon_button("⚙", "设置", move || {
+            shell.ws.say("设置页将在 P4 迁移")
+        }))
 }
 
 /// 工具窗口条 + 左侧工具窗口 + 编辑器区（可拖宽、可折叠）。

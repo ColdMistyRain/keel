@@ -270,10 +270,10 @@ keel-core
 验证：
 
 - `cargo test -p keel-core`：3 通过（懒加载服务、逆序清理、类型化事件）；
-- `cargo test -p keel-workspace`：4 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订）；
+- `cargo test -p keel-workspace`：5 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订、项目根）；
 - `cargo test -p keel-commands`：6 通过（注册表、上下文、可用性/勾选、菜单解析、执行、快捷键）；
 - `cargo test -p keel-theme`：3 通过（配置解析、颜色/透明度、cssVars）；
-- 根 GPUI `cargo test`：14 通过；spike `nsh test`：4 通过。
+- 根 GPUI `cargo test`：14 通过；spike `nsh test`：5 通过。
 
 还没做的 P1 部分：
 
@@ -300,10 +300,11 @@ keel-core
 
 | 区域 | 实现 |
 | --- | --- |
-| 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
+| 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；项目名；右侧搜索 / 运行 / 设置快捷图标；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
+| 启动与项目 | `KEEL_SPIKE_OPEN=<路径>`（开发）或打包产物的第一个路径参数；文件会向上识别项目根（`.git` / `pom.xml` / `Cargo.toml` 等） |
 | 左侧工具窗口 | 项目 / 搜索 / 版本控制；`h_resizable` + `resizable_panel`，宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏 |
-| 编辑器区 | 标签条横向滚动（溢出）、未保存圆点、关闭按钮、右键菜单（关闭 / 关闭其他 / 关闭全部 / 在项目中定位）；面包屑、`nsh_base::editor` |
-| 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable`，高度 90–360；状态栏左侧有切换条 |
+| 编辑器区 | 标签条横向滚动（溢出）、未保存圆点、关闭按钮、右键菜单（关闭 / 关闭其他 / 关闭全部 / 在项目中定位）；**预览标签**：项目树单击斜体预览、下一个预览替换、双击或编辑后固定；面包屑、`nsh_base::editor` |
+| 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable`，高度 90–360；状态栏左侧有图标切换条 |
 | 状态栏 | 底部窗口条、提示、分支、语言、编码、换行、缩进、光标位置 |
 | 动作状态 | 可用性与勾选态来自 `UiState`：无文档时禁用保存/关闭，工具窗口与外观菜单显示勾选 |
 
@@ -314,12 +315,14 @@ keel-core
 
 **验证**
 
+- `cargo test -p keel-workspace`：5 通过（含项目根识别）；
 - `cargo test -p keel-commands`：6 通过；
-- spike `nsh test`：4 通过（外壳文本、视图菜单、两个截图测试在无头下自动跳过）；
-- spike `nsh test --target windows`：4 通过（真实窗口；含浅色/深色/菜单截图）；
+- spike `nsh test`：5 通过（外壳文本、视图菜单、三个截图测试在无头下自动跳过）；
+- spike `nsh test --target windows`：5 通过（真实窗口；含浅色/深色/菜单/预览截图）；
 - `cargo clippy --all-targets -- -D warnings`：通过。
 
-截图：[浅色](screenshots/nsh-p2-light.png) · [深色](screenshots/nsh-p2-dark.png) · [文件菜单](screenshots/nsh-p2-menu.png)。
+截图：[浅色](screenshots/nsh-p2-light.png) · [深色](screenshots/nsh-p2-dark.png) ·
+[文件菜单](screenshots/nsh-p2-menu.png) · [预览标签](screenshots/nsh-p2-preview.png)。
 
 还没做的 P2 部分：
 
@@ -327,6 +330,25 @@ keel-core
 - `nsh_base::dock_area` 的可停靠布局未采用（当前 `resizable_panel` 已够用，继续评估）；
 - 命令面板（`mod+shift+a`）尚未接入注册表；
 - 工具窗口内容的拖放、浮动、最大化，最近项目与会话持久化。
+
+### 4.4 与 IDEA 社区版（新 UI）对照
+
+| IDEA 社区版 | 当前 spike | 结论 |
+| --- | --- | --- |
+| `IdeRootPane`：标题栏 → 工具窗口 + 编辑器 → 状态栏 | 同一结构 | 对齐 |
+| 标题栏：主菜单、项目名、主工具栏（运行 / 搜索 / 设置） | 菜单、项目名、三个快捷图标 | 基本对齐（工具栏简化为图标） |
+| View → Appearance 切换主题 | View → 外观（跟随系统 / 浅色 / 深色，带勾选） | 对齐 |
+| ToolWindow 条纹（左侧、底部）+ 拖宽 + 折叠 | 左条纹、底部图标条、`resizable_panel` | 主要行为对齐（无浮动 / 最大化） |
+| FileEditorManager / EditorsSplitters | 单编辑器组、标签页、预览标签 | 核心对齐；分栏 / 拖拽标签未做 |
+| 项目树：刷新、收起全部、隐藏、展开 / 选中 | 同；文件图标用字母徽标代替 | 行为对齐，视觉待图标资源 |
+| 编辑器：高亮、行号、折叠、面包屑、状态栏 | `nsh_base::editor` | 对齐（无 LSP / 诊断） |
+| ActionManager：菜单 / 快捷键共用动作 | `keel-commands` | 对齐；命令面板待做 |
+| 设置、持久化（最近项目、会话） | 无 | 缺口 P4 |
+| 运行 / 调试、VCS | 占位 | 缺口 P4/P5 |
+
+已知视觉差异：菜单没有助记符下划线与图标；工具窗口头没有齿轮菜单；没有
+“最近项目”欢迎页；文件图标仍是字母徽标。这些不影响最小可用流程。
+
 
 ### P1：抽 `keel-core`
 
@@ -401,7 +423,9 @@ keel-core
 `keel-commands` 已抽出；现有 `src/` 的 GPUI 版本保持可运行，作为迁移期基线。
 
 **P2 进行中**：工作台外壳（标题栏、工具窗口、编辑器标签、底部工具窗口、
-状态栏、菜单与快捷键）已按 IDEA 的 `IdeRootPane` 结构落地，见 §4.3。
+状态栏、菜单与快捷键）已按 IDEA 的 `IdeRootPane` 结构落地，见 §4.3；
+最小可用流程已打通：打开文件夹 / 文件作为项目 → 项目树浏览 → 单击预览 /
+双击固定 → 语法高亮。
 
 进行中的工作：
 

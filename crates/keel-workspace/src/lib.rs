@@ -122,6 +122,35 @@ pub fn scan_project(root: &Path) -> Vec<ProjectNode> {
     scan_snapshot(root).nodes
 }
 
+/// 项目根的标记文件 / 目录（IDEA 的 project root 识别）。
+pub const PROJECT_ROOT_MARKERS: [&str; 8] = [
+    ".git",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle",
+    "settings.gradle.kts",
+    "Cargo.toml",
+    "package.json",
+];
+
+/// 从文件或目录向上找项目根：最近的、含标记的祖先目录。
+///
+/// 命令行传入单个文件时用它决定打开哪个项目；找不到时调用方退回文件所在目录。
+pub fn find_project_root(path: &Path) -> Option<PathBuf> {
+    let start = if path.is_dir() {
+        path
+    } else {
+        path.parent()?
+    };
+    start.ancestors().find_map(|dir| {
+        PROJECT_ROOT_MARKERS
+            .iter()
+            .any(|marker| dir.join(marker).exists())
+            .then(|| dir.to_path_buf())
+    })
+}
+
 fn scan_dir(dir: &Path, depth: usize) -> Vec<ProjectNode> {
     if depth >= 12 {
         return Vec::new();
@@ -314,6 +343,16 @@ mod tests {
         assert!(flattened[0].open);
         assert!(!flattened[1].open);
 
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn finds_the_nearest_project_root() {
+        let dir = fixture();
+        let nested_file = dir.join("src").join("main").join("Main.java");
+        assert_eq!(find_project_root(&nested_file), Some(dir.clone()));
+        assert_eq!(find_project_root(&dir.join("src")), Some(dir.clone()));
+        assert_eq!(find_project_root(&dir.join("pom.xml")), Some(dir.clone()));
         let _ = fs::remove_dir_all(&dir);
     }
 

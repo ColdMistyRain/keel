@@ -9,7 +9,7 @@ use nsh_core::prelude::*;
 use crate::shell::{Bottom, Shell};
 use crate::ui::{color_of, icon_button};
 
-/// 状态栏左侧的底部工具窗口条。
+/// 状态栏左侧的底部工具窗口条（IDEA 里是图标条）。
 pub fn bottom_bar(shell: Shell) -> impl IntoElement {
     view()
         .flex_row()
@@ -18,11 +18,10 @@ pub fn bottom_bar(shell: Shell) -> impl IntoElement {
         .children(Bottom::ALL.into_iter().map(move |bottom| {
             let active = move || shell.bottom.get() == Some(bottom);
             view()
+                .w(px(24.0))
                 .h(px(20.0))
-                .px(px(6.0))
-                .flex_row()
                 .items_center()
-                .gap(px(3.0))
+                .justify_center()
                 .rounded(px(4.0))
                 .role(AccessibilityRole::Button)
                 .label(bottom.label())
@@ -31,21 +30,10 @@ pub fn bottom_bar(shell: Shell) -> impl IntoElement {
                 .on_press(move || shell.toggle_bottom(bottom))
                 .child(
                     text(bottom.glyph())
-                        .text_size(px(10.0))
-                        .text_color(move || {
-                            if active() {
-                                color_of("secondary-fg")
-                            } else {
-                                color_of("muted-fg")
-                            }
-                        }),
-                )
-                .child(
-                    text(bottom.label())
                         .text_size(px(11.0))
                         .text_color(move || {
                             if active() {
-                                theme().foreground
+                                color_of("secondary-fg")
                             } else {
                                 color_of("muted-fg")
                             }

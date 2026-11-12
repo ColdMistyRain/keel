@@ -10,9 +10,9 @@ test("renders the Keel workbench shell", async () => {
   expect(texts).toContain("导航");
   expect(texts).toContain("帮助");
   expect(texts).toContain("项目");
-  expect(texts).toContain("问题");
-  expect(texts).toContain("运行");
-  expect(texts).toContain("终端");
+  expect(texts).toContain("⌕");
+  expect(texts).toContain("⚙");
+  expect(texts).toContain("UTF-8");
 });
 
 test("opens the View menu from the action registry", async () => {

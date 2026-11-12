@@ -8,7 +8,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use keel_workspace::{FlatRow, ProjectSnapshot, flatten, scan_snapshot};
+use keel_workspace::{FlatRow, ProjectSnapshot, find_project_root, flatten, scan_snapshot};
 use nsh_core::prelude::*;
 
 pub use keel_workspace::{language_label, language_name as language_of};
@@ -22,10 +22,16 @@ pub struct Doc {
     pub text: SharedString,
     /// 有未保存修改时标签显示圆点。
     pub dirty: bool,
+    /// 预览标签（IDEA 的 preview tab）：斜体显示，下一次预览会替换它。
+    pub preview: bool,
 }
 
 impl Doc {
     fn open(path: PathBuf) -> io::Result<Self> {
+        Self::open_as(path, false)
+    }
+
+    fn open_as(path: PathBuf, preview: bool) -> io::Result<Self> {
         let text = fs::read_to_string(&path)?;
         let name = path
             .file_name()
@@ -36,6 +42,7 @@ impl Doc {
             name: name.into(),
             text: text.into(),
             dirty: false,
+            preview,
         })
     }
 }
@@ -60,12 +67,9 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    /// 在根组件里创建一份空工作区。
-    ///
-    /// 设置环境变量 `KEEL_SPIKE_DEMO=1` 时自动打开 `samples/demo`，
-    /// 方便截图和手动验证，不影响正常启动。
+    /// 在根组件里创建一份空工作区；启动路径由 [`Self::open_startup`] 处理。
     pub fn new() -> Self {
-        let workspace = Self {
+        Self {
             root: signal(None),
             tree: signal(Arc::new(ProjectSnapshot::empty())),
             expanded: signal(Vec::new()),
@@ -74,11 +78,39 @@ impl Workspace {
             active: signal(None),
             cursor: signal("Ln 1, Col 1".into()),
             message: signal("就绪".into()),
-        };
-        if std::env::var_os("KEEL_SPIKE_DEMO").is_some() {
-            workspace.open_demo();
         }
-        workspace
+    }
+
+    /// 启动时打开：`KEEL_SPIKE_DEMO=1` 打开示例项目；否则用
+    /// `KEEL_SPIKE_OPEN` 或命令行里的第一个路径。
+    pub fn open_startup(&self) {
+        if std::env::var_os("KEEL_SPIKE_DEMO").is_some() {
+            self.open_demo();
+            return;
+        }
+        if let Some(path) = startup_path() {
+            self.open_path(path);
+        }
+    }
+
+    /// 打开一个路径：目录作为项目；文件先识别项目根，再打开文件。
+    pub fn open_path(&self, path: PathBuf) {
+        if path.is_dir() {
+            self.open_project(path);
+            return;
+        }
+        if !path.is_file() {
+            self.say(format!("路径不存在：{}", path.display()));
+            return;
+        }
+        let root = find_project_root(&path)
+            .or_else(|| path.parent().map(Path::to_path_buf))
+            .unwrap_or_default();
+        if root.is_dir() {
+            self.open_project(root);
+        }
+        self.open_files(vec![path.clone()]);
+        self.reveal(&path);
     }
 
     /// 打开仓库内置的示例项目。
@@ -123,7 +155,7 @@ impl Workspace {
         self.root.set(Some(dir));
     }
 
-    /// 打开一组文件；已经打开的文件直接切换过去。
+    /// 打开一组文件（固定标签）；已经打开的文件直接切换过去并取消预览态。
     pub fn open_files(&self, paths: Vec<PathBuf>) {
         let mut failures = Vec::new();
         for path in paths {
@@ -135,20 +167,25 @@ impl Workspace {
                 .docs
                 .with(|docs| docs.iter().position(|doc| doc.path == path))
             {
+                self.docs.update(|docs| {
+                    if let Some(doc) = docs.get_mut(index) {
+                        doc.preview = false;
+                    }
+                });
                 self.active.set(Some(index));
                 continue;
             }
-            match Doc::open(path) {
+            match Doc::open(path.clone()) {
                 Ok(doc) => {
                     let index = self.docs.with(|docs| docs.len());
                     self.docs.update(|docs| docs.push(doc));
                     self.active.set(Some(index));
                 }
-                Err(error) => failures.push(error.to_string()),
+                Err(error) => failures.push(open_error(&path, &error)),
             }
         }
         match failures.first() {
-            Some(error) => self.say(format!("打开失败：{error}")),
+            Some(error) => self.say(error.clone()),
             None => {
                 let name = self
                     .active_doc()
@@ -159,6 +196,42 @@ impl Workspace {
                 }
             }
         }
+    }
+
+    /// 打开预览标签（IDEA 的 preview tab）：斜体显示，下一个预览会替换它；
+    /// 编辑或双击后固定为普通标签。
+    pub fn preview_file(&self, path: PathBuf) {
+        if path.is_dir() {
+            self.open_project(path);
+            return;
+        }
+        if let Some(index) = self
+            .docs
+            .with(|docs| docs.iter().position(|doc| doc.path == path))
+        {
+            self.active.set(Some(index));
+            return;
+        }
+        let doc = match Doc::open_as(path.clone(), true) {
+            Ok(doc) => doc,
+            Err(error) => {
+                self.say(open_error(&path, &error));
+                return;
+            }
+        };
+        let name = doc.name.clone();
+        if let Some(index) = self
+            .docs
+            .with(|docs| docs.iter().position(|doc| doc.preview))
+        {
+            self.docs.update(|docs| docs[index] = doc);
+            self.active.set(Some(index));
+        } else {
+            let index = self.docs.with(|docs| docs.len());
+            self.docs.update(|docs| docs.push(doc));
+            self.active.set(Some(index));
+        }
+        self.say(format!("预览 {name}"));
     }
 
     /// 保存当前的文档。
@@ -334,6 +407,8 @@ impl Workspace {
             {
                 doc.text = text.to_owned().into();
                 doc.dirty = true;
+                // 编辑预览标签即固定它（IDEA 的行为）。
+                doc.preview = false;
             }
         });
     }
@@ -343,14 +418,14 @@ impl Workspace {
         self.message.set(text.into());
     }
 
-    /// 项目名：根目录的最后一段。
+    /// 项目名：根目录的最后一段；未打开项目时为空。
     pub fn root_name(&self) -> SharedString {
         self.root
             .with(|root| {
                 root.as_ref()
                     .and_then(|root| root.file_name())
                     .map(|name| name.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "Keel".to_owned())
+                    .unwrap_or_default()
             })
             .into()
     }
@@ -432,4 +507,31 @@ fn demo_dir() -> Option<PathBuf> {
         }
     }
     None
+}
+
+/// 启动路径：`KEEL_SPIKE_OPEN` 优先，其次命令行里的第一个存在的路径。
+fn startup_path() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("KEEL_SPIKE_OPEN") {
+        let path = PathBuf::from(path);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    std::env::args_os().skip(1).map(PathBuf::from).find(|path| {
+        let text = path.to_string_lossy();
+        !text.starts_with('-') && text != "." && path.exists()
+    })
+}
+
+/// 打开失败的提示：区分二进制 / 非 UTF-8 与普通 IO 错误。
+fn open_error(path: &Path, error: &io::Error) -> String {
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.display().to_string());
+    if error.kind() == io::ErrorKind::InvalidData {
+        format!("无法预览 {name}：二进制或非 UTF-8 文件")
+    } else {
+        format!("无法打开 {name}：{error}")
+    }
 }

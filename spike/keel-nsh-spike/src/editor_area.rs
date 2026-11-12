@@ -63,6 +63,7 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
     let close_path = path.clone();
     let name_path = path.clone();
     let dirty_path = path.clone();
+    let preview_path = path.clone();
     let others_path = path.clone();
     let reveal_path = path.clone();
     let selected = move || ws.active.get() == Some(index.get());
@@ -85,6 +86,7 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
             text(move || doc_name(ws, &name_path))
                 .text_size(px(12.0))
                 .number_of_lines(1)
+                .style_when(move || doc_preview(ws, &preview_path), |s| s.italic())
                 .text_color(move || {
                     if selected() {
                         theme().foreground
@@ -306,6 +308,14 @@ fn doc_dirty(ws: Workspace, path: &Path) -> bool {
         docs.iter()
             .find(|doc| doc.path == path)
             .is_some_and(|doc| doc.dirty)
+    })
+}
+
+fn doc_preview(ws: Workspace, path: &Path) -> bool {
+    ws.docs.with(|docs| {
+        docs.iter()
+            .find(|doc| doc.path == path)
+            .is_some_and(|doc| doc.preview)
     })
 }
 

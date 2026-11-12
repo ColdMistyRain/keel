@@ -144,6 +144,7 @@ impl Shell {
             appearance: signal(Appearance::System),
             registry: stored(Arc::new(ActionRegistry::new())),
         };
+        shell.ws.open_startup();
         shell.registry.replace(Arc::new(commands::build(shell)));
         shell
     }
@@ -210,15 +211,6 @@ impl Shell {
     pub fn set_appearance(&self, appearance: Appearance) {
         self.appearance.set(appearance);
         set_color_scheme(appearance);
-    }
-
-    pub fn cycle_appearance(&self) {
-        let next = match self.appearance.get_untracked() {
-            Appearance::System => Appearance::Light,
-            Appearance::Light => Appearance::Dark,
-            Appearance::Dark => Appearance::System,
-        };
-        self.set_appearance(next);
     }
 
     /// 在项目树里定位当前文件（Navigate → 在项目中定位）。
