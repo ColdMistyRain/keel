@@ -2946,24 +2946,33 @@ pub fn empty_editor_state(chrome: &Chrome) -> AnyElement {
         .flex()
         .flex_col()
         .items_center()
-        // IDEA 把提示放在编辑器高度的 37.5% 处；这里用上下弹性空白近似。
-        .child(div().flex_grow(0.75))
+        // `EditorEmptyTextPainter.heightRatio()` = 0.375：文本块紧接在
+        // 编辑器高度 37.5% 的空白之后，首行基线落在黄金分割处。
+        .child(div().h(relative(0.375)).flex_shrink_0())
         .child(
             div()
                 .flex()
                 .flex_col()
-                .line_height(relative(1.8))
+                // `UIUtil.TextPainter` 的行距 = `fontMetrics.getHeight()`，
+                // 13px 字体约 17px（行高比 1.3），不是松散的 1.8。
+                .line_height(relative(1.3))
                 .children(lines.into_iter().map(|(label, shortcut)| {
-                    div()
+                    let mut line = div()
                         .flex()
                         .items_center()
-                        .gap(px(6.))
-                        // 说明用 `Label.infoForeground`（text-secondary），快捷键用正文色。
-                        .child(div().text_color(chrome.secondary_fg).child(label))
-                        .child(div().text_color(chrome.fg).child(shortcut))
+                        // `appendAction()` 在说明后拼一个空格再放快捷键，
+                        // 13px 下的空白约 4px。
+                        .gap(px(4.))
+                        // 说明用 `Label.infoForeground`（Islands 的 ui.* 覆盖为
+                        // text-secondary）。
+                        .child(div().text_color(chrome.secondary_fg).child(label));
+                    if !shortcut.is_empty() {
+                        // 快捷键用 `Shortcut.foreground` = text-muted。
+                        line = line.child(div().text_color(chrome.muted_fg).child(shortcut));
+                    }
+                    line
                 })),
         )
-        .child(div().flex_grow(1.25))
         .into_any_element()
 }
 
