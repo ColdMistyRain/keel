@@ -6,6 +6,10 @@ import { open, test } from "nsh/test";
 test("captures the Keel workbench shell", async () => {
   const app = await open(".");
   await app.setViewport(1180, 680);
+  // 等启动提示自动清除，截到状态栏左侧的面包屑。
+  if (app.count("text:demo") > 0) {
+    await app.wait(4500);
+  }
   try {
     await app.screenshot("docs/screenshots/nsh-p2-light.png");
   } catch (error) {

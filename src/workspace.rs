@@ -7,11 +7,12 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use keel_workspace::{FlatRow, ProjectSnapshot, find_project_root, flatten, scan_snapshot};
 use nsh_core::prelude::*;
 
-pub use keel_workspace::{language_label, language_name as language_of};
+pub use keel_workspace::language_name as language_of;
 
 /// 编辑器里打开的一个文档。
 #[derive(Clone, PartialEq)]
@@ -64,6 +65,8 @@ pub struct Workspace {
     pub cursor: Signal<SharedString>,
     /// 状态栏左侧的提示（保存、打开失败等）。
     pub message: Signal<SharedString>,
+    /// 提示的序号：新提示覆盖旧提示时，旧的自动清除定时器不再生效。
+    pub message_seq: Signal<u64>,
 }
 
 impl Workspace {
@@ -76,8 +79,9 @@ impl Workspace {
             selected: signal(None),
             docs: signal(Vec::new()),
             active: signal(None),
-            cursor: signal("Ln 1, Col 1".into()),
-            message: signal("就绪".into()),
+            cursor: signal("1:1".into()),
+            message: signal("".into()),
+            message_seq: signal(0),
         }
     }
 
@@ -413,9 +417,18 @@ impl Workspace {
         });
     }
 
-    /// 状态栏提示。
+    /// 状态栏提示：显示 4 秒后自动清除，让面包屑回到状态栏左侧。
     pub fn say(&self, text: impl Into<SharedString>) {
         self.message.set(text.into());
+        let sequence = self.message_seq.get_untracked().wrapping_add(1);
+        self.message_seq.set(sequence);
+        let message = self.message;
+        let message_seq = self.message_seq;
+        set_timeout(Duration::from_secs(4), move || {
+            if message_seq.get_untracked() == sequence {
+                message.set("".into());
+            }
+        });
     }
 
     /// 项目名：根目录的最后一段；未打开项目时为空。

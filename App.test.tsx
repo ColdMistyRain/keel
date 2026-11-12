@@ -4,7 +4,8 @@ import { expect, open, test } from "nsh/test";
 test("renders the Keel workbench shell", async () => {
   const app = await open(".");
   const texts = app.texts();
-  expect(texts).toContain("Keel");
+  // 无项目时标题栏显示产品名，打开示例项目后显示项目名。
+  expect(texts.includes("Keel") || texts.includes("demo")).toBe(true);
   expect(texts).toContain("项目");
   expect(texts).toContain("UTF-8");
   // 菜单栏默认收进左上角的汉堡按钮。
@@ -40,6 +41,17 @@ test("opens the command palette from the toolbar search field", async () => {
   await app.waitFor("text:关闭标签页");
   await app.keyboard.press("escape");
   await app.waitFor("text:关闭标签页", { state: "gone" });
+});
+
+test("opens the project widget menu", async () => {
+  const app = await open(".");
+  // 无头测试没有打开项目时，标题栏只显示产品名，没有项目控件。
+  if (app.count("label:项目菜单") === 0) {
+    return;
+  }
+  await app.press("label:项目菜单");
+  await app.waitFor("text:刷新项目");
+  await app.keyboard.press("escape");
 });
 
 test("opens the project tree context menu", async () => {

@@ -4,7 +4,7 @@
 //! 标签页支持未保存圆点、关闭按钮、横向溢出滚动与右键菜单；编辑器仍是
 //! `nsh_base::editor`，后续 P3 再补 LSP 与查找替换。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use nsh_base::{EditorClasses, button, context_menu, editor, theme};
 use nsh_core::prelude::*;
@@ -12,11 +12,10 @@ use nsh_core::prelude::*;
 use crate::icons;
 use crate::shell::Shell;
 use crate::ui::{color_of, menu_action, popup_style};
-use crate::workspace::{Doc, Workspace, language_label, language_of};
+use crate::workspace::{Doc, Workspace, language_of};
 
 /// 编辑器区（岛屿容器）。
 pub fn editor_area(shell: Shell) -> impl IntoElement {
-    let ws = shell.ws;
     view()
         .flex_1()
         .min_h(px(0.0))
@@ -24,7 +23,6 @@ pub fn editor_area(shell: Shell) -> impl IntoElement {
         .bg(move || color_of("editor-bg"))
         .child(tab_strip(shell))
         .child(view().h(px(1.0)).bg(move || color_of("editor-border")))
-        .child(breadcrumbs(ws))
         .child(editor_pane(shell))
 }
 
@@ -301,43 +299,73 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
         .into_element()
 }
 
-/// 面包屑：每段是可悬停的 crumb，圆角 2、左右内缩 7（IDEA `BreadcrumbsComponent`）。
-fn breadcrumbs(ws: Workspace) -> impl IntoElement {
+/// 状态栏左侧的面包屑（IDEA `NavBarLocation.BOTTOM`）。
+///
+/// 从项目根开始逐段渲染：文件夹用通用文件夹图标，最后一段用当前文件
+/// 的类型图标；段与段之间是 12px 的 `chevronRight`（IDEA 的
+/// `AllIcons.Ide.NavBarSeparator`）。每段高 22、左右内缩 6、圆角 2。
+pub fn breadcrumbs(shell: Shell) -> impl IntoElement {
+    let ws = shell.ws;
     dynamic(move || {
+        let root = ws.root_name();
         let parts = ws.breadcrumbs();
+        if root.is_empty() && parts.is_empty() {
+            return view().into_element();
+        }
+        let dark = shell.appearance.get() == Appearance::Dark;
+        let active_path = ws.active_path();
+        let mut row = view().h(px(22.0)).flex_row().items_center().gap(px(2.0));
+        let mut has_previous = false;
+        if !root.is_empty() {
+            row = row.child(crumb(root, icons::FOLDER));
+            has_previous = true;
+        }
         let last = parts.len().saturating_sub(1);
-        let mut row = view()
-            .h(px(28.0))
-            .px(px(12.0))
-            .flex_row()
-            .items_center()
-            .gap(px(2.0));
         for (index, part) in parts.into_iter().enumerate() {
-            row = row.child(
-                view()
-                    .h(px(22.0))
-                    .px(px(7.0))
-                    .items_center()
-                    .justify_center()
-                    .rounded(px(2.0))
-                    .hover(|s| s.bg(move || color_of("hover-overlay")))
-                    .child(
-                        text(part)
-                            .text_size(px(12.0))
-                            .text_color(move || color_of("muted-fg"))
-                            .number_of_lines(1),
-                    ),
-            );
-            if index < last {
+            if has_previous {
                 row = row.child(
-                    text("›")
-                        .text_size(px(12.0))
+                    svg(icons::CHEVRON_RIGHT)
+                        .w(px(12.0))
+                        .h(px(12.0))
                         .text_color(move || color_of("muted-fg")),
                 );
             }
+            let icon = if index == last {
+                active_path
+                    .as_deref()
+                    .map(|path| icons::for_file(&path.display().to_string(), false, dark))
+                    .unwrap_or(icons::FILE)
+            } else {
+                icons::FOLDER
+            };
+            row = row.child(crumb(part, icon));
+            has_previous = true;
         }
-        row
+        row.into_element()
     })
+}
+
+fn crumb(label: SharedString, icon: ImageAsset) -> View {
+    view()
+        .h(px(22.0))
+        .px(px(6.0))
+        .flex_row()
+        .items_center()
+        .gap(px(4.0))
+        .rounded(px(2.0))
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .child(
+            svg(icon)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("secondary-fg")),
+        )
+        .child(
+            text(label)
+                .text_size(px(12.0))
+                .text_color(move || color_of("muted-fg"))
+                .number_of_lines(1),
+        )
 }
 
 fn editor_pane(shell: Shell) -> impl IntoElement {
@@ -387,12 +415,7 @@ fn code_editor(ws: Workspace) -> impl IntoElement {
         .on_selection_change(move |selections: &Vec<nsh_base::EditorSelection>| {
             if let Some(selection) = selections.last() {
                 ws.cursor.set(
-                    format!(
-                        "Ln {}, Col {}",
-                        selection.head.line + 1,
-                        selection.head.column + 1
-                    )
-                    .into(),
+                    format!("{}:{}", selection.head.line + 1, selection.head.column + 1).into(),
                 );
             }
         })
@@ -491,16 +514,4 @@ fn doc_preview(ws: Workspace, path: &Path) -> bool {
             .find(|doc| doc.path == path)
             .is_some_and(|doc| doc.preview)
     })
-}
-
-/// 当前文档相对项目根的路径片段（给状态栏 / 面包屑复用）。
-pub fn active_path(ws: Workspace) -> Option<PathBuf> {
-    ws.active_path()
-}
-
-/// 当前文档的语言名（状态栏）。
-pub fn active_language(ws: Workspace) -> String {
-    active_path(ws)
-        .map(|path| language_label(&path))
-        .unwrap_or_else(|| "Plain Text".to_owned())
 }

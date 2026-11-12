@@ -81,20 +81,40 @@ pub fn icon_slot(icon: Option<ImageAsset>) -> View {
 /// 主工具栏左上角的汉堡按钮。
 ///
 /// IDEA 新 UI 默认把主菜单收进这个按钮（`MainMenuButton`），图标
-/// `AllIcons.General.WindowsMenu_20x20` 为 20×20，按钮悬停用
-/// `toolbar-bg-hovered`。
+/// `AllIcons.General.WindowsMenu_20x20` 为 20×20，按钮最小 30×30，
+/// 悬停用 `toolbar-bg-hovered`（`#00000012`）。
 pub fn burger_button() -> View {
     view()
-        .w(px(24.0))
-        .h(px(24.0))
+        .w(px(30.0))
+        .h(px(30.0))
         .items_center()
         .justify_center()
-        .rounded(px(4.0))
+        .rounded(px(6.0))
         .role(AccessibilityRole::Button)
         .label("主菜单")
-        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .hover(|s| s.bg(move || color_of("control-hover")))
         .child(
             svg(crate::icons::MENU)
+                .w(px(20.0))
+                .h(px(20.0))
+                .text_color(move || color_of("muted-fg")),
+        )
+}
+
+/// 主工具栏的 30×30 图标按钮（搜索、设置等，IDEA `MainToolbar.Icon`）。
+pub fn toolbar_button(icon: ImageAsset, label: &'static str, action: impl Fn() + 'static) -> View {
+    view()
+        .w(px(30.0))
+        .h(px(30.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(6.0))
+        .role(AccessibilityRole::Button)
+        .label(label)
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .on_press(action)
+        .child(
+            svg(icon)
                 .w(px(20.0))
                 .h(px(20.0))
                 .text_color(move || color_of("muted-fg")),
@@ -184,6 +204,60 @@ pub fn icon_button(icon: ImageAsset, label: &'static str, action: impl Fn() + 's
                 .h(px(16.0))
                 .text_color(move || color_of("muted-fg")),
         )
+}
+
+/// 项目色调色板下标：按项目名做 FNV-1a，保证同一项目每次启动颜色一致。
+fn project_palette_index(name: &str, len: usize) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    let hash = name.as_bytes().iter().fold(2_166_136_261u32, |hash, byte| {
+        (hash ^ u32::from(*byte)).wrapping_mul(16_777_619)
+    });
+    hash as usize % len
+}
+
+fn project_palette_color(name: &str, dark: bool, badge: bool) -> u32 {
+    let kind = if dark {
+        keel_theme::ThemeKind::Dark
+    } else {
+        keel_theme::ThemeKind::Light
+    };
+    let tokens = keel_theme::theme(kind).tokens();
+    let colors = if badge {
+        &tokens.project_badge
+    } else {
+        &tokens.project_gradient
+    };
+    colors
+        .get(project_palette_index(name, colors.len()))
+        .copied()
+        .unwrap_or(0x80_8080)
+}
+
+/// 标题栏左上角项目色渐变的起始色（IDEA `RecentProject.ColorN.MainToolbarGradientStart`）。
+pub fn project_gradient_rgb(name: &str, dark: bool) -> (u8, u8, u8) {
+    rgb_parts(project_palette_color(name, dark, false))
+}
+
+/// 项目头像的饱和底色（IDEA 的项目徽标色）。
+pub fn project_badge_rgb(name: &str, dark: bool) -> u32 {
+    project_palette_color(name, dark, true)
+}
+
+/// 按比例压暗一个 `0xRRGGBB` 颜色，用于头像渐变的末端。
+pub fn shade_rgb(hex: u32, factor: f32) -> u32 {
+    let (r, g, b) = rgb_parts(hex);
+    let scale = |channel: u8| (f32::from(channel) * factor).round().clamp(0.0, 255.0) as u32;
+    (scale(r) << 16) | (scale(g) << 8) | scale(b)
+}
+
+fn rgb_parts(hex: u32) -> (u8, u8, u8) {
+    (
+        ((hex >> 16) & 0xFF) as u8,
+        ((hex >> 8) & 0xFF) as u8,
+        (hex & 0xFF) as u8,
+    )
 }
 
 /// 工具窗口条 / 底部条上的方形按钮。
