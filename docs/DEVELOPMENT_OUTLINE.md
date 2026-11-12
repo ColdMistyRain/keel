@@ -348,6 +348,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-10：设置页骨架（外观页可切换主题与文本渲染方式并写入 state.json，关于页展示版本/阶段/配置路径）与「设置…」「关于 Keel…」菜单入口（Ctrl+Alt+S 开关、Esc 关闭）
 - [x] Phase 2 · ED-01：文件内查找/替换条（Ctrl+F / Ctrl+R，编辑器自带面板：匹配高亮、上一个/下一个、匹配计数、替换与全部替换、Esc 关闭；焦点归面板管理，应用级快捷键在项目树聚焦时同样可用）
 - [x] Phase 1 · UI-11：对照 IDEA 2025.3 新 UI（expUI）做外观对齐——移除多余工具按钮行；标签栏压到 28px、选中标签靠顶部蓝线区分；面包屑移到底部；底部工具窗口默认隐藏；状态栏改为「分支 + 行列/换行/编码/缩进/设置」；令牌全部换成 expUI 的 Gray/Blue 调色板；工具窗口侧边条与面板标题使用 expUI SVG 图标；UI 字体嵌入 Inter 13px，编辑器改为 JetBrains Mono 13px
+- [x] Phase 1 · UI-12：对照社区版 2026 默认的 Islands 主题重做外观——令牌换成 ManyIslandsLight/Dark（画布 gray-150、岛屿白、选中 blue-140/blue-50、标签 blue-150 底 + 4px blue-120 上边线、悬停为半透明黑/白）；自绘 40px 标题栏（汉堡菜单、项目徽标、分支、搜索/设置、窗口按钮，菜单收进汉堡）；编辑器与项目面板改为 20px 圆角岛屿；工具窗口条 40×40、激活蓝底白图标，底部追加问题/运行/终端入口；状态栏只留行列/换行/编码/缩进；标签关闭改用 SVG、未保存改为圆点；嵌入 JetBrains Mono、行高 1.2，并按 expUI light/dark scheme 设置编辑器语法色与当前行高亮
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven
