@@ -128,8 +128,12 @@ pub struct Shell {
     /// 底部工具窗口；`None` 时收起。
     pub bottom: Signal<Option<Bottom>>,
     pub appearance: Signal<Appearance>,
-    /// 动作注册表：菜单、快捷键、后续的命令面板共用。
+    /// 动作注册表：菜单、快捷键、命令面板共用。
     pub registry: Stored<Arc<ActionRegistry>>,
+    /// 命令面板（IDEA 的 Search Everywhere / Find Action）。
+    pub palette: Signal<bool>,
+    pub palette_query: Signal<SharedString>,
+    pub palette_selected: Signal<usize>,
 }
 
 impl Shell {
@@ -143,6 +147,9 @@ impl Shell {
             bottom: signal(demo.then_some(Bottom::Problems)),
             appearance: signal(Appearance::System),
             registry: stored(Arc::new(ActionRegistry::new())),
+            palette: signal(false),
+            palette_query: signal(SharedString::from("")),
+            palette_selected: signal(0),
         };
         shell.ws.open_startup();
         shell.registry.replace(Arc::new(commands::build(shell)));
@@ -188,6 +195,84 @@ impl Shell {
     pub fn perform(&self, id: ActionId) {
         let context = self.context();
         self.registry().perform(id, &context);
+    }
+
+    /// 命令面板：打开、关闭、切换。
+    pub fn open_palette(&self) {
+        self.palette_query.set(SharedString::from(""));
+        self.palette.set(true);
+        self.palette_selected.set(self.first_enabled_palette_item());
+    }
+
+    pub fn close_palette(&self) {
+        self.palette.set(false);
+    }
+
+    /// 按当前查询过滤出的动作（不追踪信号，供事件处理使用）。
+    pub fn palette_actions(&self) -> Vec<(ActionId, Presentation)> {
+        let query = self.palette_query.get_untracked().to_lowercase();
+        self.registry()
+            .presentations(&self.context())
+            .into_iter()
+            .filter(|(id, item)| {
+                item.visible
+                    && *id != "help.find_action"
+                    && (query.is_empty()
+                        || item.text.to_lowercase().contains(&query)
+                        || item.description.to_lowercase().contains(&query)
+                        || id.to_lowercase().contains(&query))
+            })
+            .collect()
+    }
+
+    fn first_enabled_palette_item(&self) -> usize {
+        self.palette_actions()
+            .iter()
+            .position(|(_, item)| item.enabled)
+            .unwrap_or(0)
+    }
+
+    /// 上 / 下移动命令面板的高亮，跳过禁用项。
+    pub fn palette_move(&self, delta: isize) {
+        if !self.palette.get_untracked() {
+            return;
+        }
+        let items = self.palette_actions();
+        if items.is_empty() {
+            return;
+        }
+        let len = items.len();
+        let mut index = self.palette_selected.get_untracked().min(len - 1);
+        for _ in 0..len {
+            index = (index as isize + delta).rem_euclid(len as isize) as usize;
+            if items[index].1.enabled {
+                self.palette_selected.set(index);
+                return;
+            }
+        }
+    }
+
+    /// 执行命令面板当前高亮的动作。
+    pub fn perform_palette_selection(&self) {
+        let index = self.palette_selected.get_untracked();
+        self.perform_palette_at(index);
+    }
+
+    /// 执行命令面板第 `index` 项。
+    pub fn perform_palette_at(&self, index: usize) {
+        let Some((id, item)) = self.palette_actions().get(index).cloned() else {
+            return;
+        };
+        if !item.enabled {
+            return;
+        }
+        self.palette.set(false);
+        self.perform(id);
+    }
+
+    /// 查询变化后把高亮落到第一个可用项。
+    pub fn palette_query_changed(&self) {
+        self.palette_selected.set(self.first_enabled_palette_item());
     }
 
     /// 工具窗口条 / 视图菜单：同一个窗口再点一次收起，否则切换过去并展开。

@@ -307,6 +307,20 @@ impl ActionRegistry {
             .collect()
     }
 
+    /// 所有动作此刻的展示状态，按文本排序（命令面板用）。
+    pub fn presentations(&self, context: &DataContext) -> Vec<(ActionId, Presentation)> {
+        let mut all: Vec<(ActionId, Presentation)> = self
+            .actions
+            .keys()
+            .filter_map(|id| {
+                self.presentation(id, context)
+                    .map(|presentation| (*id, presentation))
+            })
+            .collect();
+        all.sort_by(|a, b| a.1.text.cmp(&b.1.text));
+        all
+    }
+
     /// 计算动作此刻的展示状态。
     pub fn presentation(&self, id: ActionId, context: &DataContext) -> Option<Presentation> {
         let action = self.actions.get(id)?;
@@ -542,6 +556,17 @@ mod tests {
         assert!(!registry.perform("test.hidden", &DataContext::new()));
         assert!(!registry.perform("test.missing", &DataContext::new()));
         assert_eq!(hits.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn presentations_are_listed_in_label_order() {
+        let mut registry = ActionRegistry::new();
+        registry.register(CallbackAction::new("b.second", "保存", |_| {}));
+        registry.register(CallbackAction::new("a.first", "关闭", |_| {}));
+        let all = registry.presentations(&DataContext::new());
+        let labels: Vec<_> = all.iter().map(|(_, item)| item.text.as_str()).collect();
+        assert_eq!(labels, vec!["保存", "关闭"]);
+        assert_eq!(all[0].0, "b.second");
     }
 
     #[test]

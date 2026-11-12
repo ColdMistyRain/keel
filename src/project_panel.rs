@@ -7,11 +7,11 @@
 
 use std::path::{Path, PathBuf};
 
-use nsh_base::{button, theme};
+use nsh_base::{button, context_menu, theme};
 use nsh_core::prelude::*;
 
 use crate::shell::{Shell, Tool};
-use crate::ui::{color_of, icon_button, stripe_button};
+use crate::ui::{color_of, icon_button, menu_action, menu_separator, popup_style, stripe_button};
 use crate::workspace::{TreeRow, Workspace};
 
 /// 左侧 40 点宽的工具窗口条。
@@ -96,7 +96,7 @@ fn placeholder(shell: Shell) -> View {
 }
 
 fn project_panel(shell: Shell) -> View {
-    view().flex_1().child(project_tree(shell.ws)).child(when(
+    view().flex_1().child(project_tree(shell)).child(when(
         move || shell.ws.root.get().is_none(),
         move || {
             view()
@@ -126,23 +126,30 @@ fn project_panel(shell: Shell) -> View {
 }
 
 /// 项目树：自绘的 `scroll` 列表。
-fn project_tree(ws: Workspace) -> View {
+fn project_tree(shell: Shell) -> View {
     view()
         .flex_1()
         .child(scroll().flex_1().child(dynamic(move || {
-            view()
-                .py(px(4.0))
-                .children(ws.visible_rows().into_iter().map(|row| tree_row(ws, row)))
+            view().py(px(4.0)).children(
+                shell
+                    .ws
+                    .visible_rows()
+                    .into_iter()
+                    .map(|row| tree_row(shell, row)),
+            )
         })))
 }
 
-fn tree_row(ws: Workspace, row: TreeRow) -> impl IntoElement {
-    let id = row.id.clone();
+fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
+    let ws = shell.ws;
+    let selected_id = row.id.clone();
     let select_id = row.id.clone();
+    let menu_id = row.id.clone();
+    let toggle_id = row.id.clone();
     let folder = row.folder;
     let open = row.open;
-    let selected = move || ws.selected.get().as_ref() == Some(&id);
-    view()
+    let selected = move || ws.selected.get().as_ref() == Some(&selected_id);
+    let body = view()
         .h(px(22.0))
         .flex_row()
         .items_center()
@@ -196,7 +203,46 @@ fn tree_row(ws: Workspace, row: TreeRow) -> impl IntoElement {
                 .text_size(px(12.0))
                 .text_color(move || theme().foreground)
                 .number_of_lines(1),
-        )
+        );
+
+    let path = PathBuf::from(menu_id.as_ref());
+    let mut menu = context_menu()
+        .offset(px(4.0))
+        .popup_style(popup_style)
+        .trigger(body);
+    if folder {
+        menu = menu
+            .child(menu_action(
+                if open { "收起" } else { "展开" },
+                None,
+                move || toggle_expanded(ws, &toggle_id),
+            ))
+            .child(menu_action("刷新项目", None, move || {
+                ws.refresh_project()
+            }))
+            .child(menu_action("收起全部", None, move || {
+                ws.expanded.set(Vec::new())
+            }));
+    } else {
+        let (open_path, preview_path, reveal_path) = (path.clone(), path.clone(), path.clone());
+        let clipboard = path.display().to_string();
+        menu = menu
+            .child(menu_action("打开", None, move || {
+                ws.open_files(vec![open_path.clone()])
+            }))
+            .child(menu_action("预览", None, move || {
+                ws.preview_file(preview_path.clone())
+            }))
+            .child(menu_separator())
+            .child(menu_action("复制路径", None, move || {
+                set_clipboard(clipboard.clone());
+                ws.say("已复制路径");
+            }))
+            .child(menu_action("在项目中定位", None, move || {
+                shell.reveal_path(&reveal_path)
+            }));
+    }
+    menu.into_element()
 }
 
 fn toggle_expanded(ws: Workspace, id: &SharedString) {

@@ -7,12 +7,14 @@
 mod bottom_panel;
 mod commands;
 mod editor_area;
+mod palette;
 mod project_panel;
 mod shell;
 mod ui;
 mod workspace;
 
 use nsh_base::{h_resizable, resizable_panel, theme, v_resizable};
+use nsh_core::keymap::When;
 use nsh_core::{element::desktop::title_bar, prelude::*};
 
 use crate::shell::{Bottom, Shell, Tool};
@@ -34,10 +36,19 @@ pub fn App() -> impl IntoElement {
 
     let shell = Shell::new();
 
-    // 快捷键也从动作注册表来：菜单、快捷键、以后的命令面板共用一份定义。
+    // 快捷键也从动作注册表来：菜单、快捷键、命令面板共用一份定义。
     for (shortcut, id) in shell.registry().shortcuts() {
         on_key(&shortcut, move |_| shell.perform(id));
     }
+    // 命令面板导航：输入框聚焦时也生效，未打开时把按键原样放行。
+    let keys = KeyOptions {
+        when: When::Always,
+        pass_through: true,
+        ..Default::default()
+    };
+    on_key_with("up", keys, move |_| shell.palette_move(-1));
+    on_key_with("down", keys, move |_| shell.palette_move(1));
+    on_key_with("escape", keys, move |_| shell.close_palette());
 
     view()
         .flex_1()
@@ -46,6 +57,10 @@ pub fn App() -> impl IntoElement {
         .child(title_bar_row(shell))
         .child(body(shell))
         .child(status_bar(shell))
+        .child(when(
+            move || shell.palette.get(),
+            move || palette::overlay(shell),
+        ))
 }
 
 /// 自绘标题栏：40 点高，右侧留给系统窗口按钮；菜单来自动作注册表。

@@ -54,3 +54,38 @@ test("captures a preview tab", async () => {
   await app.waitFor("text:预览 Greeter.java");
   await app.screenshot("docs/screenshots/nsh-p2-preview.png");
 });
+
+test("captures the command palette", async () => {
+  const app = await open(".");
+  await app.setViewport(1180, 680);
+  try {
+    await app.screenshot("docs/screenshots/nsh-p2-palette.png");
+  } catch (error) {
+    if (String(error).includes("real platform")) {
+      return;
+    }
+    throw error;
+  }
+  await app.keyboard.press("mod+shift+a");
+  await app.waitFor("text:关闭标签页");
+  await app.screenshot("docs/screenshots/nsh-p2-palette.png");
+});
+
+test("captures the project tree context menu", async () => {
+  const app = await open(".");
+  await app.setViewport(1180, 680);
+  if (app.count("text:pom.xml") === 0) {
+    return;
+  }
+  try {
+    await app.screenshot("docs/screenshots/nsh-p2-tree-menu.png");
+  } catch (error) {
+    if (String(error).includes("real platform")) {
+      return;
+    }
+    throw error;
+  }
+  await app.rightClick("text:pom.xml");
+  await app.waitFor("text:复制路径");
+  await app.screenshot("docs/screenshots/nsh-p2-tree-menu.png");
+});

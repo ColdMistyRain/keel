@@ -110,6 +110,13 @@ pub fn build(shell: Shell) -> ActionRegistry {
         }),
     );
     registry.register(
+        CallbackAction::new("help.find_action", "搜索操作…", move |_| {
+            shell.open_palette()
+        })
+        .description("按名称搜索菜单动作")
+        .shortcut("mod+shift+a"),
+    );
+    registry.register(
         CallbackAction::new("help.about", "关于 Keel", move |_| shell.about())
             .description("版本与运行时信息"),
     );
@@ -148,7 +155,12 @@ pub fn build(shell: Shell) -> ActionRegistry {
     );
     registry
         .register_group(ActionGroup::new("menu.navigate", "导航").add_action("navigate.reveal"));
-    registry.register_group(ActionGroup::new("menu.help", "帮助").add_action("help.about"));
+    registry.register_group(
+        ActionGroup::new("menu.help", "帮助")
+            .add_action("help.find_action")
+            .add_separator()
+            .add_action("help.about"),
+    );
 
     registry
 }

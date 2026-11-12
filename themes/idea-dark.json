@@ -29,6 +29,7 @@
     "popup_border": "#33353B",
     "separator": "#FFFFFF21",
     "separator_line": "#33353B",
+    "overlay": "#00000066",
     "feedback": "#33353B",
     "feedback_border": "#33353B",
     "scrollbar_thumb": "#A6A6A647",

@@ -40,8 +40,9 @@ nsh package --target windows
 | 标题栏 | 自绘 40px 标题栏，`.window_drag(true)` 拖动窗口，右侧给系统窗口按钮留白（`title_bar().right`）；菜单、项目名、搜索/运行/设置快捷图标 |
 | 应用菜单 | 文件 / 视图 / 导航 / 帮助，全部来自 `keel-commands` 的动作注册表；快捷键也从注册表绑定 |
 | 工具窗口条 | 左侧 40px 竖条：项目、搜索、版本控制 |
-| 项目面板 | `resizable_panel` 宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏；树用自绘 `scroll` 列表 |
+| 项目面板 | `resizable_panel` 宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏；树用自绘 `scroll` 列表，右键菜单（打开 / 预览 / 复制路径 / 在项目中定位） |
 | 编辑器区 | 横向滚动的标签条、预览标签（单击斜体、双击固定）、未保存圆点、关闭、右键菜单；面包屑、`nsh_base::editor` |
+| 命令面板 | `Ctrl+Shift+A` 按名称搜索动作注册表；↑↓ 选择、Enter 执行、Esc 关闭；背景用主题的 `overlay` 遮罩 |
 | 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable` 高度 90–360；状态栏左侧有图标切换条 |
 | 状态栏 | 提示、分支、语言、编码、换行、缩进、光标位置 |
 
@@ -56,8 +57,9 @@ nsh package --target windows
 ```
 src/lib.rs            IdeRootPane：标题栏、工具窗口条、分栏、状态栏
 src/shell.rs          外壳状态：工具窗口、底部窗口、外观、动作注册表、UiState
-src/commands.rs       动作注册与菜单渲染：菜单 / 快捷键共用一份定义
-src/project_panel.rs  左侧工具窗口：条纹、标题栏、项目树
+src/commands.rs       动作注册与菜单渲染：菜单 / 快捷键 / 命令面板共用一份定义
+src/palette.rs        命令面板：搜索、排序、键盘选择与执行
+src/project_panel.rs  左侧工具窗口：条纹、标题栏、项目树与右键菜单
 src/editor_area.rs    编辑器区：标签页与右键菜单、面包屑、编辑器、欢迎页
 src/bottom_panel.rs   底部工具窗口：切换条、标题栏、占位内容
 src/ui.rs             共用小部件与主题取值（菜单触发器、图标按钮、条纹按钮）
@@ -93,10 +95,12 @@ P2 外壳（2026-11-12）：
 | 项 | 结果 |
 | --- | --- |
 | `cargo clippy --all-targets -- -D warnings` | 通过 |
-| `nsh test`（无头） | 5 通过：外壳文本、视图菜单、三个截图测试自动跳过 |
-| `nsh test --target windows` | 5 通过：真实窗口中的菜单交互、预览标签与截图 |
+| `nsh test`（无头） | 9 通过：外壳文本、视图菜单、命令面板、项目树菜单，截图测试自动跳过 |
+| `nsh test --target windows` | 9 通过：真实窗口中的菜单、命令面板、预览标签、右键菜单与截图 |
 | 左侧工具窗口 | 可拖宽、可折叠；刷新 / 收起全部 / 隐藏可用 |
 | 标签页 | 溢出横向滚动、预览标签（单击）、双击固定、未保存圆点、关闭、右键菜单 |
+| 命令面板 | `Ctrl+Shift+A` 打开，按名称过滤，↑↓ / Enter / Esc 可用 |
+| 项目树 | 单击预览、双击固定；右键打开 / 预览 / 复制路径 / 在项目中定位 |
 | 底部工具窗口 | 问题 / 运行 / 终端切换与拖高可用；状态栏图标条同步 |
 | 动作状态 | 无文档时保存 / 关闭变灰；工具窗口与外观菜单显示勾选 |
 | 打开项目 | 菜单 / 欢迎页对话框、`KEEL_OPEN`、打包产物路径参数；文件向上识别项目根 |
@@ -104,14 +108,16 @@ P2 外壳（2026-11-12）：
 截图：[浅色](docs/screenshots/nsh-p2-light.png) ·
 [深色](docs/screenshots/nsh-p2-dark.png) ·
 [文件菜单](docs/screenshots/nsh-p2-menu.png) ·
-[预览标签](docs/screenshots/nsh-p2-preview.png)。
+[预览标签](docs/screenshots/nsh-p2-preview.png) ·
+[命令面板](docs/screenshots/nsh-p2-palette.png) ·
+[项目树右键菜单](docs/screenshots/nsh-p2-tree-menu.png)。
 
 ## 已知缺口
 
 - 文件图标用字母徽标代替 IDEA 图标；
 - 搜索 / 版本控制工具窗口、问题 / 运行 / 终端面板仍是占位；
 - 编辑器只有一个编辑器组，没有分栏、拖拽标签与标签重排；
-- 命令面板、查找替换、设置页未迁移；
+- 查找替换、设置页未迁移；命令面板目前只搜动作，不搜文件和类；
 - 每次按键都会把整段文本写回信号（`editor` 的受控用法），大文件应改用
   `default_value` + 保存时读取（P3 处理）；
 - 中文 IME 组合（拼音候选）仍需人工在窗口里验证；`SendKeys` 注入中文已验证。

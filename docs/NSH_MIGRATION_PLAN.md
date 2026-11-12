@@ -274,9 +274,9 @@ keel-core
 
 - `cargo test -p keel-core`：3 通过（懒加载服务、逆序清理、类型化事件）；
 - `cargo test -p keel-workspace`：5 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订、项目根）；
-- `cargo test -p keel-commands`：6 通过（注册表、上下文、可用性/勾选、菜单解析、执行、快捷键）；
+- `cargo test -p keel-commands`：7 通过（注册表、上下文、可用性/勾选、菜单解析、执行、快捷键、动作列表）；
 - `cargo test -p keel-theme`：3 通过（配置解析、颜色/透明度、cssVars）；
-- 根 GPUI `cargo test`：迁移前 14 通过（归档在 `legacy/gpui/`）；nsh `nsh test`：5 通过。
+- 根 GPUI `cargo test`：迁移前 14 通过（归档在 `legacy/gpui/`）；nsh `nsh test`：9 通过。
 
 还没做的 P1 部分：
 
@@ -306,7 +306,9 @@ keel-core
 | 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；项目名；右侧搜索 / 运行 / 设置快捷图标；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
 | 启动与项目 | `KEEL_OPEN=<路径>`（开发）或打包产物的第一个路径参数；文件会向上识别项目根（`.git` / `pom.xml` / `Cargo.toml` 等） |
 | 左侧工具窗口 | 项目 / 搜索 / 版本控制；`h_resizable` + `resizable_panel`，宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏 |
+| 项目树 | 单击预览、双击固定；右键菜单（打开 / 预览 / 复制路径 / 在项目中定位） |
 | 编辑器区 | 标签条横向滚动（溢出）、未保存圆点、关闭按钮、右键菜单（关闭 / 关闭其他 / 关闭全部 / 在项目中定位）；**预览标签**：项目树单击斜体预览、下一个预览替换、双击或编辑后固定；面包屑、`nsh_base::editor` |
+| 命令面板 | `Ctrl+Shift+A` 复用动作注册表搜索；↑↓ 选择、Enter 执行、Esc 关闭；`overlay` 主题令牌做背景遮罩 |
 | 底部工具窗口 | 问题 / 运行 / 终端占位；`v_resizable`，高度 90–360；状态栏左侧有图标切换条 |
 | 状态栏 | 底部窗口条、提示、分支、语言、编码、换行、缩进、光标位置 |
 | 动作状态 | 可用性与勾选态来自 `UiState`：无文档时禁用保存/关闭，工具窗口与外观菜单显示勾选 |
@@ -319,19 +321,20 @@ keel-core
 **验证**
 
 - `cargo test -p keel-workspace`：5 通过（含项目根识别）；
-- `cargo test -p keel-commands`：6 通过；
-- `nsh test`：5 通过（外壳文本、视图菜单、三个截图测试在无头下自动跳过）；
-- `nsh test --target windows`：5 通过（真实窗口；含浅色/深色/菜单/预览截图）；
+- `cargo test -p keel-commands`：7 通过；
+- `nsh test`：9 通过（外壳文本、菜单、命令面板、项目树菜单，截图测试在无头下自动跳过）；
+- `nsh test --target windows`：9 通过（真实窗口；含浅色/深色/菜单/预览/命令面板/项目树菜单截图）；
 - `cargo clippy --all-targets -- -D warnings`：通过。
 
 截图：[浅色](screenshots/nsh-p2-light.png) · [深色](screenshots/nsh-p2-dark.png) ·
-[文件菜单](screenshots/nsh-p2-menu.png) · [预览标签](screenshots/nsh-p2-preview.png)。
+[文件菜单](screenshots/nsh-p2-menu.png) · [预览标签](screenshots/nsh-p2-preview.png) ·
+[命令面板](screenshots/nsh-p2-palette.png) · [项目树右键菜单](screenshots/nsh-p2-tree-menu.png)。
 
 还没做的 P2 部分：
 
 - 编辑器分栏 / 拖拽标签（`EditorsSplitters` 的多组编辑器）；标签重排；
 - `nsh_base::dock_area` 的可停靠布局未采用（当前 `resizable_panel` 已够用，继续评估）；
-- 命令面板（`mod+shift+a`）尚未接入注册表；
+- 命令面板目前只搜动作，不搜文件 / 类（Search Everywhere 的其余部分）；
 - 工具窗口内容的拖放、浮动、最大化，最近项目与会话持久化。
 
 ### 4.4 与 IDEA 社区版（新 UI）对照
@@ -345,7 +348,7 @@ keel-core
 | FileEditorManager / EditorsSplitters | 单编辑器组、标签页、预览标签 | 核心对齐；分栏 / 拖拽标签未做 |
 | 项目树：刷新、收起全部、隐藏、展开 / 选中 | 同；文件图标用字母徽标代替 | 行为对齐，视觉待图标资源 |
 | 编辑器：高亮、行号、折叠、面包屑、状态栏 | `nsh_base::editor` | 对齐（无 LSP / 诊断） |
-| ActionManager：菜单 / 快捷键共用动作 | `keel-commands` | 对齐；命令面板待做 |
+| ActionManager：菜单 / 快捷键 / 命令面板共用动作 | `keel-commands` | 对齐 |
 | 设置、持久化（最近项目、会话） | 无 | 缺口 P4 |
 | 运行 / 调试、VCS | 占位 | 缺口 P4/P5 |
 
@@ -425,7 +428,7 @@ keel-core
 
 ### P4：功能对齐
 
-- 项目树右键、文件操作、命令面板、设置、通知、查找替换、工具窗口内容；
+- 项目树文件操作、查找替换、设置、通知、工具窗口内容；
 - 复用现有 44 张 UI 卡的验收标准，逐项截图对比。
 
 ### P5：切换与清理
