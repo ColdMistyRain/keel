@@ -32,8 +32,10 @@ pub fn editor_area(shell: Shell) -> impl IntoElement {
 ///
 /// 条高 36，标签高 28、圆角 6（arc 12），横向内缩 4；选中标签是
 /// `#E3EBFE` 底色 + `#A7C5FF` 1px 边框，未选中没有底色。
+/// 标签溢出时右侧出现左右滚动箭头（IDEA 的 `ScrollableSingleRowLayout`）。
 fn tab_strip(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
+    measure_tab_overflow(shell);
     view()
         .h(px(36.0))
         .flex_row()
@@ -45,6 +47,7 @@ fn tab_strip(shell: Shell) -> impl IntoElement {
                 .scrollbar(false)
                 .h(px(36.0))
                 .flex_1()
+                .element_ref(&shell.tab_viewport)
                 .child(
                     view()
                         .h(px(36.0))
@@ -52,12 +55,112 @@ fn tab_strip(shell: Shell) -> impl IntoElement {
                         .items_center()
                         .gap(px(2.0))
                         .pl(px(3.0))
+                        .element_ref(&shell.tab_content)
                         .child(each(
                             ws.docs,
                             |doc: &Doc| doc.path.display().to_string(),
                             move |doc, index| tab(shell, doc, index),
                         )),
                 ),
+        )
+        .child(overflow_arrows(shell))
+}
+
+/// 打开 / 关闭标签或切换激活标签后，测量标签内容与视口宽度，决定是否显示箭头。
+fn measure_tab_overflow(shell: Shell) {
+    let viewport = shell.tab_viewport;
+    let content = shell.tab_content;
+    effect(move || {
+        // 订阅文档与激活标签，变化后重新测量。
+        let _count = shell.ws.docs.with(|docs| docs.len());
+        let active = shell.ws.active.get_untracked();
+        spawn(async move {
+            let (Some(viewport_size), Some(content_size)) =
+                (viewport.measure().await, content.measure().await)
+            else {
+                return;
+            };
+            let viewport_width = viewport_size.frame.size.width.0;
+            let content_width = content_size.frame.size.width.0;
+            // 布局稳定前会量到很小的宽度（例如 92），忽略这种中间值。
+            if viewport_width < 200.0 {
+                return;
+            }
+            shell.tab_viewport_width.set(viewport_width);
+            shell.tab_content_width.set(content_width);
+            let overflow = content_width > viewport_width + 0.5;
+            shell.tab_overflow.set(overflow);
+            if !overflow {
+                shell.tab_scroll.set(0.0);
+                viewport.scroll_to(point(px(0.0), px(0.0)), false);
+            } else if active.is_some_and(|index| index + 1 == shell.ws.docs.with(|docs| docs.len()))
+            {
+                // 新打开的标签在最右侧：把它滚进视口。
+                let end = (content_width - viewport_width).max(0.0);
+                shell.tab_scroll.set(end);
+                viewport.scroll_to(point(px(end), px(0.0)), false);
+            }
+        });
+    });
+}
+
+/// 溢出时显示的左右滚动箭头。
+fn overflow_arrows(shell: Shell) -> View {
+    view()
+        .flex_row()
+        .items_center()
+        .gap(px(2.0))
+        .pl(px(2.0))
+        .style_when(move || !shell.tab_overflow.get(), |s| s.hidden())
+        .child(scroll_arrow(shell, -1.0))
+        .child(scroll_arrow(shell, 1.0))
+}
+
+fn scroll_arrow(shell: Shell, direction: f32) -> View {
+    let left = direction < 0.0;
+    let icon = if left {
+        icons::CHEVRON_LEFT
+    } else {
+        icons::CHEVRON_RIGHT
+    };
+    let dimmed = move || {
+        let available = (shell.tab_content_width.get() - shell.tab_viewport_width.get()).max(0.0);
+        if left {
+            shell.tab_scroll.get() <= 0.5
+        } else {
+            shell.tab_scroll.get() + 0.5 >= available
+        }
+    };
+    view()
+        .w(px(24.0))
+        .h(px(28.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(4.0))
+        .role(AccessibilityRole::Button)
+        .label(if left {
+            "向左滚动标签"
+        } else {
+            "向右滚动标签"
+        })
+        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .style_when(dimmed, |s| s.opacity(0.4))
+        .on_press(move || {
+            let available = (shell.tab_content_width.get_untracked()
+                - shell.tab_viewport_width.get_untracked())
+            .max(0.0);
+            let next = (shell.tab_scroll.get_untracked() + direction * 160.0).clamp(0.0, available);
+            if next == shell.tab_scroll.get_untracked() {
+                return;
+            }
+            shell.tab_scroll.set(next);
+            shell.tab_viewport.scroll_to(point(px(next), px(0.0)), true);
+        })
+        .child(
+            svg(icon)
+                .w(px(12.0))
+                .h(px(12.0))
+                .text_color(move || color_of("muted-fg")),
         )
 }
 

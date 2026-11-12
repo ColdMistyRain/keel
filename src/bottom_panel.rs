@@ -126,10 +126,26 @@ fn tab_button(shell: Shell, bottom: Bottom) -> View {
 fn panel_content(shell: Shell) -> impl IntoElement {
     dynamic(move || {
         let bottom = shell.bottom.get().unwrap_or(Bottom::Problems);
-        let (title, hint) = match bottom {
-            Bottom::Problems => ("没有发现问题", "编译、检查与 LSP 诊断将在 P3/P4 接入"),
-            Bottom::Run => ("没有正在运行的应用", "运行配置将在 P4 迁移"),
-            Bottom::Terminal => ("终端尚未连接", "nsh_base::terminal 将在 P4 接入"),
+        let running = shell.running.get();
+        let (title, hint): (SharedString, &'static str) = match bottom {
+            Bottom::Problems => (
+                "没有发现问题".into(),
+                "编译、检查与 LSP 诊断将在 P3/P4 接入",
+            ),
+            Bottom::Run => {
+                if running {
+                    (
+                        format!("正在运行 {}…", shell.run_config_name()).into(),
+                        "按 Ctrl+F2 或点击工具栏的停止按钮结束运行",
+                    )
+                } else {
+                    (
+                        "没有正在运行的应用".into(),
+                        "按 Shift+F10 或点击工具栏的绿色按钮运行当前配置",
+                    )
+                }
+            }
+            Bottom::Terminal => ("终端尚未连接".into(), "nsh_base::terminal 将在 P4 接入"),
         };
         view()
             .flex_1()

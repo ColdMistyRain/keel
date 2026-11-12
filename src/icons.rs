@@ -1,8 +1,8 @@
 //! 菜单与命令面板的图标、助记符。
 //!
 //! 图标是 16×16 的 SVG，`currentColor` 跟随主题；路径相对 `assets/`。
-//! `java*.svg` / `xml*.svg` 取自 IntelliJ 社区版 `platform/icons/src/expui/fileTypes`
-//! （Apache 2.0，文件内保留版权头）。
+//! `java*.svg` / `xml*.svg` / `run.svg` / `debug.svg` 取自 IntelliJ 社区版
+//! `platform/icons/src/expui`（Apache 2.0，文件内保留版权头）。
 
 use nsh_core::prelude::*;
 
@@ -28,7 +28,11 @@ pub const COPY: ImageAsset = asset!("icons/copy.svg");
 pub const REFRESH: ImageAsset = asset!("icons/refresh.svg");
 pub const COLLAPSE_ALL: ImageAsset = asset!("icons/collapse_all.svg");
 pub const CHEVRON_RIGHT: ImageAsset = asset!("icons/chevron_right.svg");
+pub const CHEVRON_LEFT: ImageAsset = asset!("icons/chevron_left.svg");
 pub const CHEVRON_DOWN: ImageAsset = asset!("icons/chevron_down.svg");
+pub const RUN: ImageAsset = asset!("icons/run.svg");
+pub const DEBUG: ImageAsset = asset!("icons/debug.svg");
+pub const STOP: ImageAsset = asset!("icons/stop.svg");
 
 /// 树 / 标签页用的文件类型图标：Java、XML 用 expui 彩色图标，其余用通用文件图标。
 pub fn for_file(path: &str, folder: bool, dark: bool) -> ImageAsset {
@@ -71,6 +75,9 @@ pub fn for_action(id: &str) -> Option<ImageAsset> {
         "view.bottom.problems" => WARNING,
         "view.bottom.run" => PLAY,
         "view.bottom.terminal" => TERMINAL,
+        "run.start" => PLAY,
+        "run.stop" => STOP,
+        "run.debug" => DEBUG,
         "view.appearance.system" | "view.appearance.light" | "view.appearance.dark" => PALETTE,
         "navigate.reveal" => LOCATE,
         "help.find_action" => SEARCH,
@@ -94,6 +101,9 @@ pub fn action_mnemonic(id: &str) -> Option<char> {
         "view.bottom.problems" => 'B',
         "view.bottom.run" => 'R',
         "view.bottom.terminal" => 'T',
+        "run.start" => 'R',
+        "run.stop" => 'S',
+        "run.debug" => 'D',
         "view.appearance.system" => 'Y',
         "view.appearance.light" => 'L',
         "view.appearance.dark" => 'D',

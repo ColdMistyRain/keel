@@ -115,6 +115,7 @@ pub struct UiState {
     pub bottom_visible: bool,
     pub active_bottom: &'static str,
     pub appearance: &'static str,
+    pub running: bool,
 }
 
 /// 外壳状态。字段都是可复制的信号句柄，可以传进任意闭包。
@@ -134,6 +135,17 @@ pub struct Shell {
     pub palette: Signal<bool>,
     pub palette_query: Signal<SharedString>,
     pub palette_selected: Signal<usize>,
+    /// 运行中的状态：主工具栏的 run widget 由它切换绿色 / 红色。
+    pub running: Signal<bool>,
+    /// 编辑器标签条是否溢出（由测量tab 内容宽度与视口宽度得出）。
+    pub tab_overflow: Signal<bool>,
+    /// 标签条的横向滚动偏移，滚动箭头按它翻页。
+    pub tab_scroll: Signal<f32>,
+    pub tab_content_width: Signal<f32>,
+    pub tab_viewport_width: Signal<f32>,
+    /// 标签条视口与内容行，用于测量是否溢出。
+    pub tab_viewport: ElementRef,
+    pub tab_content: ElementRef,
 }
 
 impl Shell {
@@ -150,6 +162,13 @@ impl Shell {
             palette: signal(false),
             palette_query: signal(SharedString::from("")),
             palette_selected: signal(0),
+            running: signal(false),
+            tab_overflow: signal(false),
+            tab_scroll: signal(0.0),
+            tab_content_width: signal(0.0),
+            tab_viewport_width: signal(0.0),
+            tab_viewport: element_ref(),
+            tab_content: element_ref(),
         };
         shell.ws.open_startup();
         shell.registry.replace(Arc::new(commands::build(shell)));
@@ -177,6 +196,7 @@ impl Shell {
             bottom_visible: bottom.is_some(),
             active_bottom: bottom.map(Bottom::id).unwrap_or(""),
             appearance: appearance_id(self.appearance.get_untracked()),
+            running: self.running.get_untracked(),
         }
     }
 
@@ -321,6 +341,55 @@ impl Shell {
 
     pub fn about(&self) {
         self.ws.say("Keel 0.1.0 · nsh 0.5.0 spike · Rust UI");
+    }
+
+    /// 当前运行配置名：打开的文件名，没有文件时用 IDEA 演示工程的 `main`。
+    pub fn run_config_name(&self) -> SharedString {
+        self.ws
+            .active_path()
+            .and_then(|path| {
+                path.file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| "main".to_owned())
+            .into()
+    }
+
+    /// run widget 的主按钮：启动 / 停止「运行」工具窗口。
+    pub fn toggle_run(&self) {
+        if self.running.get_untracked() {
+            self.stop_run();
+        } else {
+            self.start_run();
+        }
+    }
+
+    /// 快捷键 Shift+F10 与 run widget 的绿色按钮。
+    pub fn start_run(&self) {
+        if self.running.get_untracked() {
+            return;
+        }
+        self.running.set(true);
+        self.bottom.set(Some(Bottom::Run));
+        self.ws.say(format!("正在运行 {}…", self.run_config_name()));
+    }
+
+    /// 快捷键 Ctrl+F2 与运行中的红色停止按钮。
+    pub fn stop_run(&self) {
+        if !self.running.get_untracked() {
+            return;
+        }
+        self.running.set(false);
+        self.ws.say("已停止运行");
+    }
+
+    /// run widget 的调试按钮：P4 之前只打开运行窗口并提示。
+    pub fn toggle_debug(&self) {
+        if self.running.get_untracked() {
+            return;
+        }
+        self.bottom.set(Some(Bottom::Run));
+        self.ws.say("调试将在 P4 接入");
     }
 
     pub fn pick_project(self) {

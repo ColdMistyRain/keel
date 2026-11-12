@@ -421,6 +421,7 @@ keel-core
 | 标签未选中 | `unselectedAlpha = 0.75`、`unselectedBlend = 0.9` | 仍用 `muted-fg` 近似；未选中标签无底色 |
 | 标签底边 | `EditorTabs.underTabsBorderColor = editor-border #E9EAEE` | 补 1px 分隔线 |
 | 标签关闭 | 仅选中标签 / 悬停时显示 | 未选中且未修改时隐藏，悬停标签后淡入（`group_hover_named`） |
+| 标签溢出 | `ScrollableSingleRowLayout`：溢出时在右侧留 more 区域并自动把选中标签滚进视口 | 测量内容 / 视口宽度，溢出时右侧出现左右滚动箭头（160px 翻页） |
 | 项目树行高 / 字号 | IDEA 常规 24 / 13 | 22 → 24，12 → 13 |
 | 项目树缩进 | `Tree.leftChildIndent = 7`、`rightChildIndent = 11`；`Tree.border = 4,12,4,12` | 每级 12 → 18，列表左右各 12 |
 | 项目树图标 | 16×16 文件 / 文件夹图标，展开箭头用 `chevronRight/Down.svg` | 字母徽标 → `folder.svg` / `file.svg`，箭头改用 SVG |
@@ -431,6 +432,7 @@ keel-core
 | 菜单项内容 | IDEA 的 16×16 动作图标 + 下划线助记符（中文界面为 `文件(F)`） | `icon_slot` 图标槽 + `mnemonic_label`（省略号在助记符之后） |
 | 面包屑 | `BreadcrumbsComponent`：crumb 圆角 2、文字内缩 7、悬停 `toolbar-bg-hovered` | 纯文本 → 可悬停 crumb |
 | 底部工具窗口标签 | `DefaultTabs.underlineHeight = 3`、`underlineColor #4083C9`，选中无底色 | 灰底 → 3px 下划线 |
+| Run widget | `RedesignedRunWidget`：高 30、按钮 30×30、绿色 `#4E9D6C`（dark `#338555`）、停止红 `#E4656E`（dark `#C54E58`）；`Shift+F10` / `Ctrl+F2` / `Shift+F9` | 标题栏加运行按钮 + 配置选择器 + 调试按钮；运行中变红色停止按钮，底部「运行」窗口与状态栏同步 |
 | 状态栏 | `background = main-window-bg`、`topBorderWidth = 0`、`Widget.iconBorder` 上下 6 | 高 24 → 28；字号 11 → 12 |
 | 条纹按钮尺寸 | `StripeToolbar.Button = 37×40` | 32 → 36（条纹宽 40） |
 | 弹出菜单 | `popup-bg = layer-2-bg`、`popup-border = layer-2-border`、`PopupMenu.borderCornerRadius = 8` | 一致 |
@@ -438,12 +440,12 @@ keel-core
 仍存在的视觉差距：
 
 - 只有 Java / XML 有语言专用彩色图标，其他语言仍是通用 `file.svg`；
-- 标签溢出时没有滚动箭头；
-- 主工具栏只有搜索 / 运行 / 设置三个图标，IDEA 有完整的 run widget 与搜索框；
+- 主工具栏没有 IDEA 的完整搜索框、AI 与其他 widget（当前是 run widget + 搜索 + 设置）；
 - 菜单栏常驻，IDEA 默认收进左上角汉堡菜单（点击后才展开菜单栏）；
 - 窗口按钮由系统绘制，不是自绘；
 - 状态栏缺少内存、后台任务、通知等部件；底部工具窗口条仍在状态栏左侧，
   IDEA 把问题 / 终端放在左侧条纹的下半区。
+- 运行只驱动 UI，没有真正的进程执行器。
 
 
 ### P1：抽 `keel-core`

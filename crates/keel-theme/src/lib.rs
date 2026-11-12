@@ -98,6 +98,9 @@ pub struct Tokens {
     pub brand: u32,
     pub brand_hover: u32,
     pub brand_active: u32,
+    /// 运行 / 调试按钮的绿色与停止按钮的红色（IDEA `RunWidget`）。
+    pub run_background: u32,
+    pub stop_background: u32,
     /// 品牌色上的文字 / 图标。
     pub on_brand: u32,
     pub caret: u32,
@@ -198,6 +201,8 @@ fn parse(json: &str) -> Theme {
         brand: color("brand"),
         brand_hover: color("brand_hover"),
         brand_active: color("brand_active"),
+        run_background: color("run_background"),
+        stop_background: color("stop_background"),
         on_brand: color("on_brand"),
         caret: color("caret"),
         editor_selection: color("editor_selection"),
@@ -293,13 +298,16 @@ fn nsh_vars(t: &Theme) -> String {
             r##""feedback":"{feedback}","scrollbar-thumb":"{scrollbar_thumb}","##,
             r##""active-line":"{active_line}","line-number":"{line_number}","##,
             r##""active-line-number":"{active_line_number}","indent-guide":"{indent_guide}","##,
-            r##""brand":"{brand}","brand-hover":"{brand_hover}""##
+            r##""brand":"{brand}","brand-hover":"{brand_hover}","##,
+            r##""run-background":"{run_background}","stop-background":"{stop_background}""##
         ),
         background = t.css("canvas"),
         foreground = t.css("foreground"),
         content = t.css("content"),
         popover = t.css("popover"),
         brand = t.css("brand"),
+        run_background = t.css("run_background"),
+        stop_background = t.css("stop_background"),
         on_brand = t.css("on_brand"),
         canvas = t.css("canvas"),
         feedback = t.css("feedback"),
@@ -372,5 +380,11 @@ mod tests {
         assert!(json.contains("\"editor-bg\""));
         assert!(json.contains("\"active-line\""));
         assert!(json.contains("#3871E1"));
+    }
+
+    #[test]
+    fn nsh_theme_is_valid_json() {
+        let json = nsh_theme_json();
+        serde_json::from_str::<serde_json::Value>(&json).expect("nsh 主题必须是合法 JSON");
     }
 }

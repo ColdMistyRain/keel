@@ -10,6 +10,7 @@ mod editor_area;
 mod icons;
 mod palette;
 mod project_panel;
+mod run_widget;
 mod shell;
 mod ui;
 mod workspace;
@@ -18,7 +19,7 @@ use nsh_base::{h_resizable, resizable_panel, theme, v_resizable};
 use nsh_core::keymap::When;
 use nsh_core::{element::desktop::title_bar, prelude::*};
 
-use crate::shell::{Bottom, Shell, Tool};
+use crate::shell::{Shell, Tool};
 use crate::ui::{color_of, icon_button};
 
 /// 注册给 TSX 入口的 Rust 组件集合与随包资源。
@@ -100,11 +101,9 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
                 .pl(px(8.0)),
         )
         .child(view().flex_1())
+        .child(run_widget::run_widget(shell))
         .child(icon_button(icons::SEARCH, "搜索", move || {
             shell.toggle_tool(Tool::Search)
-        }))
-        .child(icon_button(icons::PLAY, "运行", move || {
-            shell.toggle_bottom(Bottom::Run)
         }))
         .child(icon_button(icons::SETTINGS, "设置", move || {
             shell.ws.say("设置页将在 P4 迁移")

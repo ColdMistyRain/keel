@@ -25,6 +25,8 @@
     "brand": "#3871E1",
     "brand_hover": "#2F5EB9",
     "brand_active": "#2E4D89",
+    "run_background": "#338555",
+    "stop_background": "#C54E58",
     "on_brand": "#FFFFFF",
     "caret": "#CED0D6",
     "editor_selection": "#214283",

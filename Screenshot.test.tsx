@@ -71,6 +71,25 @@ test("captures the command palette", async () => {
   await app.screenshot("docs/screenshots/nsh-p2-palette.png");
 });
 
+test("captures the running run widget", async () => {
+  const app = await open(".");
+  await app.setViewport(1180, 680);
+  if (app.count("text:Main.java") === 0) {
+    return;
+  }
+  try {
+    await app.screenshot("docs/screenshots/nsh-p2-running.png");
+  } catch (error) {
+    if (String(error).includes("real platform")) {
+      return;
+    }
+    throw error;
+  }
+  await app.keyboard.press("shift+f10");
+  await app.waitFor("text:正在运行 Main…");
+  await app.screenshot("docs/screenshots/nsh-p2-running.png");
+});
+
 test("captures the project tree context menu", async () => {
   const app = await open(".");
   await app.setViewport(1180, 680);

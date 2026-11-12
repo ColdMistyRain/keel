@@ -89,6 +89,23 @@ pub fn build(shell: Shell) -> ActionRegistry {
         registry.register(action);
     }
 
+    registry.register(
+        CallbackAction::new("run.start", "运行", move |_| shell.start_run())
+            .description("运行当前配置")
+            .shortcut("shift+f10"),
+    );
+    registry.register(
+        CallbackAction::new("run.stop", "停止", move |_| shell.stop_run())
+            .description("停止正在运行的应用")
+            .shortcut("mod+f2")
+            .enabled(|context| state(context).is_some_and(|state| state.running)),
+    );
+    registry.register(
+        CallbackAction::new("run.debug", "调试", move |_| shell.toggle_debug())
+            .description("以调试模式运行当前配置")
+            .shortcut("shift+f9"),
+    );
+
     for (id, label, value) in [
         ("view.appearance.system", "跟随系统", Appearance::System),
         ("view.appearance.light", "浅色", Appearance::Light),
