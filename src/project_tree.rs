@@ -31,6 +31,8 @@ impl KeelApp {
                     .small()
                     .h(px(24.))
                     .pl_0()
+                    // 标题字号跟随 `ToolWindow.Header.font.size.offset=0`，即 13px。
+                    .text_size(px(13.))
                     .label("项目")
                     .icon(IconName::ChevronDown)
                     .dropdown_menu(|menu, _, _| {
@@ -183,13 +185,12 @@ impl KeelApp {
         let row = div()
             .id(("tree-row", ix))
             .h(px(22.))
-            .mx_1()
+            // IDEA 的树选中是满宽直角矩形，只有文字带 8px 内边距。
             .flex()
             .items_center()
             .gap_1()
             .pl(indent)
             .pr_2()
-            .rounded_sm()
             .cursor_pointer()
             .when(is_selected, |row| {
                 row.bg(chrome.selection).text_color(chrome.selection_fg)

@@ -106,7 +106,8 @@ impl KeelApp {
 
         let splitter = div()
             .id("project-splitter")
-            .w(px(6.))
+            // 岛屿之间的留白是 `Island.borderWidth.compact` = 4px。
+            .w(px(4.))
             .h_full()
             .flex_shrink_0()
             .flex()
@@ -186,13 +187,10 @@ impl KeelApp {
         }
 
         let tab_bar = self.render_tab_bar(chrome, cx);
-        let breadcrumbs = self
-            .breadcrumbs_visible
-            .then(|| self.render_breadcrumbs(chrome, cx));
         let editor = self.render_active_editor(chrome);
 
-        // IDEA 新 UI 把面包屑放在编辑器下方、状态栏上方；整块是画布上的圆角岛屿。
-        let mut column = div()
+        // 面包屑由状态栏左侧承载（和 IDEA 一致），这里只留标签条与编辑器。
+        div()
             .flex_1()
             .min_h_0()
             .flex()
@@ -201,16 +199,16 @@ impl KeelApp {
             .rounded(chrome.island_arc)
             .overflow_hidden()
             .child(tab_bar)
-            .child(editor);
-        if let Some(breadcrumbs) = breadcrumbs {
-            column = column.child(breadcrumbs);
-        }
-
-        column.into_any_element()
+            .child(editor)
+            .into_any_element()
     }
 
-    /// 导航栏面包屑：按项目根拆成路径段，点击任一段在项目树中选中它。
-    fn render_breadcrumbs(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
+    /// 状态栏里的导航栏面包屑：按项目根拆成路径段，点击任一段在项目树中选中它。
+    pub fn render_status_breadcrumbs(
+        &mut self,
+        chrome: &Chrome,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let Some(doc) = self.active_document() else {
             return div().into_any_element();
         };
@@ -299,12 +297,9 @@ impl KeelApp {
             .flex()
             .items_center()
             .gap_1()
-            .h(px(24.))
-            .px_1()
-            .flex_shrink_0()
+            .h_full()
+            .min_w_0()
             .overflow_hidden()
-            .bg(chrome.bg)
-            .text_xs()
             .children(children)
             .into_any_element()
     }
@@ -340,12 +335,14 @@ impl KeelApp {
 
             let mut tab = div()
                 .id(("editor-tab", ix))
-                .h(px(24.))
+                .h(px(28.))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
                 .gap_1()
-                .px(px(8.))
+                // `EditorTabs.tabInsets.compact` 是 "-2,6,-2,4"。
+                .pl(px(6.))
+                .pr(px(4.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
                     // IDEA Islands 的选中标签是一张带 1px 蓝边的圆角卡片，
@@ -538,9 +535,12 @@ impl KeelApp {
             .relative()
             .flex()
             .items_center()
-            .h(px(28.))
+            // COMPACT 密度下标签行 32px（`SingleHeightTabs.UNSCALED_PREF_HEIGHT` 28 减去负内边距）。
+            .h(px(32.))
             .flex_shrink_0()
             .bg(chrome.tab_bg)
+            .border_b_1()
+            .border_color(chrome.border)
             .child(tracker)
             .child(
                 div()

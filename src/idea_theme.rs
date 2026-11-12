@@ -70,6 +70,8 @@ pub struct Tokens {
     pub caret: u32,
     /// `popup-bg`：弹层背景
     pub popover: u32,
+    /// `toolbar-border`：侧边条分组、工具栏分隔线
+    pub separator: u32,
     /// `Island.arc`
     pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
@@ -103,6 +105,7 @@ pub const LIGHT: Tokens = Tokens {
     brand_active: 0x2e4d89,            // blue-60
     caret: 0x000000,                   // CARET_COLOR（浅色方案未覆盖，取默认黑）
     popover: 0xffffff,                 // popup-bg = layer-2-bg
+    separator: 0x00000020,             // toolbar-border = transparent-black-30
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
@@ -120,7 +123,7 @@ pub const DARK: Tokens = Tokens {
     secondary: 0x73767c,    // gray-80 / text-secondary
     selection: 0x2a4371,    // blue-50 / selection-bg-active
     selection_fg: 0xd1d3d9,
-    hover: 0xffffff0d,                 // transparent-white-10
+    hover: 0xffffff10,                 // transparent-white-10
     control_hover: 0xffffff17,         // transparent-white-20
     tool_window_header: 0x191a1c,      // tool-window-bg(layer-0)
     tab_underline: 0x2e4d89,           // blue-60 / tab-selected-border-active
@@ -132,6 +135,7 @@ pub const DARK: Tokens = Tokens {
     brand_active: 0x2e4d89,            // blue-60
     caret: 0xced0d6,                   // CARET_COLOR（expUI_darkScheme.xml）
     popover: 0x26282c,                 // popup-bg = layer-1-bg
+    separator: 0xffffff21,             // toolbar-border = transparent-white-30
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
@@ -264,11 +268,30 @@ pub fn project_gradient(kind: ThemeKind, seed: &str) -> Hsla {
         0x664832, 0x5e4724, 0x45522f, 0x335661, 0x394773, 0x613861, 0x503d70, 0x325959, 0x365439,
     ];
     let palette = if kind.is_dark() { &DARK } else { &LIGHT };
-    let index = seed.bytes().fold(0u32, |acc, byte| {
+    color(palette[project_color_index(seed)])
+}
+
+/// 项目徽标的底色。
+///
+/// 徽标用的是 `RecentProjectColorPalette` 里的高饱和色（主题文件只为渐变提供了
+/// 浅色覆盖，徽标仍取代码里的默认值）。
+pub fn project_badge(kind: ThemeKind, seed: &str) -> Hsla {
+    const LIGHT: [u32; 9] = [
+        0xdb3d3c, 0xf57236, 0x2bc8bb, 0x359af2, 0x8379fb, 0x7e54b5, 0xd63cc8, 0x954294, 0xe75371,
+    ];
+    const DARK: [u32; 9] = [
+        0xce443c, 0xe27237, 0x2dbcad, 0x3895e1, 0x7b75e8, 0x7854ad, 0x8f4593, 0xc840b9, 0xd75370,
+    ];
+    let palette = if kind.is_dark() { &DARK } else { &LIGHT };
+    color(palette[project_color_index(seed)])
+}
+
+/// 由项目路径算出的调色板下标，同一项目在工具栏渐变与徽标上保持一致。
+fn project_color_index(seed: &str) -> usize {
+    seed.bytes().fold(0u32, |acc, byte| {
         acc.wrapping_mul(31).wrapping_add(byte as u32)
     }) as usize
-        % palette.len();
-    color(palette[index])
+        % 9
 }
 
 /// 编辑器配色，取自 IDEA 的 `expUI_lightScheme.xml`。

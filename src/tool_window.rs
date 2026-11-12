@@ -100,6 +100,15 @@ impl KeelApp {
             .bg(chrome.canvas)
             .child(project)
             .child(commit)
+            // IDEA 用 `ToolWindow.Stripe.separatorColor` 把侧边条分成若干组。
+            .child(
+                div()
+                    .w(px(20.))
+                    .h(px(1.))
+                    .my_1()
+                    .flex_shrink_0()
+                    .bg(chrome.separator),
+            )
             .child(bookmarks)
             .child(structure)
             .child(search)

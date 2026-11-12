@@ -46,6 +46,8 @@ pub struct Chrome {
     pub hover_bg: Hsla,
     /// 控件的中性悬停底色。
     pub control_hover: Hsla,
+    /// 侧边条分组、工具栏分隔线（`toolbar-border`）。
+    pub separator: Hsla,
     /// 列表/树选中态的背景与文字色。
     pub selection: Hsla,
     pub selection_fg: Hsla,
@@ -82,6 +84,7 @@ impl Chrome {
             header: crate::idea_theme::color(tokens.tool_window_header),
             hover_bg: crate::idea_theme::color_rgba(tokens.hover),
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
+            separator: crate::idea_theme::color_rgba(tokens.separator),
             selection: crate::idea_theme::color(tokens.selection),
             selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
@@ -1741,6 +1744,14 @@ impl KeelApp {
             .unwrap_or_else(|| "Keel".to_string());
         let initials: String = project_name.chars().take(2).collect();
         let branch = self.git_branch();
+        // IDEA 用项目路径派生的项目色（`RecentProject.ColorN`）给徽标和工具栏着色。
+        let seed = self
+            .project
+            .root
+            .as_deref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "Keel".to_string());
+        let badge_color = crate::idea_theme::project_badge(self.theme_kind, &seed);
 
         let menu = Button::new("main-menu")
             .ghost()
@@ -1785,12 +1796,12 @@ impl KeelApp {
             .child(
                 div()
                     .size(px(20.))
-                    .rounded(px(4.))
-                    .bg(chrome.accent)
+                    .rounded(px(6.))
+                    .bg(badge_color)
                     .flex()
                     .items_center()
                     .justify_center()
-                    .text_color(chrome.accent_fg)
+                    .text_color(hsla(0., 0., 1., 1.))
                     .text_xs()
                     .child(initials),
             )
@@ -1837,12 +1848,6 @@ impl KeelApp {
             }));
 
         // IDEA 顶部工具栏左侧有一块项目色渐变（600×300 的渐变区域）。
-        let seed = self
-            .project
-            .root
-            .as_deref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_else(|| "Keel".to_string());
         let tint = crate::idea_theme::project_gradient(self.theme_kind, &seed);
         let mut fade = tint;
         fade.alpha = 0.;
@@ -1861,7 +1866,7 @@ impl KeelApp {
         let control = |id: &'static str, area: WindowControlArea, glyph: &'static str| {
             div()
                 .id(id)
-                .w(px(46.))
+                .w(px(40.))
                 .h_full()
                 .flex()
                 .items_center()
@@ -1943,6 +1948,8 @@ impl KeelApp {
                 .file_name()
                 .map(|name| name.to_string_lossy().to_string())
                 .unwrap_or_default();
+            let badge =
+                crate::idea_theme::project_badge(self.theme_kind, &root.display().to_string());
             left = left.child(
                 div()
                     .id("status-project")
@@ -1953,12 +1960,16 @@ impl KeelApp {
                     .px_2()
                     .cursor_pointer()
                     .hover(|style| style.bg(chrome.control_hover))
-                    .child(div().size(px(12.)).rounded(px(3.)).bg(chrome.accent))
+                    .child(div().size(px(12.)).rounded(px(3.)).bg(badge))
                     .child(div().whitespace_nowrap().child(name))
                     .on_click(cx.listener(|this, _event, _window, cx| {
                         this.run_command(CommandId::ToggleProjectPanel, cx);
                     })),
             );
+        }
+        // IDEA 把导航栏面包屑放在状态栏里，紧挨项目选择器。
+        if self.breadcrumbs_visible {
+            left = left.child(self.render_status_breadcrumbs(chrome, cx));
         }
         if !self.status.text.is_empty() {
             left = left.child(
@@ -2001,7 +2012,7 @@ impl KeelApp {
             .flex()
             .items_center()
             .justify_between()
-            .h(px(26.))
+            .h(px(24.))
             .flex_shrink_0()
             .text_xs()
             .bg(chrome.status_bg)
@@ -2687,8 +2698,9 @@ pub fn empty_editor_state(chrome: &Chrome) -> AnyElement {
                     div()
                         .flex()
                         .items_center()
-                        .gap_3()
-                        .child(div().text_color(chrome.muted_fg).child(label))
+                        .gap(px(6.))
+                        // 说明用 `Label.infoForeground`（text-secondary），快捷键用正文色。
+                        .child(div().text_color(chrome.secondary_fg).child(label))
                         .child(div().text_color(chrome.fg).child(shortcut))
                 })),
         )

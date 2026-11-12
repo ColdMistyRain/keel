@@ -352,6 +352,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-13：对照 IDEA 2026 的 COMPACT 密度继续对齐细节——岛屿圆角 16/间距 4、工具条 44px；项目面板标题改为「项目 ⌄」+ 新建（真实新建文件/文件夹）+ 分隔线 + 折叠/刷新/更多/隐藏；树根行显示完整路径并默认选中，缩进改为 12+20/级；状态栏左侧补项目选择器；底部工具窗口条按原版顺序放 Profiler/Services/终端/问题/Git；选中标签改为 1px 蓝边圆角卡片、高 24；标题栏补产品图标、外链按钮与项目色渐变；编辑器字号 15px、行高 1.44
 - [x] Phase 1 · UI-14：补齐编辑器缩进参考线（`INDENT_GUIDE` 取色，顺带修正 `theme.border`）与 expUI 文件类型图标——文件树、编辑器标签、面包屑统一使用 java/xml/json/yaml/toml/markdown/js/ts/html/css/shell/text 及 folder 的浅/深两套图标
 - [x] Phase 1 · UI-15：按 Islands 源码补齐遗漏令牌与度量——补 `button_primary*`（Primary 按钮不再变黑）、`selection`、`caret`、`popover`，圆角改 6/8；设置浮层补焦点与 Esc 关闭；侧边条 37px、按钮 29×32（`StripeToolbar.Button.size`）；项目面板标题 41、树行 22（`ToolWindow.Header.height`、`Tree.rowHeight.compact`）；选中标签圆角 4（`EditorTabs.underlineArc`）；状态栏部件内边距 3/4/1/4；空编辑器改为 IDEA 的六行快捷键提示（`DefaultEditorEmptyTextProvider`）
+- [x] Phase 1 · UI-16：继续按源码对齐——面包屑改为状态栏左侧部件（IDEA 的 `NAVBAR_WIDGET_KEY`），状态栏 24px；标签行 32、卡片 28、水平内边距 6/4、标签条下补 1px 分隔线；树选中改为满宽直角；面板标题字号 13；侧边条补分组分隔线（`toolbar-border`）；项目徽标与状态栏项目点改用项目色（`RecentProjectColorPalette`），窗口按钮宽 40（`TitlePane.Button.preferredSize.compact`）；面板与编辑器间距 4（`Island.borderWidth.compact`）；空编辑器文字改用 `Label.infoForeground`（text-secondary）；深色悬停改 `#FFFFFF10`
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven
