@@ -55,8 +55,9 @@ nsh.json          应用配置：窗口尺寸、隐藏标题栏（主题不在�
 主题配置在仓库根目录的 `themes/idea-light.json`、`themes/idea-dark.json`，
 由 `keel-theme` 读取；spike 没有自己的主题文件。
 
-`workspace.rs` 只持有 nsh 信号；目录扫描、树摊平、语言识别来自仓库里的
-[`keel-workspace`](../../crates/keel-workspace/src/lib.rs)，与 GPUI 版本共用。
+`workspace.rs` 只持有 nsh 信号；项目结构来自 `keel-workspace` 的不可变
+`ProjectSnapshot`（IDEA Workspace Model 式快照），目录扫描、树摊平、语言识别
+都在 [`keel-workspace`](../../crates/keel-workspace/src/lib.rs)。
 
 ## P0 验收记录
 

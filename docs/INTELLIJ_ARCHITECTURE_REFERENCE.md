@@ -515,16 +515,16 @@ IdeFrame (JFrame)
 
 | IDEA 机制 | Keel 现状 | 建议 |
 | --- | --- | --- |
-| Service Container（应用/项目/模块三级） | `KeelApp` 单实体持有大部分状态 | 引入 `AppServices` / `ProjectServices`，按作用域注册与释放 |
+| Service Container（应用/项目/模块三级） | `keel-core` 已提供服务容器、Disposable、MessageBus；GPUI 的 `KeelApp` 仍持有大部分状态 | UI 改为从 `AppServices` / `ProjectServices` 取服务 |
 | Extension Point + plugin.xml | 无 | 先做进程内扩展注册表，后续再考虑插件 |
 | Action/Command + DataContext | `CommandId` + 手写菜单 | 统一 CommandRegistry，菜单/工具栏/快捷键共用 |
 | VFS | 直接 `std::fs` | 抽象 `VirtualFileSystem`，支持本地/远程/归档 |
 | Document/PSI/Index | 只有编辑器文本 | 引入文档缓冲、tree-sitter 语法树、索引层 |
-| Workspace Model 快照 | 项目树每次扫描 | 不可变项目快照 + 变更事件 |
+| Workspace Model 快照 | `keel-workspace` 已有 `ProjectModel` + 不可变 `ProjectSnapshot` + 变更事件；GPUI 树尚未接入 | UI 只读快照，订阅变更刷新 |
 | Read/Write 锁 + 取消 | GPUI 单线程 + 少量后台任务 | 后台任务统一取消令牌与快照读 |
 | JPS 外部构建 | 尚未接入 | 直接调用 Maven/Gradle，不移植 JPS |
 | RunManager/ProgramRunner | 未实现 | 运行配置模型 + 外部进程管理 |
-| Theme JSON / i18n properties | Rust 常量/硬编码文案 | 资源文件化 + 加载器 + 继承 |
+| Theme JSON / i18n properties | 主题已外置到 `themes/idea-*.json`；文案仍硬编码 | i18n 资源文件化 + 加载器 + 继承 |
 | Swing/JBUI/LAF | GPUI + 手写度量 | 保留 GPUI，但把度量/颜色/文案外置为资源 |
 
 ### 13.1 推荐给 Keel 的目标架构

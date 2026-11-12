@@ -140,10 +140,11 @@ serde_json = "1"
 
 保持**单 crate**，按职责拆模块；只有当某块需要独立测试或被外部进程复用时才拆 crate。
 
-已经抽出的独立 crate（GPUI 与 nsh 共用）：
+已经抽出的独立 crate（按 IDEA 平台分层，GPUI 与 nsh 共用）：
 
-- `crates/keel-theme`：读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），生成 GPUI 用的令牌与 nsh 的 `cssVars`；
-- `crates/keel-workspace`：项目目录扫描、树摊平、语言识别。
+- `crates/keel-core`：Service Container（应用/项目）、Disposable、MessageBus / Topic；
+- `crates/keel-workspace`：`ProjectModel` + 不可变 `ProjectSnapshot` + 变更事件、树摊平、语言识别；
+- `crates/keel-theme`：读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），生成 GPUI 用的令牌与 nsh 的 `cssVars`。
 
 ```
 src/

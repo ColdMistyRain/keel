@@ -6,8 +6,9 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use keel_workspace::{FlatRow, ProjectNode, flatten, scan_project};
+use keel_workspace::{FlatRow, ProjectSnapshot, flatten, scan_snapshot};
 use nsh_core::prelude::*;
 
 pub use keel_workspace::{language_label, language_name as language_of};
@@ -44,8 +45,8 @@ impl Doc {
 pub struct Workspace {
     /// 已打开项目的根目录。
     pub root: Signal<Option<PathBuf>>,
-    /// 项目树的数据源（`keel-workspace` 的节点）。
-    pub tree: Signal<Vec<ProjectNode>>,
+    /// 项目树的不可变快照（`keel-workspace` 的 Workspace Model）。
+    pub tree: Signal<Arc<ProjectSnapshot>>,
     /// 展开的节点 id（绝对路径）。
     pub expanded: Signal<Vec<SharedString>>,
     pub selected: Signal<Option<SharedString>>,
@@ -66,7 +67,7 @@ impl Workspace {
     pub fn new() -> Self {
         let workspace = Self {
             root: signal(None),
-            tree: signal(Vec::new()),
+            tree: signal(Arc::new(ProjectSnapshot::empty())),
             expanded: signal(Vec::new()),
             selected: signal(None),
             docs: signal(Vec::new()),
@@ -106,13 +107,14 @@ impl Workspace {
             self.say(format!("不是目录：{}", dir.display()));
             return;
         }
-        let nodes = scan_project(&dir);
-        let expanded = nodes
+        let snapshot = scan_snapshot(&dir);
+        let expanded = snapshot
+            .nodes
             .iter()
             .filter(|node| node.is_dir && !node.children.is_empty())
             .map(|node| SharedString::from(node.path.display().to_string()))
             .collect();
-        self.tree.set(nodes);
+        self.tree.set(Arc::new(snapshot));
         self.expanded.set(expanded);
         self.selected.set(None);
         self.message

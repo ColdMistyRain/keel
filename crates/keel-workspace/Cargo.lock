@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "keel-core"
+version = "0.1.0"
+
+[[package]]
 name = "keel-workspace"
 version = "0.1.0"
+dependencies = [
+ "keel-core",
+]

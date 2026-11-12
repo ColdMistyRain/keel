@@ -1,11 +1,14 @@
-//! Keel 的工作区模型：项目目录扫描、树摊平、语言识别。
+//! Keel 的工作区模型：项目目录快照、树摊平、语言识别。
 //!
-//! 与 UI 框架无关：GPUI 版本和 nsh spike 都只拿到普通 Rust 结构，
-//! 各自决定怎么画树、怎么持有状态（信号 / 实体）。
-//! 对应迁移方案 P1 里的 `keel-workspace`。
+//! 对应 IDEA 的 **Workspace Model**：`ProjectModel` 持有一个不可变
+//! [`ProjectSnapshot`]，刷新时整体替换并广播变更；UI 只读快照。
+//! 与 UI 框架无关，GPUI 版本和 nsh spike 共用。
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
+
+use keel_core::{MessageBus, Subscription, Topic};
 
 /// 项目树的一个节点。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,19 +27,99 @@ impl ProjectNode {
     }
 }
 
-/// 摊平后的一行，给列表直接渲染。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FlatRow {
-    pub id: String,
-    pub label: String,
-    pub depth: u32,
-    pub folder: bool,
-    pub open: bool,
+/// 一个不可变的项目结构快照（IDEA 的 `ImmutableEntityStorage`）。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProjectSnapshot {
+    pub root: PathBuf,
+    pub nodes: Vec<ProjectNode>,
 }
 
-/// 扫描 `root` 的直接子项：目录在前、文件在后，按名称排序并跳过构建产物。
+impl ProjectSnapshot {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+}
+
+/// 项目模型变更事件。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectModelChanged {
+    pub root: PathBuf,
+}
+
+/// 项目模型变更的主题。
+pub static PROJECT_MODEL_CHANGED: Topic<ProjectModelChanged> =
+    Topic::new("keel.workspace.projectChanged");
+
+/// 一个打开的项目：当前快照 + 变更广播。
+#[derive(Clone)]
+pub struct ProjectModel {
+    root: PathBuf,
+    snapshot: Arc<RwLock<Arc<ProjectSnapshot>>>,
+    bus: Arc<MessageBus>,
+}
+
+impl ProjectModel {
+    /// 打开 `root` 并扫描一次。
+    pub fn open(root: PathBuf) -> Self {
+        let snapshot = Arc::new(scan_snapshot(&root));
+        Self {
+            root,
+            snapshot: Arc::new(RwLock::new(snapshot)),
+            bus: MessageBus::new(),
+        }
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// 当前快照（无锁读）。
+    pub fn snapshot(&self) -> Arc<ProjectSnapshot> {
+        self.snapshot.read().unwrap().clone()
+    }
+
+    /// 重新扫描并替换快照，然后广播变更。
+    pub fn refresh(&self) {
+        let next = Arc::new(scan_snapshot(&self.root));
+        *self.snapshot.write().unwrap() = next;
+        self.bus.publish(
+            &PROJECT_MODEL_CHANGED,
+            &ProjectModelChanged {
+                root: self.root.clone(),
+            },
+        );
+    }
+
+    /// 订阅本项目的快照变更；返回的句柄释放时自动退订。
+    pub fn subscribe(
+        &self,
+        listener: impl Fn(&ProjectSnapshot) + Send + Sync + 'static,
+    ) -> Subscription {
+        let snapshot = self.snapshot.clone();
+        let root = self.root.clone();
+        self.bus.subscribe(
+            &PROJECT_MODEL_CHANGED,
+            move |event: &ProjectModelChanged| {
+                if event.root == root {
+                    let current = snapshot.read().unwrap().clone();
+                    listener(&current);
+                }
+            },
+        )
+    }
+}
+
+/// 扫描 `root` 生成一个不可变快照。
+pub fn scan_snapshot(root: &Path) -> ProjectSnapshot {
+    ProjectSnapshot {
+        root: root.to_path_buf(),
+        nodes: scan_dir(root, 0),
+    }
+}
+
+/// 兼容旧调用：只要节点。
 pub fn scan_project(root: &Path) -> Vec<ProjectNode> {
-    scan_dir(root, 0)
+    scan_snapshot(root).nodes
 }
 
 fn scan_dir(dir: &Path, depth: usize) -> Vec<ProjectNode> {
@@ -91,8 +174,22 @@ pub fn skip(name: &str) -> bool {
     ) || name.starts_with('.')
 }
 
-/// 把节点按展开状态摊平成可见行。
-pub fn flatten(nodes: &[ProjectNode], expanded: &[String], depth: u32) -> Vec<FlatRow> {
+/// 摊平后的一行，给列表直接渲染。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlatRow {
+    pub id: String,
+    pub label: String,
+    pub depth: u32,
+    pub folder: bool,
+    pub open: bool,
+}
+
+/// 把快照按展开状态摊平成可见行。
+pub fn flatten(snapshot: &ProjectSnapshot, expanded: &[String], depth: u32) -> Vec<FlatRow> {
+    flatten_nodes(&snapshot.nodes, expanded, depth)
+}
+
+fn flatten_nodes(nodes: &[ProjectNode], expanded: &[String], depth: u32) -> Vec<FlatRow> {
     let mut rows = Vec::new();
     for node in nodes {
         let folder = node.is_folder();
@@ -106,7 +203,7 @@ pub fn flatten(nodes: &[ProjectNode], expanded: &[String], depth: u32) -> Vec<Fl
             open,
         });
         if open {
-            rows.extend(flatten(&node.children, expanded, depth + 1));
+            rows.extend(flatten_nodes(&node.children, expanded, depth + 1));
         }
     }
     rows
@@ -156,6 +253,7 @@ pub fn language_label(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -205,11 +303,41 @@ mod tests {
         assert_eq!(names, vec!["src", "pom.xml"]);
         assert_eq!(nodes[0].children[0].name, "main");
 
-        let flattened = flatten(&nodes, &[nodes[0].path.display().to_string()], 0);
+        let snapshot = scan_snapshot(&dir);
+        let flattened = flatten(
+            &snapshot,
+            &[snapshot.nodes[0].path.display().to_string()],
+            0,
+        );
         let labels: Vec<_> = flattened.iter().map(|row| row.label.as_str()).collect();
         assert_eq!(labels, vec!["src", "main", "pom.xml"]);
         assert!(flattened[0].open);
         assert!(!flattened[1].open);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn snapshot_is_replaced_and_broadcast_on_refresh() {
+        let dir = fixture();
+        let model = ProjectModel::open(dir.clone());
+        let seen = Arc::new(Mutex::new(Vec::<usize>::new()));
+        let subscription = {
+            let seen = seen.clone();
+            model.subscribe(move |snapshot| {
+                seen.lock().unwrap().push(snapshot.nodes.len());
+            })
+        };
+
+        assert_eq!(model.snapshot().nodes.len(), 2);
+        fs::write(dir.join("README.md"), "# demo").unwrap();
+        model.refresh();
+        assert_eq!(model.snapshot().nodes.len(), 3);
+        assert_eq!(*seen.lock().unwrap(), vec![3]);
+
+        drop(subscription);
+        model.refresh();
+        assert_eq!(*seen.lock().unwrap(), vec![3]);
 
         let _ = fs::remove_dir_all(&dir);
     }

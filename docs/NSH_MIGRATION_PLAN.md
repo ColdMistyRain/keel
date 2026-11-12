@@ -221,35 +221,70 @@ macOS/Linux 放到后续阶段。
 
 下一步（P1）已开始，见 §4.2。
 
-### 4.2 P1 进展（2026-11-12）
+### 4.2 P1 进展：按 IDEA 架构分层（2026-11-12）
 
-已抽出两个不依赖 UI 框架的 crate：
+P1 的目标不是“抽几个工具 crate”，而是照
+[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
+的 §3、§5、§6、§8、§10 把 Keel 分成同样的层：
 
-| crate | 内容 | 当前消费者 |
+| IDEA 机制 | Keel 目标 | 状态 |
 | --- | --- | --- |
-| [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | 读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），提供 `ThemeKind` / `Tokens`，生成 nsh `cssVars` | GPUI 的 `src/idea_theme.rs`；nsh spike（启动时 `set_tokens`） |
-| [`crates/keel-workspace`](../crates/keel-workspace/src/lib.rs) | `ProjectNode`、`scan_project`、`flatten`、`language_name`/`language_label` | nsh spike 的 `src/workspace.rs`（只加信号与文档状态） |
+| Service Container（Application / Project / Module） | `keel-core`：`ServiceContainer` + `AppServices` / `ProjectServices`，懒加载、可释放 | 已落地基础 |
+| Disposable 树 | `keel-core::Disposer`，逆序清理 | 已落地 |
+| MessageBus / Topic | `keel-core::MessageBus` + 类型化 `Topic`，订阅句柄自动退订 | 已落地 |
+| Workspace Model（不可变快照 + 变更广播） | `keel-workspace`：`ProjectModel` / `ProjectSnapshot` / `PROJECT_MODEL_CHANGED` | 已落地 |
+| Theme JSON + 编辑器 scheme | `themes/idea-*.json` + `keel-theme` | 已落地 |
+| Action / Command + DataContext | `keel-commands`：菜单、工具栏、快捷键、命令面板共用一份动作定义 | 下一步 |
+| VFS（`VirtualFile`） | `keel-vfs`：本地/远程/归档统一抽象，UI 不再直接 `std::fs` | 下一步 |
+| Document / PSI / Index | `keel-document` → `keel-syntax` → `keel-index` | P3 |
+| ToolWindowManager / ToolWindowPane | nsh `dock_area` 的工具窗口 + 条纹 | P2 |
+| FileEditorManager / EditorsSplitters | nsh 编辑器标签组 + 分栏 | P2 |
+| IdeRootPane / MainToolbar / StatusBar / LayeredPane | nsh 自绘壳（标题栏、工具条、状态栏、弹层） | P0/P2 |
+| PersistentStateComponent / Configurable | `keel-settings`：统一持久化，设置页 `reset/apply/isModified` | P4 |
+| JPS 外部构建 | 不照搬，直接调用 Maven/Gradle | Phase 4/5 |
+| Swing / EDT / LAF | 不照搬，用 nsh 原生视图（GPUI 只作迁移期基线） | 永久 |
+
+依赖方向照 IDEA 的 `*-api` / `*-impl` 约束，UI 只依赖下层：
+
+```text
+keel-core
+  ├─ keel-vfs ─ keel-document ─ keel-syntax ─ keel-index
+  ├─ keel-workspace ─ keel-commands
+  └─ keel-theme / keel-settings / keel-i18n
+                          ↓
+                  keel-ui（nsh） / GPUI 基线
+```
+
+当前 crate：
+
+| crate | 内容 |
+| --- | --- |
+| [`crates/keel-core`](../crates/keel-core/src/lib.rs) | 服务容器、Disposable、MessageBus / Topic |
+| [`crates/keel-workspace`](../crates/keel-workspace/src/lib.rs) | `ProjectModel` + 不可变 `ProjectSnapshot` + 变更事件、树摊平、语言识别 |
+| [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | 读取 `themes/idea-*.json`，生成 GPUI 令牌与 nsh `cssVars` |
 
 验证：
 
-- `cargo test -p keel-theme`：3 通过（两套配置解析、颜色/透明度、cssVars 输出）；
-- `cargo test -p keel-workspace`：3 通过（语言识别、忽略规则、临时目录扫描 + 摊平）；
-- 根 GPUI 版本 `cargo check` / `cargo test`：通过（14 个测试）；
-- spike `nsh test`：1 通过；项目树截图与 P0 一致。
+- `cargo test -p keel-core`：3 通过（懒加载服务、逆序清理、类型化事件）；
+- `cargo test -p keel-workspace`：4 通过（语言、忽略规则、扫描 + 摊平、快照刷新与退订）；
+- `cargo test -p keel-theme`：3 通过（配置解析、颜色/透明度、cssVars）；
+- 根 GPUI `cargo test`：14 通过；spike `nsh test`：1 通过。
 
 还没做的 P1 部分：
 
+- `keel-commands`、`keel-vfs` 未开始；spike 的菜单与快捷键仍是手写，下一步改成动作注册表；
 - `src/project_tree.rs`、`src/model.rs` 尚未改用 `keel-workspace`（GPUI 侧仍是自己的树模型）；
-- `keel-core` / `keel-vfs` / `keel-i18n` 未开始；
-- GPUI 与 nsh 的文档状态（打开的文件、光标、保存）还没有共享的 `keel-workspace` 会话模型。
+- 最近项目、会话（打开的文档/光标）还没有 `PersistentStateComponent` 式的持久化；
+- `keel-i18n` 未开始。
 
 ### P1：抽 `keel-core`
 
-- 把与 UI 无关的逻辑从 `KeelApp` 抽出：
-  - `keel-core`：id、错误、事件、取消、命令；
+- 按 IDEA 分层落地：
+  - `keel-core`：服务容器、Disposable、MessageBus；
   - `keel-vfs`：文件系统、监听、编码；
-  - `keel-workspace`：项目快照、最近项目、会话；
-  - `keel-theme`：IDEA token → nsh theme 的映射与加载；
+  - `keel-workspace`：不可变项目快照 + 变更事件；
+  - `keel-commands`：Action / ActionGroup / DataContext；
+  - `keel-theme`：主题 JSON 的加载与 UI 令牌；
   - `keel-i18n`：包装 `nsh-i18n`，只保留 Keel 自己的词条与回退策略。
 - 现有 GPUI UI 改为调用这些 core，保证两边行为一致。
 
