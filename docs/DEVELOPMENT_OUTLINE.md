@@ -361,6 +361,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-22：编辑器字体回到 IDEA 默认——JetBrains Mono 由 15px 改为 13px（`FontPreferences.DEFAULT_FONT_SIZE`，Windows + JetBrains Mono），行高按 `LINE_SPACING=1.2` 换算为 1.6 倍（约 20.8px），文本密度与原版一致
 - [x] Phase 1 · UI-23：状态栏高度与字号对齐——高度 24 改为 28（`StatusBar.Widget.border=insets(6,8)`，即 13px 行高 + 上下各 6px），文字由 `text_xs` 改为 13px（`JBUI.statusBarFont()` → `JBFont.label()`）；同时确认编辑器行号已与正文同字号（gpui-component 用同一 `text_size` 绘制行号，无需覆盖）
 - [x] Phase 1 · UI-24：菜单弹层补 1px 描边——组件库 `popover_style` 用 10% 前景色阴影环充当边框（shadcn 做法，实际渲染约 `#E5E5E5`），而 IDEA 的 `Popup.borderColor` 是 `popup-border-windows`（浅色 gray-130 `#D1D3D9`、深色 gray-40 `#33353B`）；新增 `Tokens.popup_border` 与 `src/menu.rs`，用 `Popover` + 叠层描边包住组件库 `PopupMenu`（6 处下拉菜单：主菜单 ×2、已打开文件、项目标题、新建、更多），定位/子菜单/键盘导航仍由组件库负责；右键上下文菜单仍走组件库 `ContextMenuExt`，暂无描边接口
+- [x] Phase 1 · UI-25：通知气泡对齐 IDEA——圆角由 `rounded_md` 改为 12（`NotificationBalloonRoundShadowBorderProvider.CORNER_RADIUS` = `Notification.arc`，默认 12）；补 1px 描边并新增 `Tokens.feedback_border`（`Notification.borderColor`：浅色 `feedback-border` = layer-0-border gray-130 `#D1D3D9`，深色 `feedback-border` = layer-2-bg，与底色相同、等价于无描边）
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

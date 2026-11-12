@@ -52,6 +52,8 @@ pub struct Chrome {
     pub separator: Hsla,
     /// 通知气泡底色（`feedback-bg`）。
     pub feedback: Hsla,
+    /// 通知气泡的 1px 描边（`Notification.borderColor`）。
+    pub feedback_border: Hsla,
     /// 列表/树选中态的背景与文字色。
     pub selection: Hsla,
     pub selection_fg: Hsla,
@@ -91,6 +93,7 @@ impl Chrome {
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
             separator: crate::idea_theme::color_rgba(tokens.separator),
             feedback: crate::idea_theme::color(tokens.feedback),
+            feedback_border: crate::idea_theme::color(tokens.feedback_border),
             selection: crate::idea_theme::color(tokens.selection),
             selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
@@ -2063,10 +2066,13 @@ impl KeelApp {
                     .gap_2()
                     .px_3()
                     .py_2()
-                    .rounded_md()
-                    // 通知气泡用 `feedback-bg` + 阴影，不额外画边框（IDEA 的
-                    // `Notification.borderColor` 与背景同色）。
+                    // 通知气泡的圆角是 `Notification.arc`=12。
+                    .rounded(px(12.))
+                    // 1px 描边取 `feedback-border`：浅色是 gray-130，深色与
+                    // 底色相同（等价于无描边），和 IDEA 的 `Notification.borderColor` 一致。
                     .bg(chrome.feedback)
+                    .border_1()
+                    .border_color(chrome.feedback_border)
                     .shadow_md()
                     .text_xs()
                     .text_color(chrome.panel_fg)

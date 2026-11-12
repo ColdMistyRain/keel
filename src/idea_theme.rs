@@ -78,6 +78,8 @@ pub struct Tokens {
     pub separator: u32,
     /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
     pub feedback: u32,
+    /// `Notification.borderColor` → `feedback-border`（浅色 layer-0-border，深色与底色相同）
+    pub feedback_border: u32,
     /// `ScrollBar.thumbColor`：半透明滚动条滑块，轨道透明
     pub scrollbar_thumb: u32,
     pub scrollbar_thumb_hover: u32,
@@ -118,6 +120,7 @@ pub const LIGHT: Tokens = Tokens {
     popup_border: 0xd1d3d9,            // popup-border-windows = gray-130
     separator: 0x00000020,             // toolbar-border = transparent-black-30
     feedback: 0xffffff,                // feedback-bg = layer-2-bg
+    feedback_border: 0xd1d3d9,         // feedback-border = layer-0-border(gray-130)
     scrollbar_thumb: 0x73737333,       // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0x73737347, // ScrollBar.Transparent.hoverThumbColor
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
@@ -153,6 +156,7 @@ pub const DARK: Tokens = Tokens {
     popup_border: 0x33353b,            // popup-border = layer-1-border(gray-40)
     separator: 0xffffff21,             // toolbar-border = transparent-white-30
     feedback: 0x33353b,                // feedback-bg = layer-2-bg(gray-40)
+    feedback_border: 0x33353b,         // feedback-border = layer-2-bg，与底色相同
     scrollbar_thumb: 0xa6a6a647,       // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0xa6a6a659, // ScrollBar.Transparent.hoverThumbColor
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
