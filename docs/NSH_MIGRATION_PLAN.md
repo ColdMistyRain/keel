@@ -169,13 +169,16 @@ macOS/Linux 放到后续阶段。
 - 自绘 40px 标题栏：`.window_drag(true)` 拖动窗口、按 `title_bar().right`
   给系统窗口按钮留白；
 - 应用菜单（文件 / 视图 / 帮助）、外观切换（自动 / 浅色 / 深色，`set_color_scheme`）；
-- 左侧 40px 工具窗口条 + 项目面板（`nsh_base::tree`），数据来自真实目录扫描；
+- 左侧 40px 工具窗口条 + 项目面板（spike 自绘 `scroll` 列表，见下方问题 1），
+  数据来自真实目录扫描，可展开 / 收起、单击选中、双击打开；
 - 编辑器区：自绘标签页、面包屑、`nsh_base::editor`（Java 高亮、行号、折叠）；
 - 状态栏：分支、提示、语言、编码、换行、缩进、光标位置；
 - `theme.json`：IDEA Islands Light/Dark → shadcn `cssVars`，组件不写字面色值；
 - 原生打开对话框（`pick_paths`）+ `std::fs` 读写保存，快捷键
   `mod+o` / `shift+mod+o` / `mod+s` / `mod+w`；
 - 示例项目 `samples/demo`，`KEEL_SPIKE_DEMO=1` 时启动即打开，便于截图与验收。
+
+截图：[浅色](screenshots/nsh-spike-light.png) · [深色](screenshots/nsh-spike-dark.png)。
 
 验证结果：
 
@@ -186,20 +189,25 @@ macOS/Linux 放到后续阶段。
 | Rust 热重载 | 通过 | 改动后约 5 秒编译 + 7 秒重建 runner |
 | 编辑器 | 通过 | Java 高亮、行号、折叠、中文显示 |
 | 标签页 / 面包屑 / 状态栏 | 通过 | 截图与 headless 均确认 |
-| 项目树数据与挂载 | 通过 | `nsh test --trace` 里出现 `TreeItem src/main/pom.xml/Main.java` |
-| 项目树可见性 | 修复待复验 | 初次截图空白：`tree()` 的 `flex_1` 需要父链有确定高度；已把侧栏内容改为直接 flex 子项，桌面锁屏未能补截图 |
-| 主题令牌 | 浅色通过，深色待截图 | `theme.json` 生效，外观切换调用 `set_color_scheme` |
-| IME 中文输入 | 未验证 | 本机验证时桌面进入锁屏，无法人工输入 |
+| 项目树 | 通过（自绘） | 展开到 `Main.java` 的层级、选中高亮、单击展开、双击打开 |
+| `nsh_base::Tree` | **不可用** | headless 里行已挂载，但 Windows 窗口不绘制（父视口虚拟列表）；已改用自绘列表 |
+| 主题令牌 | 通过 | 浅色 / 深色截图归档；外观按钮调用 `set_color_scheme` |
+| 编辑与保存 | 通过 | 编辑器输入 → `Ctrl+S` → 磁盘内容更新（测试后已还原示例） |
+| 中文输入 | 基本通过 | `SendKeys` 注入「中文输入」并保存成功；IME 组合（拼音候选）仍需人工验证 |
 | `nsh test` | 通过 | `1 test: 1 passed`（headless，Rust 根组件从 TypeScript 侧打开） |
 | `nsh package --target windows` | 通过 | `.nsh/out/Keel.zip`（约 2 分半 release 构建）；`.iss` 已生成，安装包需要本机装 Inno Setup 6 |
 
 需要注意的坑（已写进 spike 代码）：
 
-1. **`when` / `otherwise` 的分支不参与父级 flex 高度分配。** 需要高度的组件
-   （`tree`、`editor`）要么直接作为 flex 子项，要么用 `style_when(.., |s| s.hidden())`
-   常驻并切换可见性；否则组件会以内容高度塌缩，看起来“什么都没画”。
-2. **组件样式方法作用在组件节点上。** `tree().h(px(360.0))` 只约束组件节点，
-   内容根视图仍可能塌缩；spike 用「父视图给高度 + 组件 `flex_1`」验证通过。
+1. **`nsh_base::Tree` 在 0.5.0 的 Windows 窗口里不绘制行。** 无头测试能挂载
+   `TreeItem` 行，但窗口里树区域空白；最小复现：给 `tree()` 固定 `h/w` 并
+   `render_item` 画纯色块，纯色块也不出现。同样的 `virtual_list`
+   （`ListViewport::Parent`，放在 `scroll` 里）也不绘制，而默认视口的
+   `virtual_list` 正常。spike 因此改用 `scroll` + `dynamic` 自绘列表；
+   P2 再复评或向 nsh 上报。
+2. **`when` / `otherwise` 的分支不参与父级 flex 高度分配。** 需要高度的内容
+   要么直接作为 flex 子项，要么用 `style_when(.., |s| s.hidden())` 常驻并切换可见性；
+   否则会以内容高度塌缩。
 3. **`*_style` 闭包的类型是 `StyleRefinement -> StyleRefinement`**，不是 `Style`；
    写 `fn popup_style(s: Style) -> Style` 会编译失败。
 4. **`nsh test` 继承环境变量**：设了 `KEEL_SPIKE_DEMO` 时测试也会打开示例项目，

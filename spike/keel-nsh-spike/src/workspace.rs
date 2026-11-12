@@ -246,6 +246,12 @@ impl Workspace {
             .into()
     }
 
+    /// 展开状态下的可见行（spike 不做虚拟化，项目规模足够小）。
+    pub fn visible_rows(&self) -> Vec<TreeRow> {
+        let expanded = self.expanded.get();
+        flatten(&self.tree.get(), &expanded, 0)
+    }
+
     /// 当前文档相对项目根的路径片段，用于面包屑（读取信号，供 `dynamic` 跟随）。
     pub fn breadcrumbs(&self) -> Vec<SharedString> {
         let index = self.active.get();
@@ -275,6 +281,37 @@ impl Workspace {
         }
         parts
     }
+}
+
+/// 项目树里显示的一行（已展开的层级）。
+#[derive(Clone, PartialEq)]
+pub struct TreeRow {
+    pub id: SharedString,
+    pub label: SharedString,
+    pub depth: u32,
+    /// 有子项：可以展开 / 收起。
+    pub folder: bool,
+    pub open: bool,
+}
+
+/// 按展开状态把树摊平成可见行。
+fn flatten(items: &[TreeItem], expanded: &[SharedString], depth: u32) -> Vec<TreeRow> {
+    let mut rows = Vec::new();
+    for item in items {
+        let folder = !item.children.is_empty();
+        let open = folder && expanded.contains(&item.id);
+        rows.push(TreeRow {
+            id: item.id.clone(),
+            label: item.label.clone(),
+            depth,
+            folder,
+            open,
+        });
+        if open {
+            rows.extend(flatten(&item.children, expanded, depth + 1));
+        }
+    }
+    rows
 }
 
 /// 示例项目的位置：`nsh run` 的工作目录是应用目录，直接从仓库根运行时再退一层。

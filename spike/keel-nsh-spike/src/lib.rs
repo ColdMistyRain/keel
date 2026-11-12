@@ -15,10 +15,10 @@ mod workspace;
 
 use std::path::{Path, PathBuf};
 
-use nsh_base::{EditorClasses, TreeEntry, button, editor, menu, menu_item, theme, tree};
+use nsh_base::{EditorClasses, button, editor, menu, menu_item, theme};
 use nsh_core::{element::desktop::title_bar, file_dialog::OpenDialog, prelude::*};
 
-use crate::workspace::{Doc, Workspace, language_label, language_of};
+use crate::workspace::{Doc, TreeRow, Workspace, language_label, language_of};
 
 /// 主题里没有的令牌一律退回透明，避免在组件里出现字面色值。
 fn color_of(name: &str) -> AdaptiveColor {
@@ -352,50 +352,85 @@ fn project_panel(ws: Workspace) -> View {
     ))
 }
 
-fn project_tree(ws: Workspace) -> impl IntoElement {
-    let expanded = ws.expanded;
-    tree()
-        .items(move || ws.tree.get())
-        .expanded(move || Some(expanded.get()))
-        .selected(move || ws.selected.get())
-        .accessibility_label("项目")
-        .item_class("rounded px-1 py-0.5 hover:bg-hover-overlay selected:bg-accent selected:text-accent-foreground")
-        .render_item(move |entry: &TreeEntry| {
-            let entry = entry.clone();
-            let path = entry.id.to_string();
-            let is_open = move || expanded.with(|ids| ids.iter().any(|id| id.as_ref() == path));
+/// 项目树：自绘的 `scroll` 列表。
+///
+/// 没有用 `nsh_base::tree`：0.5.0 在 Windows 上树的行（父视口虚拟列表）
+/// 不会绘制，`nsh test --trace` 里行已挂载但窗口里不可见。
+/// 细节见 `docs/NSH_MIGRATION_PLAN.md` 的 P0 记录；P2 再评估或上报 nsh。
+fn project_tree(ws: Workspace) -> View {
+    view()
+        .flex_1()
+        .child(scroll().flex_1().child(dynamic(move || {
             view()
-                .flex_row()
-                .items_center()
-                .gap(px(4.0))
-                .pl(px(2.0 + entry.depth as f32 * 12.0))
-                .child(
-                    text(move || {
-                        if entry.folder {
-                            if is_open() { "▾" } else { "▸" }
-                        } else {
-                            ""
-                        }
-                    })
-                    .text_size(px(9.0))
-                    .text_color(move || color_of("muted-fg")),
-                )
-                .child(file_badge(&entry.id, entry.folder))
-                .child(
-                    text(entry.label.clone())
-                        .text_size(px(12.0))
-                        .number_of_lines(1),
-                )
-        })
-        .on_expanded_change(move |ids: &Vec<SharedString>| ws.expanded.set(ids.clone()))
-        .on_selected_change(move |id: &SharedString| ws.selected.set(Some(id.clone())))
-        .on_action(move |id: &SharedString| {
-            let path = PathBuf::from(id.as_ref());
-            if path.is_file() {
-                ws.open_files(vec![path]);
+                .py(px(4.0))
+                .children(ws.visible_rows().into_iter().map(|row| tree_row(ws, row)))
+        })))
+}
+
+fn tree_row(ws: Workspace, row: TreeRow) -> impl IntoElement {
+    let id = row.id.clone();
+    let select_id = row.id.clone();
+    let folder = row.folder;
+    let open = row.open;
+    let selected = move || ws.selected.get().as_ref() == Some(&id);
+    view()
+        .h(px(22.0))
+        .flex_row()
+        .items_center()
+        .gap(px(4.0))
+        .pl(px(6.0 + row.depth as f32 * 12.0))
+        .pr(px(6.0))
+        .rounded(px(4.0))
+        .style_when(selected, |s| s.bg(move || theme().accent))
+        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .role(AccessibilityRole::Button)
+        .label(row.label.clone())
+        .on_press(move |event: &PressEvent| {
+            ws.selected.set(Some(select_id.clone()));
+            if folder {
+                toggle_expanded(ws, &select_id);
+            } else if event.clicks >= 2 {
+                let path = PathBuf::from(select_id.as_ref());
+                if path.is_file() {
+                    ws.open_files(vec![path]);
+                }
             }
         })
-        .flex_1()
+        .child(
+            view()
+                .w(px(12.0))
+                .h(px(12.0))
+                .items_center()
+                .justify_center()
+                .child(
+                    text(if !folder {
+                        ""
+                    } else if open {
+                        "−"
+                    } else {
+                        "+"
+                    })
+                    .text_size(px(10.0))
+                    .text_color(move || color_of("muted-fg")),
+                ),
+        )
+        .child(file_badge(row.id.as_ref(), row.folder))
+        .child(
+            text(row.label)
+                .text_size(px(12.0))
+                .text_color(move || theme().foreground)
+                .number_of_lines(1),
+        )
+}
+
+fn toggle_expanded(ws: Workspace, id: &SharedString) {
+    ws.expanded.update(|ids| {
+        if let Some(index) = ids.iter().position(|item| item == id) {
+            ids.remove(index);
+        } else {
+            ids.push(id.clone());
+        }
+    });
 }
 
 /// 文件类型徽标：一个带底色的字母，先代替 IDEA 的文件图标。
