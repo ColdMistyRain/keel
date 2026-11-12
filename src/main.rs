@@ -10,6 +10,7 @@ mod panels;
 mod project;
 mod project_tree;
 mod tool_window;
+mod tooltip;
 
 use gpui::{prelude::*, *};
 

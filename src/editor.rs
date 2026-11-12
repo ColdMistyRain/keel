@@ -497,27 +497,32 @@ impl KeelApp {
 
         // 标签超出宽度时横向滚动；右侧按钮提供完整的已打开文件列表。
         let overflow_app = app.clone();
-        let overflow = crate::menu::dropdown_menu(
-            "editor-tab-overflow",
-            chrome.popup_border,
-            Button::new("editor-tab-overflow")
-                .small()
-                .ghost()
-                .icon(IconName::ChevronDown)
-                .tooltip("已打开的文件"),
-            move |menu, _, _| {
-                let mut menu = menu;
-                for (path, title, dirty) in documents.clone() {
-                    let item_app = overflow_app.clone();
-                    let label = if dirty { format!("● {title}") } else { title };
-                    menu = menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
-                        item_app
-                            .update(cx, |this, cx| this.open_file(path.clone(), window, cx))
-                            .ok();
-                    }));
-                }
-                menu
-            },
+        let overflow = crate::tooltip::with_tooltip(
+            "tip-tab-overflow",
+            "已打开的文件",
+            crate::menu::dropdown_menu(
+                "editor-tab-overflow",
+                chrome.popup_border,
+                Button::new("editor-tab-overflow")
+                    .small()
+                    .ghost()
+                    .icon(IconName::ChevronDown),
+                move |menu, _, _| {
+                    let mut menu = menu;
+                    for (path, title, dirty) in documents.clone() {
+                        let item_app = overflow_app.clone();
+                        let label = if dirty { format!("● {title}") } else { title };
+                        menu =
+                            menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
+                                item_app
+                                    .update(cx, |this, cx| this.open_file(path.clone(), window, cx))
+                                    .ok();
+                            }));
+                    }
+                    menu
+                },
+            ),
+            cx,
         );
 
         let tracker_app = app.clone();

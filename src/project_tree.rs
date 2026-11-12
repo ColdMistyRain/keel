@@ -53,52 +53,64 @@ impl KeelApp {
                 let new_app = cx.entity().downgrade();
                 let file_dir = root.clone().unwrap_or_default();
                 let folder_dir = file_dir.clone();
-                crate::menu::dropdown_menu(
-                    "project-new",
-                    chrome.popup_border,
-                    crate::app::icon_button("project-new", icon("plus"), chrome.muted_fg)
-                        .tooltip("新建"),
-                    move |menu, _, _| {
-                        let file_app = new_app.clone();
-                        let file_dir = file_dir.clone();
-                        let folder_app = new_app.clone();
-                        let folder_dir = folder_dir.clone();
-                        menu.item(
-                            PopupMenuItem::new("新建文件…").on_click(move |_, window, cx| {
-                                file_app
-                                    .update(cx, |this, cx| {
-                                        this.open_new_file_dialog(file_dir.clone(), window, cx)
-                                    })
-                                    .ok();
-                            }),
-                        )
-                        .item(
-                            PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
-                                folder_app
-                                    .update(cx, |this, cx| {
-                                        this.open_new_folder_dialog(folder_dir.clone(), window, cx)
-                                    })
-                                    .ok();
-                            }),
-                        )
-                    },
+                crate::tooltip::with_tooltip(
+                    "tip-project-new",
+                    "新建",
+                    crate::menu::dropdown_menu(
+                        "project-new",
+                        chrome.popup_border,
+                        crate::app::icon_button("project-new", icon("plus"), chrome.muted_fg),
+                        move |menu, _, _| {
+                            let file_app = new_app.clone();
+                            let file_dir = file_dir.clone();
+                            let folder_app = new_app.clone();
+                            let folder_dir = folder_dir.clone();
+                            menu.item(PopupMenuItem::new("新建文件…").on_click(
+                                move |_, window, cx| {
+                                    file_app
+                                        .update(cx, |this, cx| {
+                                            this.open_new_file_dialog(file_dir.clone(), window, cx)
+                                        })
+                                        .ok();
+                                },
+                            ))
+                            .item(
+                                PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
+                                    folder_app
+                                        .update(cx, |this, cx| {
+                                            this.open_new_folder_dialog(
+                                                folder_dir.clone(),
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                        .ok();
+                                }),
+                            )
+                        },
+                    ),
+                    cx,
                 )
             })
             .child(div().w(px(1.)).h(px(16.)).mx_1().bg(chrome.border))
-            .child(
+            .child(crate::tooltip::with_tooltip(
+                "tip-project-collapse-all",
+                "折叠全部",
                 crate::app::icon_button("project-collapse-all", icon("collapse"), chrome.muted_fg)
-                    .tooltip("折叠全部")
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
                     ),
-            )
-            .child(
+                cx,
+            ))
+            .child(crate::tooltip::with_tooltip(
+                "tip-project-refresh",
+                "从磁盘重新加载",
                 crate::app::icon_button("project-refresh", icon("refresh"), chrome.muted_fg)
-                    .tooltip("从磁盘重新加载")
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.refresh_project_tree(cx)),
                     ),
-            )
+                cx,
+            ))
             .child(crate::menu::dropdown_menu(
                 "project-options",
                 chrome.popup_border,
@@ -110,13 +122,15 @@ impl KeelApp {
                         .menu("隐藏工具窗口", Box::new(ToggleProjectPanel))
                 },
             ))
-            .child(
+            .child(crate::tooltip::with_tooltip(
+                "tip-project-hide",
+                "隐藏到侧边条",
                 crate::app::icon_button("project-hide", icon("chevron_left"), chrome.muted_fg)
-                    .tooltip("隐藏到侧边条")
                     .on_click(cx.listener(|this, _event, _window, cx| {
                         this.run_command(CommandId::ToggleProjectPanel, cx)
                     })),
-            );
+                cx,
+            ));
 
         let body = if self.project.rows.is_empty() {
             let message = match &self.project.root {
@@ -177,8 +191,9 @@ impl KeelApp {
         // 根行在项目名后附带完整路径，和 IDEA 的项目树一致。
         let is_root = row.depth == 0;
         let root_path = is_root.then(|| row.path.display().to_string());
-        // IDEA 树文字左右各留 8px（`Tree.border.compact`），每级缩进 20px。
-        let indent = px(8.0 + row.depth as f32 * 20.0);
+        // IDEA 树文字左右各留 8px（`Tree.border.compact`），
+        // 每级缩进 = `Tree.leftChildIndent`(7) + `Tree.rightChildIndent`(11) = 18px。
+        let indent = px(8.0 + row.depth as f32 * 18.0);
         let icon_path = if is_dir {
             crate::file_icons::folder_icon(chrome.icon_suffix)
         } else {

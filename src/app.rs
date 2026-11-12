@@ -376,6 +376,10 @@ pub struct KeelApp {
     pub delete_confirm: Option<DeleteConfirm>,
     /// 右键菜单（项目树、编辑器标签）。
     pub context_menu: Option<ContextMenuPopup>,
+    /// 正在显示的工具提示。
+    pub tip: Option<crate::tooltip::KeelTip>,
+    /// 工具提示的延迟任务，悬停结束时丢弃即可取消。
+    tip_task: Option<Task<()>>,
     pending_focus: Option<FocusTarget>,
     focus_retries: u8,
     pub persisted: PersistedState,
@@ -423,6 +427,8 @@ impl KeelApp {
             file_op: None,
             delete_confirm: None,
             context_menu: None,
+            tip: None,
+            tip_task: None,
             pending_focus: None,
             focus_retries: 0,
             focus_handle: cx.focus_handle(),
@@ -814,6 +820,41 @@ impl KeelApp {
 
         self.context_menu = Some(ContextMenuPopup { menu, position });
         cx.notify();
+    }
+
+    /// 悬停进入/离开时调度工具提示：进入后延迟 500ms 显示，离开立即隐藏。
+    pub fn on_tooltip_hover(
+        &mut self,
+        text: SharedString,
+        hovered: bool,
+        mouse: Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        if !hovered {
+            self.hide_tip(cx);
+            return;
+        }
+
+        // 丢弃旧任务即取消上一次的延迟计时。
+        self.tip_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(crate::tooltip::TOOLTIP_DELAY)
+                .await;
+            this.update(cx, |this, cx| {
+                this.tip = Some(crate::tooltip::KeelTip::at(text, mouse));
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
+    /// 隐藏工具提示（离开悬停区域、点击任意位置时）。
+    pub fn hide_tip(&mut self, cx: &mut Context<Self>) {
+        self.tip_task = None;
+        if self.tip.is_some() {
+            self.tip = None;
+            cx.notify();
+        }
     }
 
     /// 手动关闭一条通知（点击气泡）。
@@ -1807,43 +1848,51 @@ impl KeelApp {
             .unwrap_or_else(|| "Keel".to_string());
         let badge_color = crate::idea_theme::project_badge(self.theme_kind, &seed);
 
-        let menu = crate::menu::dropdown_menu(
-            "main-menu",
-            chrome.popup_border,
-            Button::new("main-menu")
-                .ghost()
-                .small()
-                .w(px(28.))
-                .h(px(28.))
-                .p_0()
-                .icon(IconName::Menu)
-                .tooltip("主菜单"),
-            build_main_menu,
+        let menu = crate::tooltip::with_tooltip(
+            "tip-main-menu",
+            "主菜单",
+            crate::menu::dropdown_menu(
+                "main-menu",
+                chrome.popup_border,
+                Button::new("main-menu")
+                    .ghost()
+                    .small()
+                    .w(px(28.))
+                    .h(px(28.))
+                    .p_0()
+                    .icon(IconName::Menu),
+                build_main_menu,
+            ),
+            cx,
         );
 
-        let app_logo = crate::menu::dropdown_menu(
-            "app-logo",
-            chrome.popup_border,
-            Button::new("app-logo")
-                .ghost()
-                .small()
-                .w(px(28.))
-                .h(px(28.))
-                .p_0()
-                .tooltip("主菜单")
-                .child(
-                    div()
-                        .size(px(20.))
-                        .rounded(px(4.))
-                        .bg(chrome.accent)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .text_color(chrome.accent_fg)
-                        .text_xs()
-                        .child("K"),
-                ),
-            build_main_menu,
+        let app_logo = crate::tooltip::with_tooltip(
+            "tip-app-logo",
+            "主菜单",
+            crate::menu::dropdown_menu(
+                "app-logo",
+                chrome.popup_border,
+                Button::new("app-logo")
+                    .ghost()
+                    .small()
+                    .w(px(28.))
+                    .h(px(28.))
+                    .p_0()
+                    .child(
+                        div()
+                            .size(px(20.))
+                            .rounded(px(4.))
+                            .bg(chrome.accent)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_color(chrome.accent_fg)
+                            .text_xs()
+                            .child("K"),
+                    ),
+                build_main_menu,
+            ),
+            cx,
         );
 
         let project_widget = div()
@@ -1897,17 +1946,21 @@ impl KeelApp {
                 .child(div().whitespace_nowrap().child(branch))
         });
 
-        let external = Button::new("title-external")
-            .small()
-            .ghost()
-            .w(px(24.))
-            .h(px(24.))
-            .p_0()
-            .icon(IconName::ExternalLink)
-            .tooltip("在文件管理器中打开项目")
-            .on_click(cx.listener(|this, _event, _window, _cx| {
-                this.open_project_in_file_manager();
-            }));
+        let external = crate::tooltip::with_tooltip(
+            "tip-title-external",
+            "在文件管理器中打开项目",
+            Button::new("title-external")
+                .small()
+                .ghost()
+                .w(px(24.))
+                .h(px(24.))
+                .p_0()
+                .icon(IconName::ExternalLink)
+                .on_click(cx.listener(|this, _event, _window, _cx| {
+                    this.open_project_in_file_manager();
+                })),
+            cx,
+        );
 
         // IDEA 顶部工具栏左侧有一块项目色渐变（600×300 的渐变区域）。
         let tint = crate::idea_theme::project_gradient(self.theme_kind, &seed);
@@ -1959,20 +2012,24 @@ impl KeelApp {
             .children(branch_widget)
             .child(external)
             .child(div().flex_1())
-            .child(
-                icon_button("title-search", icon("search"), chrome.muted_fg)
-                    .tooltip("搜索文件与命令")
-                    .on_click(
-                        cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
-                    ),
-            )
-            .child(
-                icon_button("title-settings", icon("settings"), chrome.muted_fg)
-                    .tooltip("设置")
-                    .on_click(cx.listener(|this, _event, _window, cx| {
+            .child(crate::tooltip::with_tooltip(
+                "tip-title-search",
+                "搜索文件与命令",
+                icon_button("title-search", icon("search"), chrome.muted_fg).on_click(
+                    cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
+                ),
+                cx,
+            ))
+            .child(crate::tooltip::with_tooltip(
+                "tip-title-settings",
+                "设置",
+                icon_button("title-settings", icon("settings"), chrome.muted_fg).on_click(
+                    cx.listener(|this, _event, _window, cx| {
                         this.open_settings(SettingsPane::Appearance, cx)
-                    })),
-            )
+                    }),
+                ),
+                cx,
+            ))
             .child(control("window-min", WindowControlArea::Min, "—"))
             .child(control("window-max", WindowControlArea::Max, "□"))
             .child(control("window-close", WindowControlArea::Close, "✕"))
@@ -2003,33 +2060,10 @@ impl KeelApp {
             chrome.muted_fg
         };
 
-        // 左侧：项目选择器 + 临时消息与后台任务进度，分支等信息在顶部工具栏。
+        // 左侧：状态栏面包屑（`NAVBAR_WIDGET_KEY`）+ 临时消息与后台任务进度。
+        // IDEA 的状态栏左侧只有面包屑一个部件，项目根本身就是面包屑的第一段，
+        // 所以这里不再单独放项目选择器。
         let mut left = div().min_w_0().flex().items_center().h_full();
-        if let Some(root) = self.project.root.clone() {
-            let name = root
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_default();
-            let badge =
-                crate::idea_theme::project_badge(self.theme_kind, &root.display().to_string());
-            left = left.child(
-                div()
-                    .id("status-project")
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .h_full()
-                    .px_2()
-                    .cursor_pointer()
-                    .hover(|style| style.bg(chrome.control_hover))
-                    .child(div().size(px(12.)).rounded(px(3.)).bg(badge))
-                    .child(div().whitespace_nowrap().child(name))
-                    .on_click(cx.listener(|this, _event, _window, cx| {
-                        this.run_command(CommandId::ToggleProjectPanel, cx);
-                    })),
-            );
-        }
-        // IDEA 把导航栏面包屑放在状态栏里，紧挨项目选择器。
         if self.breadcrumbs_visible {
             left = left.child(self.render_status_breadcrumbs(chrome, cx));
         }
@@ -2127,6 +2161,14 @@ impl KeelApp {
         // `gpui_base::POPUP_PRIORITY`，与组件库弹层同一层级。
         .priority(100)
         .into_any_element()
+    }
+
+    /// 工具提示层（自绘，样式按 IDEA 的 `ToolTip`）。
+    fn render_tooltip(&self, chrome: &Chrome, window: &Window) -> AnyElement {
+        match &self.tip {
+            Some(tip) => crate::tooltip::render(tip, chrome, window),
+            None => div().into_any_element(),
+        }
     }
 
     /// 右下角通知气泡，点击立即关闭，超时由 `notify` 里的定时任务移除。
@@ -2664,6 +2706,11 @@ impl Render for KeelApp {
             .on_action(cx.listener(Self::on_close_settings))
             .on_action(cx.listener(Self::on_find_in_file))
             .on_action(cx.listener(Self::on_replace_in_file))
+            // 点击任意位置都收起工具提示。
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _event, _window, cx| this.hide_tip(cx)),
+            )
             .relative()
             .size_full()
             .flex()
@@ -2695,6 +2742,8 @@ impl Render for KeelApp {
         }
 
         root = root.child(self.render_context_menu(&chrome, window, cx));
+
+        root = root.child(self.render_tooltip(&chrome, window));
 
         root = root.child(self.render_toasts(&chrome, cx));
 
