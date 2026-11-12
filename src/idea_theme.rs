@@ -37,6 +37,8 @@ pub struct Tokens {
     pub foreground: u32,
     /// `editor-border` / `dialog-border`
     pub border: u32,
+    /// 编辑器缩进参考线颜色（`INDENT_GUIDE`）。
+    pub indent_guide: u32,
     /// `text-muted`：状态栏部件、树中的次要文字
     pub muted: u32,
     /// `text-secondary`：更次要的文字
@@ -73,13 +75,14 @@ pub struct Tokens {
 /// `platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`
 /// 及其 gray-*/blue-* 调色板。
 pub const LIGHT: Tokens = Tokens {
-    canvas: 0xe9eaee,     // gray-150 / main-window-bg
-    content: 0xffffff,    // layer-2-bg / editor-bg
-    foreground: 0x000000, // text-default
-    border: 0xe9eaee,     // layer-2-border / editor-border
-    muted: 0x5f6269,      // gray-70 / text-muted
-    secondary: 0x73767c,  // gray-80 / text-secondary
-    selection: 0xd0dffe,  // blue-140 / selection-bg-active
+    canvas: 0xe9eaee,       // gray-150 / main-window-bg
+    content: 0xffffff,      // layer-2-bg / editor-bg
+    foreground: 0x000000,   // text-default
+    border: 0xe9eaee,       // layer-2-border / editor-border
+    indent_guide: 0xebecf0, // INDENT_GUIDE
+    muted: 0x5f6269,        // gray-70 / text-muted
+    secondary: 0x73767c,    // gray-80 / text-secondary
+    selection: 0xd0dffe,    // blue-140 / selection-bg-active
     selection_fg: 0x000000,
     hover: 0x00000008,                 // transparent-black-10（8/255 透明度）
     control_hover: 0x00000012,         // transparent-black-20
@@ -97,13 +100,14 @@ pub const LIGHT: Tokens = Tokens {
 ///
 /// 取值来自 `ManyIslandsDark.theme.json`。
 pub const DARK: Tokens = Tokens {
-    canvas: 0x26282c,     // gray-30 / main-window-bg(layer-1)
-    content: 0x191a1c,    // gray-10 / editor-bg(layer-0)
-    foreground: 0xd1d3d9, // gray-130 / text-default
-    border: 0x26282c,     // gray-30 / editor-border
-    muted: 0x9fa2a8,      // gray-100 / text-muted
-    secondary: 0x73767c,  // gray-80 / text-secondary
-    selection: 0x2a4371,  // blue-50 / selection-bg-active
+    canvas: 0x26282c,       // gray-30 / main-window-bg(layer-1)
+    content: 0x191a1c,      // gray-10 / editor-bg(layer-0)
+    foreground: 0xd1d3d9,   // gray-130 / text-default
+    border: 0x26282c,       // gray-30 / editor-border
+    indent_guide: 0x313438, // INDENT_GUIDE
+    muted: 0x9fa2a8,        // gray-100 / text-muted
+    secondary: 0x73767c,    // gray-80 / text-secondary
+    selection: 0x2a4371,    // blue-50 / selection-bg-active
     selection_fg: 0xd1d3d9,
     hover: 0xffffff0d,                 // transparent-white-10
     control_hover: 0xffffff17,         // transparent-white-20
@@ -191,7 +195,8 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
 
         theme.background = color(tokens.canvas);
         theme.foreground = color(tokens.foreground);
-        theme.border = color(tokens.border);
+        // 编辑器的缩进参考线直接复用 `theme.border` 取色。
+        theme.border = color(tokens.indent_guide);
 
         theme.sidebar = color(tokens.tool_window_header);
         theme.sidebar_foreground = color(tokens.foreground);

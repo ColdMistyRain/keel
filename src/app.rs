@@ -72,7 +72,7 @@ impl Chrome {
             canvas: crate::idea_theme::color(tokens.canvas),
             bg: crate::idea_theme::color(tokens.content),
             fg: theme.foreground,
-            border: theme.border,
+            border: crate::idea_theme::color(tokens.border),
             panel: crate::idea_theme::color(tokens.tool_window_header),
             panel_fg: theme.foreground,
             muted_fg: theme.muted_foreground,

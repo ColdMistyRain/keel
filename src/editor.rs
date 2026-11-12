@@ -263,10 +263,10 @@ impl KeelApp {
             }
             let is_last = ix == last;
             let is_dir = segment_path.is_dir();
-            let (icon, icon_color) = if is_dir {
-                (IconName::Folder, chrome.muted_fg)
+            let icon_path = if is_dir {
+                crate::file_icons::folder_icon(chrome.icon_suffix)
             } else {
-                crate::file_icons::file_icon(&segment_path, chrome.muted_fg)
+                crate::file_icons::file_icon(&segment_path, chrome.icon_suffix)
             };
             children.push(
                 div()
@@ -279,7 +279,12 @@ impl KeelApp {
                     .cursor_pointer()
                     .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
                     .hover(|style| style.bg(chrome.control_hover))
-                    .child(div().text_color(icon_color).child(icon))
+                    .child(
+                        svg()
+                            .path(icon_path)
+                            .size(px(16.))
+                            .text_color(chrome.muted_fg),
+                    )
                     .child(div().whitespace_nowrap().child(label))
                     .on_click(cx.listener(move |this, _event, _window, cx| {
                         this.locate_in_project(segment_path.clone(), cx);
@@ -329,7 +334,7 @@ impl KeelApp {
             let activate_right_path = path.clone();
             let hover_path = path.clone();
             let close_path = path.clone();
-            let (icon, icon_color) = crate::file_icons::file_icon(&path, chrome.muted_fg);
+            let icon_path = crate::file_icons::file_icon(&path, chrome.icon_suffix);
 
             let mut tab = div()
                 .id(("editor-tab", ix))
@@ -353,7 +358,12 @@ impl KeelApp {
                         .hover(|style| style.bg(chrome.control_hover))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
-                .child(div().text_color(icon_color).child(icon))
+                .child(
+                    svg()
+                        .path(icon_path)
+                        .size(px(16.))
+                        .text_color(chrome.muted_fg),
+                )
                 .child(div().whitespace_nowrap().child(title))
                 .on_mouse_down(
                     MouseButton::Left,

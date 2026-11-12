@@ -1,26 +1,28 @@
 use std::path::Path;
 
-use gpui::Hsla;
-use gpui_component_assets::IconName;
+use gpui::SharedString;
 
-use crate::idea_theme::color;
 use crate::model::language_for_path;
 
-/// 按 IDEA 的习惯给不同语言的文件配图标和颜色。
-pub fn file_icon(path: &Path, fallback: Hsla) -> (IconName, Hsla) {
-    match language_for_path(path) {
-        Some("java") => (IconName::FileCode, color(0xe76f00)),
-        Some("rust") => (IconName::FileCode, color(0xb7410e)),
-        Some("json" | "toml" | "yaml") => (IconName::FileBraces, color(0x8c8c8c)),
-        Some("markdown") => (IconName::FileText, color(0x519aba)),
-        Some("javascript" | "jsx") => (IconName::FileCode, color(0xa88b00)),
-        Some("typescript" | "tsx") => (IconName::FileCode, color(0x3178c6)),
-        Some("python") => (IconName::FileCode, color(0x3572a5)),
-        Some("html") => (IconName::FileCode, color(0xe34f26)),
-        Some("css") => (IconName::FileCode, color(0x563d7c)),
-        Some("go") => (IconName::FileCode, color(0x00add8)),
-        Some("bash") => (IconName::FileTerminal, color(0x4e9a06)),
-        Some(_) => (IconName::FileCode, fallback),
-        None => (IconName::File, fallback),
-    }
+/// 按 IDEA 的文件类型图标返回 SVG 资源路径；`suffix` 为 `""` 或 `"_dark"`。
+pub fn file_icon(path: &Path, suffix: &str) -> SharedString {
+    let name = match language_for_path(path) {
+        Some("java") => "ft_java",
+        Some("json") => "ft_json",
+        Some("yaml") => "ft_yaml",
+        Some("toml") => "ft_toml",
+        Some("markdown") => "ft_markdown",
+        Some("javascript" | "jsx") => "ft_js",
+        Some("typescript" | "tsx") => "ft_ts",
+        Some("html") => "ft_html",
+        Some("css") => "ft_css",
+        Some("bash") => "ft_shell",
+        Some(_) | None => "ft_text",
+    };
+    SharedString::from(format!("icons/{name}{suffix}.svg"))
+}
+
+/// 目录图标，展开与收起共用同一张 expUI 图标。
+pub fn folder_icon(suffix: &str) -> SharedString {
+    SharedString::from(format!("icons/ft_folder{suffix}.svg"))
 }

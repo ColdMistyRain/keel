@@ -164,15 +164,10 @@ impl KeelApp {
         let root_path = (row.depth == 0).then(|| row.path.display().to_string());
         // IDEA 树左右各留 12px，每级缩进 20px。
         let indent = px(8.0 + row.depth as f32 * 20.0);
-        let (icon, icon_color) = if is_dir {
-            let folder = if row.expanded {
-                IconName::FolderOpen
-            } else {
-                IconName::Folder
-            };
-            (folder, chrome.secondary_fg)
+        let icon_path = if is_dir {
+            crate::file_icons::folder_icon(chrome.icon_suffix)
         } else {
-            crate::file_icons::file_icon(&row.path, chrome.muted_fg)
+            crate::file_icons::file_icon(&row.path, chrome.icon_suffix)
         };
         let chevron = is_dir.then(|| {
             svg()
@@ -209,7 +204,12 @@ impl KeelApp {
                     .text_color(chrome.muted_fg)
                     .children(chevron),
             )
-            .child(div().text_color(icon_color).child(icon))
+            .child(
+                svg()
+                    .path(icon_path)
+                    .size(px(16.))
+                    .text_color(chrome.muted_fg),
+            )
             .child(
                 div()
                     .min_w_0()
@@ -224,7 +224,7 @@ impl KeelApp {
                     .overflow_hidden()
                     .whitespace_nowrap()
                     .text_xs()
-                    .text_color(chrome.muted_fg)
+                    .text_color(chrome.secondary_fg)
                     .child(path)
             }))
             .on_mouse_down(
