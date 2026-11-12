@@ -335,6 +335,12 @@ pub struct DeleteConfirm {
     pub is_dir: bool,
 }
 
+/// 正在显示的右键菜单：菜单实体与弹出位置（窗口坐标）。
+pub struct ContextMenuPopup {
+    pub menu: Entity<PopupMenu>,
+    pub position: Point<Pixels>,
+}
+
 pub struct KeelApp {
     pub project: ProjectState,
     pub documents: Vec<Document>,
@@ -365,6 +371,8 @@ pub struct KeelApp {
     pub pending_close: Option<PathBuf>,
     pub file_op: Option<FileOpDialog>,
     pub delete_confirm: Option<DeleteConfirm>,
+    /// 右键菜单（项目树、编辑器标签）。
+    pub context_menu: Option<ContextMenuPopup>,
     pending_focus: Option<FocusTarget>,
     focus_retries: u8,
     pub persisted: PersistedState,
@@ -411,6 +419,7 @@ impl KeelApp {
             pending_close: None,
             file_op: None,
             delete_confirm: None,
+            context_menu: None,
             pending_focus: None,
             focus_retries: 0,
             focus_handle: cx.focus_handle(),
@@ -771,6 +780,37 @@ impl KeelApp {
             .ok();
         });
         self.tasks.push(task);
+    }
+
+    /// 在鼠标位置弹出右键菜单。菜单表面与下拉菜单一样带 IDEA 的 1px 描边，
+    /// 因为组件库的 `ContextMenuExt` 不暴露菜单表面样式。
+    pub fn open_context_menu(
+        &mut self,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        build: impl FnOnce(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu + 'static,
+    ) {
+        let menu = PopupMenu::build(window, cx, build);
+        menu.focus_handle(cx).focus(window, cx);
+
+        // 菜单自行关闭（点空白、Esc、执行菜单项）后清掉状态。
+        // 只处理当前这一份菜单，避免旧菜单的关闭事件把新菜单一起清掉。
+        let shown = menu.entity_id();
+        cx.subscribe(&menu, move |this, _menu, _: &DismissEvent, cx| {
+            if this
+                .context_menu
+                .as_ref()
+                .is_some_and(|popup| popup.menu.entity_id() == shown)
+            {
+                this.context_menu = None;
+                cx.notify();
+            }
+        })
+        .detach();
+
+        self.context_menu = Some(ContextMenuPopup { menu, position });
+        cx.notify();
     }
 
     /// 手动关闭一条通知（点击气泡）。
@@ -2043,6 +2083,49 @@ impl KeelApp {
             .into_any_element()
     }
 
+    /// 右键菜单层：位置取右键点击处，弹出层优先级与组件库的弹层一致。
+    fn render_context_menu(
+        &self,
+        chrome: &Chrome,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(popup) = &self.context_menu else {
+            return div().into_any_element();
+        };
+        let menu = popup.menu.clone();
+        let position = popup.position;
+
+        // 菜单打开期间由它持有焦点，Esc、方向键和回车才会派发到菜单上
+        // （组件库的 `DeferredMenu` 也是在每帧预绘制时这样做）。
+        let focus = menu.focus_handle(cx);
+        if !focus.contains_focused(window, cx) {
+            focus.focus(window, cx);
+        }
+
+        let surface =
+            crate::menu::bordered_surface(menu, chrome.popup_border, crate::menu::menu_radius(cx));
+        let size = window.bounds().size;
+        deferred(
+            anchored().child(
+                div()
+                    .w(size.width)
+                    .h(size.height)
+                    // 菜单打开时滚轮只作用于菜单，不滚动下面的内容。
+                    .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                    .child(
+                        anchored()
+                            .position(position)
+                            .snap_to_window_with_margin(px(8.))
+                            .child(surface),
+                    ),
+            ),
+        )
+        // `gpui_base::POPUP_PRIORITY`，与组件库弹层同一层级。
+        .priority(100)
+        .into_any_element()
+    }
+
     /// 右下角通知气泡，点击立即关闭，超时由 `notify` 里的定时任务移除。
     fn render_toasts(&self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         if self.toasts.is_empty() {
@@ -2607,6 +2690,8 @@ impl Render for KeelApp {
         if self.settings.is_some() {
             root = root.child(self.render_settings(&chrome, cx));
         }
+
+        root = root.child(self.render_context_menu(&chrome, window, cx));
 
         root = root.child(self.render_toasts(&chrome, cx));
 

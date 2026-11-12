@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
-use gpui_component::menu::{ContextMenuExt as _, PopupMenuItem};
+use gpui_component::menu::{PopupMenu, PopupMenuItem};
 use gpui_component_assets::IconName;
 
 use crate::actions::{
@@ -191,7 +191,7 @@ impl KeelApp {
                 .text_color(chrome.muted_fg)
         });
 
-        let row = div()
+        div()
             .id(("tree-row", ix))
             .h(px(22.))
             // IDEA 的树选中是满宽直角矩形，只有文字带 8px 内边距。
@@ -255,106 +255,114 @@ impl KeelApp {
                     }
                 }),
             )
-            // 右键只选中，不展开目录，随后弹出文件操作菜单。
+            // 右键只选中，不展开目录，随后在点击处弹出文件操作菜单。
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                     this.project.selected = Some(right_path.clone());
-                    cx.notify();
+                    let menu_app = cx.entity().downgrade();
+                    let menu_path = right_path.clone();
+                    let menu_is_dir = is_dir;
+                    this.open_context_menu(event.position, window, cx, move |menu, _, _| {
+                        build_row_menu(menu, menu_app, menu_path, menu_is_dir)
+                    });
                 }),
-            );
-
-        let menu_app = cx.entity().downgrade();
-        let menu_path = row_path.clone();
-        let menu_is_dir = is_dir;
-        row.context_menu(move |menu, _, _| {
-            let path = menu_path.clone();
-            let dir = if menu_is_dir {
-                path.clone()
-            } else {
-                path.parent()
-                    .map(|parent| parent.to_path_buf())
-                    .unwrap_or_else(|| path.clone())
-            };
-            let mut menu = menu;
-
-            let new_file_app = menu_app.clone();
-            let new_file_dir = dir.clone();
-            menu = menu.item(
-                PopupMenuItem::new("新建文件…").on_click(move |_, window, cx| {
-                    new_file_app
-                        .update(cx, |this, cx| {
-                            this.open_new_file_dialog(new_file_dir.clone(), window, cx)
-                        })
-                        .ok();
-                }),
-            );
-
-            let new_folder_app = menu_app.clone();
-            let new_folder_dir = dir;
-            menu = menu.item(
-                PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
-                    new_folder_app
-                        .update(cx, |this, cx| {
-                            this.open_new_folder_dialog(new_folder_dir.clone(), window, cx)
-                        })
-                        .ok();
-                }),
-            );
-
-            menu = menu.separator();
-
-            let rename_app = menu_app.clone();
-            let rename_path = path.clone();
-            menu = menu.item(
-                PopupMenuItem::new("重命名…").on_click(move |_, window, cx| {
-                    rename_app
-                        .update(cx, |this, cx| {
-                            this.open_rename_dialog(rename_path.clone(), window, cx)
-                        })
-                        .ok();
-                }),
-            );
-
-            let delete_app = menu_app.clone();
-            let delete_path = path.clone();
-            menu = menu.item(PopupMenuItem::new("删除").on_click(move |_, _, cx| {
-                delete_app
-                    .update(cx, |this, cx| {
-                        this.request_delete(delete_path.clone(), menu_is_dir, cx)
-                    })
-                    .ok();
-            }));
-
-            menu = menu.separator();
-
-            let copy_app = menu_app.clone();
-            let copy_path = path.clone();
-            menu = menu.item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
-                cx.write_to_clipboard(ClipboardItem::new_string(copy_path.display().to_string()));
-                copy_app
-                    .update(cx, |this, cx| {
-                        this.status = crate::app::StatusMessage::info("已复制路径");
-                        cx.notify();
-                    })
-                    .ok();
-            }));
-
-            if !menu_is_dir {
-                let open_app = menu_app.clone();
-                let open_path = path;
-                menu = menu.separator();
-                menu = menu.item(PopupMenuItem::new("在编辑器中打开").on_click(
-                    move |_, window, cx| {
-                        open_app
-                            .update(cx, |this, cx| this.open_file(open_path.clone(), window, cx))
-                            .ok();
-                    },
-                ));
-            }
-
-            menu
-        })
-        .into_any_element()
+            )
+            .into_any_element()
     }
+}
+
+/// 项目树行的右键菜单：新建、重命名、删除、复制路径、在编辑器中打开。
+fn build_row_menu(
+    menu: PopupMenu,
+    menu_app: WeakEntity<KeelApp>,
+    path: PathBuf,
+    menu_is_dir: bool,
+) -> PopupMenu {
+    // 文件的新建位置取所在目录，目录则取自身。
+    let dir = if menu_is_dir {
+        path.clone()
+    } else {
+        path.parent()
+            .map(|parent| parent.to_path_buf())
+            .unwrap_or_else(|| path.clone())
+    };
+    let mut menu = menu;
+
+    let new_file_app = menu_app.clone();
+    let new_file_dir = dir.clone();
+    menu = menu.item(
+        PopupMenuItem::new("新建文件…").on_click(move |_, window, cx| {
+            new_file_app
+                .update(cx, |this, cx| {
+                    this.open_new_file_dialog(new_file_dir.clone(), window, cx)
+                })
+                .ok();
+        }),
+    );
+
+    let new_folder_app = menu_app.clone();
+    let new_folder_dir = dir;
+    menu = menu.item(
+        PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
+            new_folder_app
+                .update(cx, |this, cx| {
+                    this.open_new_folder_dialog(new_folder_dir.clone(), window, cx)
+                })
+                .ok();
+        }),
+    );
+
+    menu = menu.separator();
+
+    let rename_app = menu_app.clone();
+    let rename_path = path.clone();
+    menu = menu.item(
+        PopupMenuItem::new("重命名…").on_click(move |_, window, cx| {
+            rename_app
+                .update(cx, |this, cx| {
+                    this.open_rename_dialog(rename_path.clone(), window, cx)
+                })
+                .ok();
+        }),
+    );
+
+    let delete_app = menu_app.clone();
+    let delete_path = path.clone();
+    menu = menu.item(PopupMenuItem::new("删除").on_click(move |_, _, cx| {
+        delete_app
+            .update(cx, |this, cx| {
+                this.request_delete(delete_path.clone(), menu_is_dir, cx)
+            })
+            .ok();
+    }));
+
+    menu = menu.separator();
+
+    let copy_app = menu_app.clone();
+    let copy_path = path.clone();
+    menu = menu.item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
+        cx.write_to_clipboard(ClipboardItem::new_string(copy_path.display().to_string()));
+        copy_app
+            .update(cx, |this, cx| {
+                this.status = crate::app::StatusMessage::info("已复制路径");
+                cx.notify();
+            })
+            .ok();
+    }));
+
+    if !menu_is_dir {
+        let open_app = menu_app.clone();
+        let open_path = path;
+        menu = menu.separator();
+        menu = menu.item(
+            PopupMenuItem::new("在编辑器中打开").on_click(move |_, window, cx| {
+                open_app
+                    .update(cx, |this, cx| this.open_file(open_path.clone(), window, cx))
+                    .ok();
+            }),
+        );
+    }
+
+    menu
 }

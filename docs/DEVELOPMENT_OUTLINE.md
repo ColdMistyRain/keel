@@ -363,6 +363,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-24：菜单弹层补 1px 描边——组件库 `popover_style` 用 10% 前景色阴影环充当边框（shadcn 做法，实际渲染约 `#E5E5E5`），而 IDEA 的 `Popup.borderColor` 是 `popup-border-windows`（浅色 gray-130 `#D1D3D9`、深色 gray-40 `#33353B`）；新增 `Tokens.popup_border` 与 `src/menu.rs`，用 `Popover` + 叠层描边包住组件库 `PopupMenu`（6 处下拉菜单：主菜单 ×2、已打开文件、项目标题、新建、更多），定位/子菜单/键盘导航仍由组件库负责；右键上下文菜单仍走组件库 `ContextMenuExt`，暂无描边接口
 - [x] Phase 1 · UI-25：通知气泡对齐 IDEA——圆角由 `rounded_md` 改为 12（`NotificationBalloonRoundShadowBorderProvider.CORNER_RADIUS` = `Notification.arc`，默认 12）；补 1px 描边并新增 `Tokens.feedback_border`（`Notification.borderColor`：浅色 `feedback-border` = layer-0-border gray-130 `#D1D3D9`，深色 `feedback-border` = layer-2-bg，与底色相同、等价于无描边）
 - [x] Phase 1 · UI-26：底部工具窗口标题栏高度 28 → 41——新 UI 的 `ToolWindowHeader.getUnscaledHeight()` 直接返回 `JBUI.CurrentTheme.ToolWindow.headerHeight()`（`ToolWindow.Header.height`，默认 41），底部面板与项目面板的标题栏高度一致；标签仍为 13px、水平内边距 12（`TabbedPane.tabInsets=0,12,0,12`）
+- [x] Phase 1 · UI-27：右键菜单也补上 1px 描边——组件库 `ContextMenuExt` 不暴露菜单表面样式，改为 Keel 自绘右键菜单层：`KeelApp::open_context_menu` 用组件库 `PopupMenu` 构建菜单并在鼠标位置渲染（`deferred` + `anchored`，优先级 `POPUP_PRIORITY`），表面复用 `menu::bordered_surface` 的 1px `popup-border` 描边；项目树行与编辑器标签的菜单迁到该实现，`DismissEvent` 只清理当前这份菜单，Esc/方向键/回车仍由 `PopupMenu` 处理（菜单在渲染时持有焦点）
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

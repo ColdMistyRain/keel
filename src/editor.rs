@@ -4,7 +4,7 @@ use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{Editor, EditorState};
-use gpui_component::menu::{ContextMenuExt as _, PopupMenuItem};
+use gpui_component::menu::PopupMenuItem;
 use gpui_component_assets::IconName;
 
 use crate::app::{Chrome, KeelApp, empty_editor_state};
@@ -438,58 +438,63 @@ impl KeelApp {
             }
 
             // IDEA 的标签右键菜单：关闭 / 关闭其他 / 关闭全部 / 在项目中定位。
-            let menu_app = app.clone();
-            let menu_close_path = path.clone();
-            let menu_other_path = path.clone();
-            let menu_locate_path = path.clone();
-            let tab = tab.context_menu(move |menu, _, _| {
-                let close_app = menu_app.clone();
-                let close_path = menu_close_path.clone();
-                let other_app = menu_app.clone();
-                let other_path = menu_other_path.clone();
-                let all_app = menu_app.clone();
-                let copy_app = menu_app.clone();
-                let copy_path = menu_close_path.clone();
-                let locate_app = menu_app.clone();
-                let locate_path = menu_locate_path.clone();
+            // 菜单在点击处弹出，表面与下拉菜单一样带 1px 描边。
+            let menu_path = path.clone();
+            let tab = tab.on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    let menu_app = cx.entity().downgrade();
+                    let menu_path = menu_path.clone();
+                    this.open_context_menu(event.position, window, cx, move |menu, _, _| {
+                        let close_app = menu_app.clone();
+                        let close_path = menu_path.clone();
+                        let other_app = menu_app.clone();
+                        let other_path = menu_path.clone();
+                        let all_app = menu_app.clone();
+                        let copy_app = menu_app.clone();
+                        let copy_path = menu_path.clone();
+                        let locate_app = menu_app.clone();
+                        let locate_path = menu_path.clone();
 
-                menu.item(PopupMenuItem::new("关闭").on_click(move |_, _, cx| {
-                    close_app
-                        .update(cx, |this, cx| this.request_close(close_path.clone(), cx))
-                        .ok();
-                }))
-                .item(PopupMenuItem::new("关闭其他").on_click(move |_, _, cx| {
-                    other_app
-                        .update(cx, |this, cx| this.close_other_documents(&other_path, cx))
-                        .ok();
-                }))
-                .item(PopupMenuItem::new("关闭全部").on_click(move |_, _, cx| {
-                    all_app
-                        .update(cx, |this, cx| this.close_all_documents(cx))
-                        .ok();
-                }))
-                .separator()
-                .item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
-                    cx.write_to_clipboard(ClipboardItem::new_string(
-                        copy_path.display().to_string(),
-                    ));
-                    copy_app
-                        .update(cx, |this, cx| {
-                            this.status = crate::app::StatusMessage::info("已复制路径");
-                            cx.notify();
-                        })
-                        .ok();
-                }))
-                .item(
-                    PopupMenuItem::new("在项目中定位").on_click(move |_, _, cx| {
-                        locate_app
-                            .update(cx, |this, cx| {
-                                this.locate_in_project(locate_path.clone(), cx)
-                            })
-                            .ok();
-                    }),
-                )
-            });
+                        menu.item(PopupMenuItem::new("关闭").on_click(move |_, _, cx| {
+                            close_app
+                                .update(cx, |this, cx| this.request_close(close_path.clone(), cx))
+                                .ok();
+                        }))
+                        .item(PopupMenuItem::new("关闭其他").on_click(move |_, _, cx| {
+                            other_app
+                                .update(cx, |this, cx| this.close_other_documents(&other_path, cx))
+                                .ok();
+                        }))
+                        .item(PopupMenuItem::new("关闭全部").on_click(move |_, _, cx| {
+                            all_app
+                                .update(cx, |this, cx| this.close_all_documents(cx))
+                                .ok();
+                        }))
+                        .separator()
+                        .item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
+                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                copy_path.display().to_string(),
+                            ));
+                            copy_app
+                                .update(cx, |this, cx| {
+                                    this.status = crate::app::StatusMessage::info("已复制路径");
+                                    cx.notify();
+                                })
+                                .ok();
+                        }))
+                        .item(
+                            PopupMenuItem::new("在项目中定位").on_click(move |_, _, cx| {
+                                locate_app
+                                    .update(cx, |this, cx| {
+                                        this.locate_in_project(locate_path.clone(), cx)
+                                    })
+                                    .ok();
+                            }),
+                        )
+                    });
+                }),
+            );
 
             children.push(tab.into_any_element());
         }

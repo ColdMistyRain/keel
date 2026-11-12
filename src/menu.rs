@@ -16,6 +16,31 @@ use gpui_component::{ActiveTheme as _, Selectable};
 /// 菜单表面的圆角上限，与组件库 `PopupMenu` 内部一致（`radius.min(8)`）。
 const MENU_RADIUS: Pixels = px(8.);
 
+/// 菜单表面的圆角（下拉菜单与右键菜单共用）。
+pub fn menu_radius(cx: &App) -> Pixels {
+    cx.theme().radius.min(MENU_RADIUS)
+}
+
+/// 菜单表面 + IDEA 的 1px 描边。
+///
+/// 组件库的 `popover_style` 只有阴影环，这里在菜单表面内侧补一层实线，
+/// 描边颜色取 `Popup.borderColor`。
+pub fn bordered_surface(menu: Entity<PopupMenu>, border: Hsla, radius: Pixels) -> AnyElement {
+    div()
+        .relative()
+        .child(menu)
+        // 盖在菜单背景之上画 1px 实线，模拟 IDEA 的 `Popup.borderColor`。
+        .child(
+            div()
+                .absolute()
+                .inset_0()
+                .rounded(radius)
+                .border_1()
+                .border_color(border),
+        )
+        .into_any_element()
+}
+
 /// 缓存的菜单实体，避免每次重绘都重建菜单项。
 #[derive(Default)]
 struct MenuSlot {
@@ -73,18 +98,6 @@ where
                 }
             };
 
-            let radius = cx.theme().radius.min(MENU_RADIUS);
-            div()
-                .relative()
-                .child(menu)
-                // 盖在菜单背景之上画 1px 实线，模拟 IDEA 的 `Popup.borderColor`。
-                .child(
-                    div()
-                        .absolute()
-                        .inset_0()
-                        .rounded(radius)
-                        .border_1()
-                        .border_color(border),
-                )
+            bordered_surface(menu, border, menu_radius(cx))
         })
 }
