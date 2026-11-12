@@ -2519,9 +2519,13 @@ impl Render for KeelApp {
             .min_h_0()
             .flex()
             .flex_row()
+            // 岛屿与窗口四边都留 `Island.borderWidth.compact`（4px）。
             .px(px(4.))
+            .pt(px(4.))
             .pb(px(4.))
             .child(stripe)
+            // 侧边条与工具窗口岛屿之间同样留 4px 的岛屿间距。
+            .child(div().w(px(4.)).flex_shrink_0())
             .child(workspace);
 
         let mut root = div()

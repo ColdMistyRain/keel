@@ -73,7 +73,8 @@ impl KeelApp {
                             if !app.resizing_project_panel {
                                 return;
                             }
-                            let width = (event.position.x - px(STRIPE_WIDTH)).as_f32();
+                            // 窗口内边距 4px + 侧边条 37px + 岛屿间距 4px。
+                            let width = (event.position.x - px(STRIPE_WIDTH + 8.)).as_f32();
                             app.project_panel_width = width.clamp(180., 600.);
                             cx.notify();
                         })
