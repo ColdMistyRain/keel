@@ -15,7 +15,6 @@ pub struct Document {
     pub path: PathBuf,
     pub state: Entity<EditorState>,
     pub dirty: bool,
-    pub language: &'static str,
     pub eol: &'static str,
     pub _changes: Subscription,
     /// 编辑器每次重绘（含光标移动）都会触发，用来刷新状态栏的行列号。
@@ -26,7 +25,6 @@ impl Document {
     pub fn new(
         path: PathBuf,
         state: Entity<EditorState>,
-        language: &'static str,
         eol: &'static str,
         changes: Subscription,
         observe: Subscription,
@@ -35,7 +33,6 @@ impl Document {
             path,
             state,
             dirty: false,
-            language,
             eol,
             _changes: changes,
             _observe: observe,
@@ -126,8 +123,7 @@ impl KeelApp {
                     window.refresh();
                     cx.notify();
                 }),
-            )
-            .child(div().w(px(1.)).h_full().bg(chrome.border));
+            );
 
         div()
             .flex_1()
@@ -142,6 +138,9 @@ impl KeelApp {
                     .w(panel_width)
                     .h_full()
                     .flex_shrink_0()
+                    .rounded(chrome.island_arc)
+                    .overflow_hidden()
+                    .bg(chrome.panel)
                     .child(project_panel),
             )
             .child(splitter)
@@ -174,7 +173,14 @@ impl KeelApp {
 
     fn render_editor_area(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         if self.documents.is_empty() {
-            return empty_editor_state(chrome, self.project.root.as_deref());
+            return div()
+                .flex_1()
+                .min_h_0()
+                .bg(chrome.bg)
+                .rounded(chrome.island_arc)
+                .overflow_hidden()
+                .child(empty_editor_state(chrome, self.project.root.as_deref()))
+                .into_any_element();
         }
 
         let tab_bar = self.render_tab_bar(chrome, cx);
@@ -183,12 +189,15 @@ impl KeelApp {
             .then(|| self.render_breadcrumbs(chrome, cx));
         let editor = self.render_active_editor(chrome);
 
-        // IDEA 新 UI 把面包屑放在编辑器下方、状态栏上方。
+        // IDEA 新 UI 把面包屑放在编辑器下方、状态栏上方；整块是画布上的圆角岛屿。
         let mut column = div()
             .flex_1()
             .min_h_0()
             .flex()
             .flex_col()
+            .bg(chrome.bg)
+            .rounded(chrome.island_arc)
+            .overflow_hidden()
             .child(tab_bar)
             .child(editor);
         if let Some(breadcrumbs) = breadcrumbs {
@@ -247,7 +256,7 @@ impl KeelApp {
                                     chrome.icon_suffix
                                 )))
                                 .size(px(16.))
-                                .text_color(chrome.secondary_fg),
+                                .text_color(chrome.muted_fg),
                         )
                         .into_any_element(),
                 );
@@ -268,11 +277,7 @@ impl KeelApp {
                     .px_1()
                     .rounded_sm()
                     .cursor_pointer()
-                    .text_color(if is_last {
-                        chrome.fg
-                    } else {
-                        chrome.secondary_fg
-                    })
+                    .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
                     .hover(|style| style.bg(chrome.control_hover))
                     .child(div().text_color(icon_color).child(icon))
                     .child(div().whitespace_nowrap().child(label))
@@ -333,17 +338,18 @@ impl KeelApp {
                 .flex()
                 .items_center()
                 .gap_1()
-                .px_2()
+                .px(px(8.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
-                    // IDEA 新 UI 里选中标签与编辑器同色，只靠顶部 4px 蓝线区分。
-                    tab.bg(chrome.tab_bg)
+                    // IDEA 的选中标签是浅蓝底 + 4px 浅蓝上边线。
+                    tab.bg(chrome.tab_selected_bg)
                         .text_color(chrome.fg)
-                        .border_t_2()
+                        .rounded_sm()
+                        .border_t_4()
                         .border_color(chrome.tab_underline)
                 })
                 .when(!is_active, |tab| {
-                    tab.text_color(chrome.muted_fg)
+                    tab.text_color(chrome.tab_fg_unselected)
                         .hover(|style| style.bg(chrome.control_hover))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
@@ -376,16 +382,19 @@ impl KeelApp {
                     }),
                 );
 
-            // IDEA 用圆点表示未保存，占的就是关闭按钮的位置。
+            // IDEA 用蓝色圆点表示未保存，占的就是关闭按钮的位置。
             if dirty {
                 tab = tab.child(
                     div()
                         .id(("editor-tab-dirty", ix))
-                        .px_1()
-                        .text_sm()
-                        .text_color(chrome.accent)
+                        .size(px(16.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_full()
                         .cursor_pointer()
-                        .child("●")
+                        .hover(|style| style.bg(chrome.control_hover))
+                        .child(div().size(px(8.)).rounded_full().bg(chrome.accent))
                         .on_click(cx.listener(move |this, _event, _window, cx| {
                             this.request_close(close_path.clone(), cx);
                         })),
@@ -394,13 +403,22 @@ impl KeelApp {
                 tab = tab.child(
                     div()
                         .id(("editor-tab-close", ix))
-                        .px_1()
+                        .size(px(16.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
                         .rounded_sm()
-                        .text_xs()
-                        .text_color(chrome.muted_fg)
                         .cursor_pointer()
-                        .hover(|style| style.bg(chrome.panel))
-                        .child("×")
+                        .hover(|style| style.bg(chrome.control_hover))
+                        .child(
+                            svg()
+                                .path(SharedString::from(format!(
+                                    "icons/close{}.svg",
+                                    chrome.icon_suffix
+                                )))
+                                .size(px(14.))
+                                .text_color(chrome.muted_fg),
+                        )
                         .on_click(cx.listener(move |this, _event, _window, cx| {
                             this.request_close(close_path.clone(), cx);
                         })),
@@ -546,7 +564,9 @@ impl KeelApp {
                     .p_0()
                     .h(relative(1.))
                     .font_family(chrome.mono_font.clone())
-                    .text_size(chrome.mono_size),
+                    .text_size(chrome.mono_size)
+                    // IDEA 编辑器行高固定为字号的 1.2 倍。
+                    .line_height(relative(1.2)),
             )
             .into_any_element()
     }

@@ -1,6 +1,8 @@
 use gpui::{App, Hsla, hsla, px};
 use gpui_component::Theme;
+use gpui_component::highlighter::HighlightTheme;
 use gpui_component::theme::ThemeMode;
+use std::sync::Arc;
 
 /// 支持的 IDEA 主题。
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -25,81 +27,93 @@ impl ThemeKind {
     }
 }
 
-/// 一套主题的颜色令牌，取值全部来自 IDEA 新 UI（expUI）主题 JSON。
+/// 一套主题的颜色令牌，取值全部来自 IDEA 2026 默认的 Islands 主题。
 pub struct Tokens {
-    /// `ToolWindow.background`
-    pub panel: u32,
-    /// `colors.contentBackground`
+    /// `MainWindow.background`（岛屿之间的画布）
+    pub canvas: u32,
+    /// `editor-bg`（编辑器岛内部）
     pub content: u32,
-    /// `colors.foreground`
+    /// `text-default`
     pub foreground: u32,
-    /// `colors.border`（新 UI 用 Gray12 / Gray3）
+    /// `editor-border` / `dialog-border`
     pub border: u32,
-    /// 状态栏、次要文字（Gray6 / Gray9）
+    /// `text-muted`：状态栏部件、树中的次要文字
     pub muted: u32,
-    /// 面包屑等更次要的文字（Gray7）
+    /// `text-secondary`：更次要的文字
     pub secondary: u32,
-    /// `colors.selectionBackground`
+    /// `selection-bg-active`
     pub selection: u32,
-    /// `colors.selectionForeground`
+    /// 选中态文字色
     pub selection_fg: u32,
-    /// `colors.hoverBackground`
-    pub tree_hover: u32,
-    /// 控件（按钮、侧边条、状态栏部件）的中性悬停底色（Gray12 / Gray3）
+    /// `selection-bg-hovered`：列表/树的悬停
+    pub hover: u32,
+    /// `toolbar-bg-hovered`：控件（按钮、侧边条、状态栏部件）的悬停
     pub control_hover: u32,
-    /// `ToolWindow.Header.background`
+    /// `ToolWindow.background`
     pub tool_window_header: u32,
-    /// `EditorTabs.underlineColor`
+    /// `tab-selected-border-active`
     pub tab_underline: u32,
     /// `EditorTabs.background`
     pub tab_background: u32,
+    /// `tab-selected-bg-active`
+    pub tab_selected_background: u32,
     /// `StatusBar.background`
     pub status_bar: u32,
+    /// `accent-brand-bg`
+    pub brand: u32,
+    /// `Island.arc`
+    pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
     pub dark_icons: bool,
 }
 
-/// IntelliJ Light 主题令牌。
+/// Islands Light 主题令牌。
 ///
 /// 取值来自 intellij-community 源码：
-/// `platform/platform-resources/src/themes/expUI/expUI_light.theme.json`
-/// 及其调色板 Gray1..Gray14、Blue1..Blue13。
+/// `platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`
+/// 及其 gray-*/blue-* 调色板。
 pub const LIGHT: Tokens = Tokens {
-    panel: 0xf7f8fa,      // Gray13
-    content: 0xffffff,    // Gray14
-    foreground: 0x000000, // Gray1
-    border: 0xebecf0,     // Gray12
-    muted: 0x6c707e,      // Gray6
-    secondary: 0x818594,  // Gray7
-    selection: 0xd4e2ff,  // Blue11
+    canvas: 0xe9eaee,     // gray-150 / main-window-bg
+    content: 0xffffff,    // layer-2-bg / editor-bg
+    foreground: 0x000000, // text-default
+    border: 0xe9eaee,     // layer-2-border / editor-border
+    muted: 0x5f6269,      // gray-70 / text-muted
+    secondary: 0x73767c,  // gray-80 / text-secondary
+    selection: 0xd0dffe,  // blue-140 / selection-bg-active
     selection_fg: 0x000000,
-    tree_hover: 0xedf3ff,    // Blue12
-    control_hover: 0xebecf0, // Gray12
-    tool_window_header: 0xf7f8fa,
-    tab_underline: 0x3574f0, // Blue4
-    tab_background: 0xffffff,
-    status_bar: 0xf7f8fa,
+    hover: 0x00000008,                 // transparent-black-10（8/255 透明度）
+    control_hover: 0x00000012,         // transparent-black-20
+    tool_window_header: 0xffffff,      // tool-window-bg
+    tab_underline: 0xa7c5ff,           // blue-120 / tab-selected-border-active
+    tab_background: 0xffffff,          // editor-bg
+    tab_selected_background: 0xe3ebfe, // blue-150
+    status_bar: 0xe9eaee,              // main-window-bg
+    brand: 0x3871e1,                   // blue-80
+    island_arc: 20.,
     dark_icons: false,
 };
 
-/// Darcula（expUI Dark）主题令牌。
+/// Islands Dark 主题令牌。
 ///
-/// 取值来自 `expUI_dark.theme.json` 的 Gray/Blue 调色板。
+/// 取值来自 `ManyIslandsDark.theme.json`。
 pub const DARK: Tokens = Tokens {
-    panel: 0x2b2d30,      // Gray2
-    content: 0x1e1f22,    // Gray1
-    foreground: 0xdfe1e5, // Gray12
-    border: 0x393b40,     // Gray3，用于面板与编辑器之间的分隔线
-    muted: 0x9da0a8,      // Gray9
-    secondary: 0x6f737a,  // Gray7
-    selection: 0x2e436e,  // Blue2
-    selection_fg: 0xdfe1e5,
-    tree_hover: 0x393b40,    // Gray3
-    control_hover: 0x393b40, // Gray3
-    tool_window_header: 0x2b2d30,
-    tab_underline: 0x3574f0, // Blue6
-    tab_background: 0x1e1f22,
-    status_bar: 0x2b2d30,
+    canvas: 0x26282c,     // gray-30 / main-window-bg(layer-1)
+    content: 0x191a1c,    // gray-10 / editor-bg(layer-0)
+    foreground: 0xd1d3d9, // gray-130 / text-default
+    border: 0x26282c,     // gray-30 / editor-border
+    muted: 0x9fa2a8,      // gray-100 / text-muted
+    secondary: 0x73767c,  // gray-80 / text-secondary
+    selection: 0x2a4371,  // blue-50 / selection-bg-active
+    selection_fg: 0xd1d3d9,
+    hover: 0xffffff0d,                 // transparent-white-10
+    control_hover: 0xffffff17,         // transparent-white-20
+    tool_window_header: 0x191a1c,      // tool-window-bg(layer-0)
+    tab_underline: 0x2e4d89,           // blue-60 / tab-selected-border-active
+    tab_background: 0x191a1c,          // editor-bg
+    tab_selected_background: 0x233558, // blue-40
+    status_bar: 0x26282c,              // main-window-bg(layer-1)
+    brand: 0x3871e1,                   // blue-80
+    island_arc: 20.,
     dark_icons: true,
 };
 
@@ -109,6 +123,13 @@ pub fn color(value: u32) -> Hsla {
     let g = ((value >> 8) & 0xff) as f32 / 255.0;
     let b = (value & 0xff) as f32 / 255.0;
     rgb_to_hsla(r, g, b)
+}
+
+/// 把 `0xRRGGBBAA` 转成带透明度的 `Hsla`，用于 Islands 的悬停覆盖色。
+pub fn color_rgba(value: u32) -> Hsla {
+    let mut hsla = color(value >> 8);
+    hsla.alpha = (value & 0xff) as f32 / 255.0;
+    hsla
 }
 
 fn rgb_to_hsla(r: f32, g: f32, b: f32) -> Hsla {
@@ -168,19 +189,20 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.radius = px(4.);
         theme.radius_lg = px(6.);
 
-        theme.background = color(tokens.content);
+        theme.background = color(tokens.canvas);
         theme.foreground = color(tokens.foreground);
         theme.border = color(tokens.border);
 
-        theme.sidebar = color(tokens.panel);
+        theme.sidebar = color(tokens.tool_window_header);
         theme.sidebar_foreground = color(tokens.foreground);
         theme.sidebar_border = color(tokens.border);
 
         theme.muted_foreground = color(tokens.muted);
-        theme.primary = color(tokens.tab_underline);
+        theme.primary = color(tokens.brand);
         theme.primary_foreground = color(0xffffff);
-        theme.accent = color(tokens.tree_hover);
-        theme.accent_foreground = color(tokens.foreground);
+        theme.accent = color(tokens.selection);
+        theme.accent_foreground = color(tokens.selection_fg);
+        theme.highlight_theme = highlight_theme(kind);
     }
     Theme::sync_base(cx);
 }
@@ -188,6 +210,85 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
 fn ui_font_family() -> &'static str {
     // 随程序打包的 Inter，与 IDEA 新 UI 一致。
     "Inter"
+}
+
+/// 编辑器配色，取自 IDEA 的 `expUI_lightScheme.xml`。
+const LIGHT_SYNTAX: &str = r##"
+{
+  "name": "Keel Light",
+  "appearance": "light",
+  "style": {
+    "editor.background": "#FFFFFF",
+    "editor.foreground": "#000000",
+    "editor.active_line.background": "#F5F8FE",
+    "editor.line_number": "#AEB3C2",
+    "editor.active_line_number": "#767A8A",
+    "editor.gutter.background": "#FFFFFF",
+    "syntax": {
+      "keyword": { "color": "#0033B3" },
+      "string": { "color": "#067D17" },
+      "string.escape": { "color": "#0037A6" },
+      "number": { "color": "#1750EB" },
+      "comment": { "color": "#8C8C8C", "font_style": "italic" },
+      "comment.doc": { "color": "#8C8C8C", "font_style": "italic" },
+      "constant": { "color": "#871094", "font_style": "italic" },
+      "function": { "color": "#00627A" },
+      "type": { "color": "#000000" },
+      "variable": { "color": "#000000" },
+      "property": { "color": "#871094" },
+      "attribute": { "color": "#9E880D" },
+      "operator": { "color": "#000000" },
+      "punctuation": { "color": "#000000" }
+    }
+  }
+}
+"##;
+
+/// 编辑器配色，取自 IDEA 的 `expUI_darkScheme.xml`。
+const DARK_SYNTAX: &str = r##"
+{
+  "name": "Keel Dark",
+  "appearance": "dark",
+  "style": {
+    "editor.background": "#191A1C",
+    "editor.foreground": "#BCBEC4",
+    "editor.active_line.background": "#26282E",
+    "editor.line_number": "#4B5059",
+    "editor.active_line_number": "#A1A3AB",
+    "editor.gutter.background": "#191A1C",
+    "syntax": {
+      "keyword": { "color": "#CF8E6D" },
+      "string": { "color": "#6AAB73" },
+      "string.escape": { "color": "#2AACB8" },
+      "number": { "color": "#2AACB8" },
+      "comment": { "color": "#7A7E85", "font_style": "italic" },
+      "comment.doc": { "color": "#7A7E85", "font_style": "italic" },
+      "constant": { "color": "#C77DBB", "font_style": "italic" },
+      "function": { "color": "#56A8F5" },
+      "type": { "color": "#D1D3D9" },
+      "variable": { "color": "#D1D3D9" },
+      "property": { "color": "#C77DBB" },
+      "attribute": { "color": "#BABABA" },
+      "operator": { "color": "#D1D3D9" },
+      "punctuation": { "color": "#D1D3D9" }
+    }
+  }
+}
+"##;
+
+fn highlight_theme(kind: ThemeKind) -> Arc<HighlightTheme> {
+    let json = if kind.is_dark() {
+        DARK_SYNTAX
+    } else {
+        LIGHT_SYNTAX
+    };
+    serde_json::from_str(json).unwrap_or_else(|_| {
+        if kind.is_dark() {
+            HighlightTheme::default_dark()
+        } else {
+            HighlightTheme::default_light()
+        }
+    })
 }
 
 #[cfg(test)]
@@ -203,8 +304,8 @@ mod tests {
         let black = color(0x000000);
         assert!((black.color.lightness - 0.0).abs() < 0.001);
 
-        let panel = color(LIGHT.panel);
-        assert!((panel.color.lightness - 0.974).abs() < 0.01);
+        let panel = color(LIGHT.canvas);
+        assert!((panel.color.lightness - 0.92).abs() < 0.03);
         assert!(panel.color.saturation < 0.3);
     }
 

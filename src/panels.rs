@@ -20,9 +20,12 @@ impl KeelApp {
                     .when(is_active, |tab| {
                         tab.text_color(chrome.fg)
                             .border_b_2()
-                            .border_color(chrome.accent)
+                            .border_color(chrome.tab_underline)
                     })
-                    .when(!is_active, |tab| tab.text_color(chrome.muted_fg))
+                    .when(!is_active, |tab| {
+                        tab.text_color(chrome.muted_fg)
+                            .hover(|style| style.bg(chrome.control_hover))
+                    })
                     .child(tab.label())
                     .on_click(cx.listener(move |this, _event, _window, cx| {
                         this.bottom_tab = tab;
@@ -58,8 +61,9 @@ impl KeelApp {
             .flex_col()
             .bg(chrome.panel)
             .text_color(chrome.panel_fg)
-            .border_t_1()
-            .border_color(chrome.border)
+            .rounded(chrome.island_arc)
+            .overflow_hidden()
+            .mt(px(6.))
             .child(
                 div()
                     .h(px(28.))

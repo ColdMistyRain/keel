@@ -1,10 +1,14 @@
 use std::path::{Path, PathBuf};
 
 use gpui::{prelude::*, *};
+use gpui_component::Sizable as _;
+use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
 use gpui_component_assets::IconName;
 
-use crate::actions::{CollapseProjectTree, RefreshProjectTree, ToggleProjectPanel};
+use crate::actions::{
+    CollapseProjectTree, LocateInProject, RefreshProjectTree, ToggleProjectPanel,
+};
 use crate::app::{Chrome, CommandId, KeelApp};
 use crate::model::VisibleRow;
 
@@ -16,10 +20,6 @@ impl KeelApp {
             .and_then(|path| path.file_name())
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| "项目".to_string());
-        let path = root
-            .as_deref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_default();
         let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
 
         let header = div()
@@ -38,16 +38,7 @@ impl KeelApp {
                     .items_center()
                     .gap_2()
                     .overflow_hidden()
-                    .child(div().whitespace_nowrap().child(name))
-                    .child(
-                        div()
-                            .min_w_0()
-                            .overflow_hidden()
-                            .whitespace_nowrap()
-                            .text_xs()
-                            .text_color(chrome.muted_fg)
-                            .child(path),
-                    ),
+                    .child(div().whitespace_nowrap().child(name)),
             )
             .child(
                 crate::app::icon_button("project-collapse-all", icon("collapse"), chrome.muted_fg)
@@ -55,6 +46,19 @@ impl KeelApp {
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
                     ),
+            )
+            .child(
+                Button::new("project-locate")
+                    .small()
+                    .ghost()
+                    .w(px(24.))
+                    .h(px(24.))
+                    .p_0()
+                    .icon(IconName::LocateFixed)
+                    .tooltip("在项目中定位")
+                    .on_click(cx.listener(|_this, _event, window, cx| {
+                        window.dispatch_action(Box::new(LocateInProject), cx);
+                    })),
             )
             .child(
                 crate::app::icon_button("project-refresh", icon("refresh"), chrome.muted_fg)

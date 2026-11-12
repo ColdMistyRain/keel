@@ -291,30 +291,6 @@ pub fn language_for_path(path: &Path) -> Option<&'static str> {
     })
 }
 
-/// 状态栏展示用的语言名称，对应 IDEA 状态栏右端的文件类型部件。
-pub fn language_display_name(language: &str) -> &'static str {
-    match language {
-        "rust" => "Rust",
-        "java" => "Java",
-        "toml" => "TOML",
-        "json" => "JSON",
-        "markdown" => "Markdown",
-        "javascript" => "JavaScript",
-        "jsx" => "JSX",
-        "typescript" => "TypeScript",
-        "tsx" => "TSX",
-        "python" => "Python",
-        "go" => "Go",
-        "c" => "C",
-        "cpp" => "C++",
-        "html" => "HTML",
-        "css" => "CSS",
-        "yaml" => "YAML",
-        "bash" => "Shell Script",
-        _ => "Plain Text",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

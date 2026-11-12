@@ -11,13 +11,11 @@ mod project_tree;
 mod tool_window;
 
 use gpui::{prelude::*, *};
-use gpui_component::input::{Copy, Cut, Paste, Redo, SelectAll, Undo};
 
 use crate::actions::{
-    CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, FindInFile,
-    LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown, PaletteUp,
-    PreviousTab, RefreshProjectTree, ReplaceInFile, SaveFile, ShowAbout, ShowCommandPalette,
-    ShowSettings, ToggleBottomPanel, ToggleBreadcrumbs, ToggleProjectPanel, ToggleTheme,
+    CloseEditor, CloseSettings, FindInFile, LocateInProject, NextTab, OpenProject, PaletteCancel,
+    PaletteConfirm, PaletteDown, PaletteUp, PreviousTab, ReplaceInFile, SaveFile,
+    ShowCommandPalette, ShowSettings, ToggleBottomPanel, ToggleProjectPanel,
 };
 use crate::app::KeelApp;
 use crate::model::PersistedState;
@@ -35,8 +33,14 @@ fn main() {
                     std::borrow::Cow::Borrowed(
                         include_bytes!("../assets/fonts/Inter-SemiBold.ttf").as_slice(),
                     ),
+                    std::borrow::Cow::Borrowed(
+                        include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf").as_slice(),
+                    ),
+                    std::borrow::Cow::Borrowed(
+                        include_bytes!("../assets/fonts/JetBrainsMono-Bold.ttf").as_slice(),
+                    ),
                 ])
-                .expect("无法加载 Inter 字体");
+                .expect("无法加载 Keel 的内置字体");
             gpui_component::init(cx);
             // 先读配置，保证启动时就是上次使用的主题与文本渲染方式，避免闪一下浅色。
             let persisted = PersistedState::load();
@@ -53,7 +57,6 @@ fn main() {
             };
             idea_theme::apply(cx, theme);
             register_key_bindings(cx);
-            install_menus(cx);
 
             let width = persisted.window_width.unwrap_or(1280.);
             let height = persisted.window_height.unwrap_or(820.);
@@ -64,6 +67,8 @@ fn main() {
                     .window_bounds(WindowBounds::Windowed(bounds))
                     .titlebar(Some(TitlebarOptions {
                         title: Some("Keel".into()),
+                        // IDEA 新 UI 自绘标题栏，系统标题栏让位给顶部主工具栏。
+                        appears_transparent: true,
                         ..Default::default()
                     })),
                 move |window, cx| {
@@ -75,91 +80,6 @@ fn main() {
 
             cx.activate(true);
         });
-}
-
-/// 顶部菜单栏的内容。菜单项全部绑定到真实存在的动作，不留空壳。
-fn install_menus(cx: &mut App) {
-    cx.set_menus(build_menus());
-    let owned = build_menus()
-        .into_iter()
-        .map(|menu| menu.owned())
-        .collect::<Vec<_>>();
-    gpui_component::GlobalState::global_mut(cx).set_app_menus(owned);
-}
-
-fn build_menus() -> Vec<Menu> {
-    let menu = |name: &str, items: Vec<MenuItem>| Menu {
-        name: name.into(),
-        items,
-        disabled: false,
-    };
-
-    vec![
-        menu(
-            "文件",
-            vec![
-                MenuItem::action("打开项目目录…", OpenProject),
-                MenuItem::separator(),
-                MenuItem::action("保存", SaveFile),
-                MenuItem::action("关闭编辑器", CloseEditor),
-                MenuItem::separator(),
-                MenuItem::action("设置…", ShowSettings),
-            ],
-        ),
-        // 编辑菜单直接复用编辑器的撤销/剪贴板动作，作用于当前聚焦的编辑区。
-        menu(
-            "编辑",
-            vec![
-                MenuItem::action("撤销", Undo),
-                MenuItem::action("重做", Redo),
-                MenuItem::separator(),
-                MenuItem::action("剪切", Cut),
-                MenuItem::action("复制", Copy),
-                MenuItem::action("粘贴", Paste),
-                MenuItem::separator(),
-                MenuItem::action("全选", SelectAll),
-                MenuItem::separator(),
-                MenuItem::action("查找…", FindInFile),
-                MenuItem::action("替换…", ReplaceInFile),
-            ],
-        ),
-        menu(
-            "视图",
-            vec![
-                MenuItem::action("显示或隐藏项目面板", ToggleProjectPanel),
-                MenuItem::action("显示或隐藏底部面板", ToggleBottomPanel),
-                MenuItem::action("显示或隐藏导航栏面包屑", ToggleBreadcrumbs),
-                MenuItem::separator(),
-                MenuItem::action("切换深色 / 浅色主题", ToggleTheme),
-                MenuItem::separator(),
-                MenuItem::action("命令面板…", ShowCommandPalette),
-            ],
-        ),
-        menu(
-            "导航",
-            vec![
-                MenuItem::action("上一个标签", PreviousTab),
-                MenuItem::action("下一个标签", NextTab),
-                MenuItem::separator(),
-                MenuItem::action("在项目中定位", LocateInProject),
-            ],
-        ),
-        menu(
-            "工具",
-            vec![
-                MenuItem::action("从磁盘重新加载项目", RefreshProjectTree),
-                MenuItem::action("折叠全部目录", CollapseProjectTree),
-            ],
-        ),
-        menu(
-            "窗口",
-            vec![
-                MenuItem::action("关闭其他标签", CloseOtherTabs),
-                MenuItem::action("关闭全部标签", CloseAllTabs),
-            ],
-        ),
-        menu("帮助", vec![MenuItem::action("关于 Keel…", ShowAbout)]),
-    ]
 }
 
 fn register_key_bindings(cx: &mut App) {

@@ -1,6 +1,7 @@
 use gpui::{prelude::*, *};
+use gpui_component_assets::IconName;
 
-use crate::app::{Chrome, CommandId, KeelApp, SettingsPane, StatusMessage};
+use crate::app::{BottomTab, Chrome, CommandId, KeelApp, StatusMessage};
 
 /// 左侧工具窗口侧边条的宽度，项目面板的拖拽计算也依赖它。
 pub const STRIPE_WIDTH: f32 = 40.;
@@ -63,13 +64,22 @@ impl KeelApp {
             cx,
             |this, _, cx| this.report_not_available("服务工具窗口尚未接入", cx),
         );
-        let settings = self.stripe_item(
-            "stripe-settings",
-            "settings",
-            false,
+
+        // IDEA 把底部工具窗口的入口放在左侧条的最下方。
+        let problems = self.bottom_item(
+            "stripe-problems",
+            BottomTab::Problems,
+            IconName::CircleAlert,
             chrome,
             cx,
-            |this, _window, cx| this.open_settings(SettingsPane::Appearance, cx),
+        );
+        let run = self.bottom_item("stripe-run", BottomTab::Run, IconName::Play, chrome, cx);
+        let terminal = self.bottom_item(
+            "stripe-terminal",
+            BottomTab::Terminal,
+            IconName::SquareTerminal,
+            chrome,
+            cx,
         );
 
         div()
@@ -80,9 +90,7 @@ impl KeelApp {
             .flex_col()
             .items_center()
             .py_1()
-            .bg(chrome.panel)
-            .border_r_1()
-            .border_color(chrome.border)
+            .bg(chrome.canvas)
             .child(project)
             .child(commit)
             .child(bookmarks)
@@ -91,7 +99,9 @@ impl KeelApp {
             .child(vcs)
             .child(services)
             .child(div().flex_1())
-            .child(settings)
+            .child(problems)
+            .child(run)
+            .child(terminal)
             .into_any_element()
     }
 
@@ -104,24 +114,30 @@ impl KeelApp {
         cx: &mut Context<Self>,
         handler: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> AnyElement {
+        let icon_color = if active {
+            chrome.accent_fg
+        } else {
+            chrome.muted_fg
+        };
+
         div()
             .id(id)
             .w(px(STRIPE_WIDTH))
-            .h(px(32.))
+            .h(px(40.))
             .flex()
             .items_center()
             .justify_center()
             .cursor_pointer()
             .child(
                 div()
-                    .size(px(28.))
+                    .size(px(34.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded_sm()
-                    .when(active, |item| item.bg(chrome.control_hover))
+                    .rounded(px(8.))
+                    .when(active, |item| item.bg(chrome.accent).text_color(icon_color))
                     .hover(|style| style.bg(chrome.control_hover))
-                    .text_color(chrome.muted_fg)
+                    .text_color(icon_color)
                     .child(
                         svg()
                             .path(SharedString::from(format!(
@@ -129,10 +145,60 @@ impl KeelApp {
                                 chrome.icon_suffix
                             )))
                             .size(px(20.))
-                            .text_color(chrome.muted_fg),
+                            .text_color(icon_color),
                     ),
             )
             .on_click(cx.listener(move |this, _event, window, cx| handler(this, window, cx)))
+            .into_any_element()
+    }
+
+    fn bottom_item(
+        &self,
+        id: &'static str,
+        tab: BottomTab,
+        icon: IconName,
+        chrome: &Chrome,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let active = self.bottom_panel_visible && self.bottom_tab == tab;
+        let icon_color = if active {
+            chrome.accent_fg
+        } else {
+            chrome.muted_fg
+        };
+
+        div()
+            .id(id)
+            .w(px(STRIPE_WIDTH))
+            .h(px(40.))
+            .flex()
+            .items_center()
+            .justify_center()
+            .cursor_pointer()
+            .child(
+                div()
+                    .size(px(34.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(8.))
+                    .when(active, |item| item.bg(chrome.accent))
+                    .hover(|style| style.bg(chrome.control_hover))
+                    .text_color(icon_color)
+                    .child(icon),
+            )
+            .on_click(cx.listener(move |this, _event, _window, cx| {
+                if this.bottom_panel_visible && this.bottom_tab == tab {
+                    this.bottom_panel_visible = false;
+                } else {
+                    this.bottom_panel_visible = true;
+                    this.bottom_tab = tab;
+                }
+                this.persisted.bottom_tab = Some(tab.key().to_string());
+                this.persisted.bottom_panel_visible = this.bottom_panel_visible;
+                this.persist();
+                cx.notify();
+            }))
             .into_any_element()
     }
 

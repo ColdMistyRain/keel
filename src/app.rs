@@ -7,8 +7,11 @@ use gpui::{prelude::*, *};
 use gpui_component::ActiveTheme;
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
-use gpui_component::input::{EditorState, Input, InputEvent, InputState, TabSize};
-use gpui_component::menu::AppMenuBar;
+use gpui_component::input::{
+    Copy, Cut, EditorState, Input, InputEvent, InputState, Paste, Redo, SelectAll, TabSize, Undo,
+};
+use gpui_component::menu::DropdownMenu as _;
+use gpui_component_assets::IconName;
 
 use crate::actions::{
     CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, FindInFile,
@@ -26,6 +29,9 @@ const MAX_EDITABLE_FILE_SIZE: u64 = 8 * 1024 * 1024;
 /// 从主题中取出的界面色板，避免在渲染过程中长期借用 `cx`。
 #[derive(Clone)]
 pub struct Chrome {
+    /// 岛屿之间的画布底色。
+    pub canvas: Hsla,
+    /// 编辑器/工具窗口岛内部底色。
     pub bg: Hsla,
     pub fg: Hsla,
     pub border: Hsla,
@@ -45,7 +51,13 @@ pub struct Chrome {
     pub selection_fg: Hsla,
     pub tab_underline: Hsla,
     pub tab_bg: Hsla,
+    /// 选中标签的浅蓝底色。
+    pub tab_selected_bg: Hsla,
+    /// 未选中标签的文字色（前景色 75% 透明，`EditorTabs.unselectedAlpha`）。
+    pub tab_fg_unselected: Hsla,
     pub status_bg: Hsla,
+    /// 岛屿卡片的圆角半径（`Island.arc`）。
+    pub island_arc: Pixels,
     /// 图标资源的主题后缀：`""` 或 `"_dark"`。
     pub icon_suffix: &'static str,
     pub mono_font: SharedString,
@@ -57,23 +69,31 @@ impl Chrome {
         let theme = cx.theme();
         let tokens = kind.tokens();
         Self {
-            bg: theme.background,
+            canvas: crate::idea_theme::color(tokens.canvas),
+            bg: crate::idea_theme::color(tokens.content),
             fg: theme.foreground,
             border: theme.border,
-            panel: theme.sidebar,
-            panel_fg: theme.sidebar_foreground,
+            panel: crate::idea_theme::color(tokens.tool_window_header),
+            panel_fg: theme.foreground,
             muted_fg: theme.muted_foreground,
             secondary_fg: crate::idea_theme::color(tokens.secondary),
-            accent: theme.primary,
+            accent: crate::idea_theme::color(tokens.brand),
             accent_fg: theme.primary_foreground,
             header: crate::idea_theme::color(tokens.tool_window_header),
-            hover_bg: crate::idea_theme::color(tokens.tree_hover),
-            control_hover: crate::idea_theme::color(tokens.control_hover),
+            hover_bg: crate::idea_theme::color_rgba(tokens.hover),
+            control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
             selection: crate::idea_theme::color(tokens.selection),
             selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
             tab_bg: crate::idea_theme::color(tokens.tab_background),
+            tab_selected_bg: crate::idea_theme::color(tokens.tab_selected_background),
+            tab_fg_unselected: {
+                let mut color = theme.foreground;
+                color.alpha = 0.75;
+                color
+            },
             status_bg: crate::idea_theme::color(tokens.status_bar),
+            island_arc: px(tokens.island_arc),
             icon_suffix: if tokens.dark_icons { "_dark" } else { "" },
             mono_font: theme.mono_font_family.clone(),
             mono_size: theme.mono_font_size,
@@ -95,9 +115,9 @@ impl BottomTab {
 
     pub fn label(self) -> &'static str {
         match self {
-            BottomTab::Problems => "Problems",
-            BottomTab::Run => "Run",
-            BottomTab::Terminal => "Terminal",
+            BottomTab::Problems => "问题",
+            BottomTab::Run => "运行",
+            BottomTab::Terminal => "终端",
         }
     }
 
@@ -301,7 +321,6 @@ pub struct DeleteConfirm {
 }
 
 pub struct KeelApp {
-    pub menu_bar: Entity<AppMenuBar>,
     pub project: ProjectState,
     pub documents: Vec<Document>,
     pub active: Option<usize>,
@@ -341,7 +360,6 @@ pub struct KeelApp {
 impl KeelApp {
     pub fn new(window: &mut Window, persisted: PersistedState, cx: &mut Context<Self>) -> Self {
         let mut this = Self {
-            menu_bar: AppMenuBar::new(cx),
             project: ProjectState::default(),
             documents: Vec::new(),
             active: None,
@@ -692,7 +710,6 @@ impl KeelApp {
         self.documents.push(Document::new(
             path.clone(),
             state,
-            language.unwrap_or("plain"),
             eol,
             subscription,
             observe,
@@ -1703,13 +1720,175 @@ impl KeelApp {
         cx.notify();
     }
 
-    fn render_menu_bar(&self, chrome: &Chrome) -> AnyElement {
-        div()
+    /// IDEA 新 UI 的顶部主工具栏：汉堡菜单、项目、分支、搜索/设置和窗口按钮。
+    /// 它同时是自绘标题栏，空白处可以拖动窗口。
+    fn render_title_bar(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
+        let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
+        let project_name = self
+            .project
+            .root
+            .as_deref()
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Keel".to_string());
+        let initials: String = project_name.chars().take(2).collect();
+        let branch = self.git_branch();
+
+        let menu = Button::new("main-menu")
+            .ghost()
+            .small()
+            .w(px(28.))
             .h(px(28.))
+            .p_0()
+            .icon(IconName::Menu)
+            .tooltip("主菜单")
+            .dropdown_menu(|menu, window, cx| {
+                menu.submenu("文件", window, cx, |menu, _, _| {
+                    menu.menu("打开项目目录…", Box::new(OpenProject))
+                        .separator()
+                        .menu("保存", Box::new(SaveFile))
+                        .menu("关闭编辑器", Box::new(CloseEditor))
+                        .separator()
+                        .menu("设置…", Box::new(ShowSettings))
+                })
+                .submenu("编辑", window, cx, |menu, _, _| {
+                    menu.menu("撤销", Box::new(Undo))
+                        .menu("重做", Box::new(Redo))
+                        .separator()
+                        .menu("剪切", Box::new(Cut))
+                        .menu("复制", Box::new(Copy))
+                        .menu("粘贴", Box::new(Paste))
+                        .separator()
+                        .menu("全选", Box::new(SelectAll))
+                        .separator()
+                        .menu("查找…", Box::new(FindInFile))
+                        .menu("替换…", Box::new(ReplaceInFile))
+                })
+                .submenu("视图", window, cx, |menu, _, _| {
+                    menu.menu("显示或隐藏项目面板", Box::new(ToggleProjectPanel))
+                        .menu("显示或隐藏底部面板", Box::new(ToggleBottomPanel))
+                        .menu("显示或隐藏导航栏面包屑", Box::new(ToggleBreadcrumbs))
+                        .separator()
+                        .menu("切换深色 / 浅色主题", Box::new(ToggleTheme))
+                        .separator()
+                        .menu("命令面板…", Box::new(ShowCommandPalette))
+                })
+                .submenu("导航", window, cx, |menu, _, _| {
+                    menu.menu("上一个标签", Box::new(PreviousTab))
+                        .menu("下一个标签", Box::new(NextTab))
+                        .separator()
+                        .menu("在项目中定位", Box::new(LocateInProject))
+                })
+                .submenu("工具", window, cx, |menu, _, _| {
+                    menu.menu("从磁盘重新加载项目", Box::new(RefreshProjectTree))
+                        .menu("折叠全部目录", Box::new(CollapseProjectTree))
+                })
+                .submenu("窗口", window, cx, |menu, _, _| {
+                    menu.menu("关闭其他标签", Box::new(CloseOtherTabs))
+                        .menu("关闭全部标签", Box::new(CloseAllTabs))
+                })
+                .submenu("帮助", window, cx, |menu, _, _| {
+                    menu.menu("关于 Keel…", Box::new(ShowAbout))
+                })
+            });
+
+        let project_widget = div()
+            .id("title-project")
+            .flex()
+            .items_center()
+            .gap_1()
+            .px_1()
+            .rounded_sm()
+            .cursor_pointer()
+            .hover(|style| style.bg(chrome.control_hover))
+            .child(
+                div()
+                    .size(px(20.))
+                    .rounded(px(4.))
+                    .bg(chrome.accent)
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_color(chrome.accent_fg)
+                    .text_xs()
+                    .child(initials),
+            )
+            .child(div().whitespace_nowrap().child(project_name))
+            .child(
+                svg()
+                    .path(icon("chevron_down"))
+                    .size(px(14.))
+                    .text_color(chrome.muted_fg),
+            )
+            .on_click(cx.listener(|this, _event, _window, cx| {
+                this.run_command(CommandId::ToggleProjectPanel, cx);
+            }));
+
+        let branch_widget = branch.map(|branch| {
+            div()
+                .id("title-branch")
+                .flex()
+                .items_center()
+                .gap_1()
+                .px_1()
+                .rounded_sm()
+                .text_color(chrome.muted_fg)
+                .hover(|style| style.bg(chrome.control_hover))
+                .child(
+                    svg()
+                        .path(icon("branch"))
+                        .size(px(16.))
+                        .text_color(chrome.muted_fg),
+                )
+                .child(div().whitespace_nowrap().child(branch))
+        });
+
+        let control = |id: &'static str, area: WindowControlArea, glyph: &'static str| {
+            div()
+                .id(id)
+                .w(px(46.))
+                .h_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .text_color(chrome.muted_fg)
+                .bg(chrome.canvas)
+                .hover(|style| style.bg(chrome.control_hover))
+                .window_control_area(area)
+                .child(glyph)
+        };
+
+        div()
+            .h(px(40.))
             .w_full()
             .flex_shrink_0()
-            .bg(chrome.panel)
-            .child(self.menu_bar.clone())
+            .flex()
+            .items_center()
+            .gap_2()
+            .pl(px(6.))
+            .bg(chrome.canvas)
+            .window_control_area(WindowControlArea::Drag)
+            .child(menu)
+            .child(project_widget)
+            .children(branch_widget)
+            .child(div().flex_1())
+            .child(
+                icon_button("title-search", icon("search"), chrome.muted_fg)
+                    .tooltip("搜索文件与命令")
+                    .on_click(
+                        cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
+                    ),
+            )
+            .child(
+                icon_button("title-settings", icon("settings"), chrome.muted_fg)
+                    .tooltip("设置")
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.open_settings(SettingsPane::Appearance, cx)
+                    })),
+            )
+            .child(control("window-min", WindowControlArea::Min, "—"))
+            .child(control("window-max", WindowControlArea::Max, "□"))
+            .child(control("window-close", WindowControlArea::Close, "✕"))
             .into_any_element()
     }
 
@@ -1729,30 +1908,8 @@ impl KeelApp {
             chrome.muted_fg
         };
 
-        // 左侧：分支组件 + 临时消息，和 IDEA 一致，不再显示“已打开 xxx”。
+        // 左侧只显示临时消息与后台任务进度，分支等信息在顶部工具栏。
         let mut left = div().min_w_0().flex().items_center().h_full();
-        if let Some(branch) = self.git_branch() {
-            left = left.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .h_full()
-                    .px_2()
-                    .text_color(chrome.muted_fg)
-                    .hover(|style| style.bg(chrome.control_hover))
-                    .child(
-                        svg()
-                            .path(SharedString::from(format!(
-                                "icons/branch{}.svg",
-                                chrome.icon_suffix
-                            )))
-                            .size(px(16.))
-                            .text_color(chrome.muted_fg),
-                    )
-                    .child(branch),
-            );
-        }
         if !self.status.text.is_empty() {
             left = left.child(
                 div()
@@ -1777,7 +1934,7 @@ impl KeelApp {
             );
         }
 
-        // 右侧按 IDEA 状态栏的顺序排：行列号、换行符、编码、缩进、文件类型、设置。
+        // 右侧按 IDEA Islands 状态栏的顺序排：行列号、换行符、编码、缩进。
         let mut widgets: Vec<AnyElement> = Vec::new();
         if let Some(doc) = self.active_document() {
             let position = doc.state.read(cx).cursor_position();
@@ -1788,35 +1945,7 @@ impl KeelApp {
             widgets.push(status_widget(doc.eol, chrome));
             widgets.push(status_widget("UTF-8", chrome));
             widgets.push(status_widget("4 个空格", chrome));
-            widgets.push(status_widget(
-                model::language_display_name(doc.language),
-                chrome,
-            ));
         }
-        widgets.push(
-            div()
-                .id("status-settings")
-                .flex()
-                .items_center()
-                .justify_center()
-                .w(px(28.))
-                .h_full()
-                .cursor_pointer()
-                .hover(|style| style.bg(chrome.control_hover))
-                .child(
-                    svg()
-                        .path(SharedString::from(format!(
-                            "icons/settings{}.svg",
-                            chrome.icon_suffix
-                        )))
-                        .size(px(16.))
-                        .text_color(chrome.muted_fg),
-                )
-                .on_click(cx.listener(|this, _event, _window, cx| {
-                    this.open_settings(SettingsPane::Appearance, cx);
-                }))
-                .into_any_element(),
-        );
 
         div()
             .flex()
@@ -2304,7 +2433,7 @@ impl Render for KeelApp {
         self.apply_pending_focus(window, cx);
         let chrome = Chrome::from_theme(cx, self.theme_kind);
 
-        let menu_bar = self.render_menu_bar(&chrome);
+        let title_bar = self.render_title_bar(&chrome, cx);
         let status_bar = self.render_status_bar(&chrome, cx);
 
         let stripe = self.render_tool_window_stripe(&chrome, cx);
@@ -2316,6 +2445,8 @@ impl Render for KeelApp {
             .min_h_0()
             .flex()
             .flex_row()
+            .px(px(6.))
+            .pb(px(6.))
             .child(stripe)
             .child(workspace);
 
@@ -2351,9 +2482,9 @@ impl Render for KeelApp {
             .size_full()
             .flex()
             .flex_col()
-            .bg(chrome.bg)
+            .bg(chrome.canvas)
             .text_color(chrome.fg)
-            .child(menu_bar)
+            .child(title_bar)
             .child(body)
             .child(status_bar);
 
@@ -2459,7 +2590,7 @@ pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, colo
         .child(svg().path(icon.into()).size(px(16.)).text_color(color))
 }
 
-/// 状态栏右端的一个部件，悬停时给出 IDEA 里的浅色高亮。
+/// 状态栏右端的一个部件，悬停时前景变正文色并给出轻微底色。
 fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
     div()
         .h_full()
@@ -2467,7 +2598,7 @@ fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
         .items_center()
         .px_2()
         .text_color(chrome.muted_fg)
-        .hover(|style| style.bg(chrome.control_hover))
+        .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
         .child(text.into())
         .into_any_element()
 }
