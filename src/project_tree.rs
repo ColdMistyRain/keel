@@ -201,9 +201,9 @@ impl KeelApp {
         // 根行在项目名后附带完整路径，和 IDEA 的项目树一致。
         let is_root = row.depth == 0;
         let root_path = is_root.then(|| row.path.display().to_string());
-        // IDEA 树文字左右各留 8px（`Tree.border.compact`），
+        // 树的内容区左右各留 12px（`Tree.border` = "4,12,4,12"），
         // 每级缩进 = `Tree.leftChildIndent`(7) + `Tree.rightChildIndent`(11) = 18px。
-        let indent = px(8.0 + row.depth as f32 * 18.0);
+        let indent = px(row.depth as f32 * 18.0);
         let icon_path = if is_dir {
             crate::file_icons::folder_icon(chrome.icon_suffix)
         } else {
@@ -222,8 +222,12 @@ impl KeelApp {
 
         div()
             .id(("tree-row", ix))
-            .h(px(22.))
-            // IDEA 的树选中是满宽直角矩形，只有文字带 8px 内边距。
+            // Swing 树读 `Tree.rowHeight`（24），`.compact` 只给 Jewel 的密度用。
+            .h(px(24.))
+            .mx(px(12.))
+            // 新 UI 的选中/悬停块是内容区宽度的圆角矩形：半径取
+            // `Tree.Selection.arc`(8) / 2 = 4（`DefaultTreeUI` 新选中样式）。
+            .rounded(px(4.))
             .flex()
             .items_center()
             .gap_1()
