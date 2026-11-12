@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use nsh_base::{EditorClasses, button, context_menu, editor, theme};
 use nsh_core::prelude::*;
 
+use crate::icons;
 use crate::shell::Shell;
 use crate::ui::{color_of, menu_action, popup_style};
 use crate::workspace::{Doc, Workspace, language_label, language_of};
@@ -22,15 +23,19 @@ pub fn editor_area(shell: Shell) -> impl IntoElement {
         .rounded(px(8.0))
         .bg(move || color_of("editor-bg"))
         .child(tab_strip(shell))
+        .child(view().h(px(1.0)).bg(move || color_of("editor-border")))
         .child(breadcrumbs(ws))
         .child(editor_pane(shell))
 }
 
-/// 标签条：横向滚动，标签带未保存圆点、关闭按钮和右键菜单。
+/// 标签条：IDEA Islands 的胶囊标签（`IslandsTabPainter`）。
+///
+/// 条高 36，标签高 28、圆角 6（arc 12），横向内缩 4；选中标签是
+/// `#E3EBFE` 底色 + `#A7C5FF` 1px 边框，未选中没有底色。
 fn tab_strip(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
     view()
-        .h(px(34.0))
+        .h(px(36.0))
         .flex_row()
         .items_center()
         .px(px(4.0))
@@ -38,14 +43,15 @@ fn tab_strip(shell: Shell) -> impl IntoElement {
             scroll()
                 .horizontal()
                 .scrollbar(false)
-                .h(px(30.0))
+                .h(px(36.0))
                 .flex_1()
                 .child(
                     view()
-                        .h(px(30.0))
+                        .h(px(36.0))
                         .flex_row()
                         .items_center()
                         .gap(px(2.0))
+                        .pl(px(3.0))
                         .child(each(
                             ws.docs,
                             |doc: &Doc| doc.path.display().to_string(),
@@ -63,119 +69,164 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
     let close_path = path.clone();
     let name_path = path.clone();
     let dirty_path = path.clone();
+    let close_dirty_path = path.clone();
     let preview_path = path.clone();
     let others_path = path.clone();
     let reveal_path = path.clone();
-    let selected = move || ws.active.get() == Some(index.get());
+    let selected_bg = move || ws.active.get() == Some(index.get());
+    let selected_fg = move || ws.active.get() == Some(index.get());
+    let selected_close = move || ws.active.get() == Some(index.get());
     let body = view()
-        .h(px(30.0))
+        .h(px(28.0))
         .max_w(px(220.0))
-        .flex_col()
-        .rounded(px(4.0))
-        .style_when(selected, |s| s.bg(move || color_of("tab-selected-bg")))
-        .hover(|s| s.bg(move || color_of("control-hover")))
+        .flex_row()
+        .items_center()
+        .gap(px(6.0))
+        .px(px(10.0))
+        .rounded(px(6.0))
+        .style_when(selected_bg, |s| {
+            s.bg(move || color_of("tab-selected-bg"))
+                .border_1()
+                .border_color(move || color_of("tab-selected-border"))
+        })
+        .hover(|s| s.bg(move || color_of("hover-overlay")))
         .role(AccessibilityRole::Button)
         .label(move || doc_name(ws, &label_path))
         .on_press(move || {
             ws.activate_path(&select_path);
         })
         .child(
-            view()
-                .flex_1()
-                .flex_row()
-                .items_center()
-                .gap(px(6.0))
-                .px(px(10.0))
-                .child(
-                    text(move || doc_name(ws, &name_path))
-                        .text_size(px(13.0))
-                        .number_of_lines(1)
-                        .style_when(move || doc_preview(ws, &preview_path), |s| s.italic())
-                        .text_color(move || {
-                            if selected() {
-                                theme().foreground
-                            } else {
-                                color_of("muted-fg")
-                            }
-                        }),
-                )
-                .child(
-                    text(move || {
-                        if doc_dirty(ws, &dirty_path) {
-                            "●"
-                        } else {
-                            ""
-                        }
-                    })
-                    .text_size(px(8.0))
-                    .text_color(move || color_of("muted-fg")),
-                )
-                .child(
-                    view()
-                        .w(px(16.0))
-                        .h(px(16.0))
-                        .items_center()
-                        .justify_center()
-                        .rounded(px(3.0))
-                        .role(AccessibilityRole::Button)
-                        .label("关闭")
-                        .hover(|s| s.bg(move || color_of("control-hover")))
-                        .on_press(move || ws.close_path(&close_path))
-                        .child(
-                            text("×")
-                                .text_size(px(12.0))
-                                .text_color(move || color_of("muted-fg")),
-                        ),
-                ),
+            svg(icons::FILE)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("secondary-fg")),
+        )
+        .child(
+            text(move || doc_name(ws, &name_path))
+                .text_size(px(13.0))
+                .number_of_lines(1)
+                .style_when(move || doc_preview(ws, &preview_path), |s| s.italic())
+                .text_color(move || {
+                    if selected_fg() {
+                        theme().foreground
+                    } else {
+                        color_of("muted-fg")
+                    }
+                }),
+        )
+        .child(
+            text(move || {
+                if doc_dirty(ws, &dirty_path) {
+                    "●"
+                } else {
+                    ""
+                }
+            })
+            .text_size(px(8.0))
+            .text_color(move || color_of("muted-fg")),
         )
         .child(
             view()
-                .h(px(4.0))
-                .w_full()
-                .rounded(px(2.0))
-                .bg(move || color_of("tab-underline"))
-                .style_when(move || !selected(), |s| s.hidden()),
+                .w(px(16.0))
+                .h(px(16.0))
+                .items_center()
+                .justify_center()
+                .rounded(px(3.0))
+                .role(AccessibilityRole::Button)
+                .label("关闭")
+                .hover(|s| s.bg(move || color_of("control-hover")))
+                .on_press(move || ws.close_path(&close_path))
+                .style_when(
+                    move || !selected_close() && !doc_dirty(ws, &close_dirty_path),
+                    |s| s.hidden(),
+                )
+                .child(
+                    svg(icons::CLOSE)
+                        .w(px(12.0))
+                        .h(px(12.0))
+                        .text_color(move || color_of("muted-fg")),
+                ),
         );
 
     context_menu()
         .offset(px(4.0))
         .popup_style(popup_style)
         .trigger(body)
-        .child(menu_action("关闭", None, move || ws.close_path(&path)))
-        .child(menu_action("关闭其他标签页", None, move || {
-            if let Some(index) = ws
-                .docs
-                .with(|docs| docs.iter().position(|doc| doc.path == others_path))
-            {
-                ws.close_others(index);
-            }
-        }))
-        .child(menu_action("关闭所有标签页", None, move || {
-            ws.close_all()
-        }))
+        .child(menu_action(
+            Some(icons::CLOSE),
+            "关闭",
+            Some('C'),
+            None,
+            move || ws.close_path(&path),
+        ))
+        .child(menu_action(
+            Some(icons::CLOSE),
+            "关闭其他标签页",
+            Some('O'),
+            None,
+            move || {
+                if let Some(index) = ws
+                    .docs
+                    .with(|docs| docs.iter().position(|doc| doc.path == others_path))
+                {
+                    ws.close_others(index);
+                }
+            },
+        ))
+        .child(menu_action(
+            Some(icons::CLOSE),
+            "关闭所有标签页",
+            Some('A'),
+            None,
+            move || ws.close_all(),
+        ))
         .child(crate::ui::menu_separator())
-        .child(menu_action("在项目中定位", None, move || {
-            shell.reveal_path(&reveal_path)
-        }))
+        .child(menu_action(
+            Some(icons::LOCATE),
+            "在项目中定位",
+            Some('E'),
+            None,
+            move || shell.reveal_path(&reveal_path),
+        ))
         .into_element()
 }
 
+/// 面包屑：每段是可悬停的 crumb，圆角 2、左右内缩 7（IDEA `BreadcrumbsComponent`）。
 fn breadcrumbs(ws: Workspace) -> impl IntoElement {
     dynamic(move || {
         let parts = ws.breadcrumbs();
-        let mut text_value = String::new();
-        for part in parts {
-            if !text_value.is_empty() {
-                text_value.push_str("  ›  ");
+        let last = parts.len().saturating_sub(1);
+        let mut row = view()
+            .h(px(28.0))
+            .px(px(12.0))
+            .flex_row()
+            .items_center()
+            .gap(px(2.0));
+        for (index, part) in parts.into_iter().enumerate() {
+            row = row.child(
+                view()
+                    .h(px(22.0))
+                    .px(px(7.0))
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(2.0))
+                    .hover(|s| s.bg(move || color_of("hover-overlay")))
+                    .child(
+                        text(part)
+                            .text_size(px(12.0))
+                            .text_color(move || color_of("muted-fg"))
+                            .number_of_lines(1),
+                    ),
+            );
+            if index < last {
+                row = row.child(
+                    text("›")
+                        .text_size(px(12.0))
+                        .text_color(move || color_of("muted-fg")),
+                );
             }
-            text_value.push_str(&part);
         }
-        view().h(px(28.0)).px(px(12.0)).justify_center().child(
-            text(text_value)
-                .text_size(px(12.0))
-                .text_color(move || color_of("muted-fg"))
-                .number_of_lines(1),
-        )
+        row
     })
 }
 

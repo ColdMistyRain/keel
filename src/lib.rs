@@ -7,6 +7,7 @@
 mod bottom_panel;
 mod commands;
 mod editor_area;
+mod icons;
 mod palette;
 mod project_panel;
 mod shell;
@@ -20,9 +21,10 @@ use nsh_core::{element::desktop::title_bar, prelude::*};
 use crate::shell::{Bottom, Shell, Tool};
 use crate::ui::{color_of, icon_button};
 
-/// 注册给 TSX 入口的 Rust 组件集合。
+/// 注册给 TSX 入口的 Rust 组件集合与随包资源。
 #[native_module("keel/native")]
 fn native(registry: &mut Registry) {
+    registry.assets(assets!());
     registry.register::<App>();
 }
 
@@ -98,13 +100,13 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
                 .pl(px(8.0)),
         )
         .child(view().flex_1())
-        .child(icon_button("⌕", "搜索", move || {
+        .child(icon_button(icons::SEARCH, "搜索", move || {
             shell.toggle_tool(Tool::Search)
         }))
-        .child(icon_button("▷", "运行", move || {
+        .child(icon_button(icons::PLAY, "运行", move || {
             shell.toggle_bottom(Bottom::Run)
         }))
-        .child(icon_button("⚙", "设置", move || {
+        .child(icon_button(icons::SETTINGS, "设置", move || {
             shell.ws.say("设置页将在 P4 迁移")
         }))
 }
@@ -157,7 +159,7 @@ fn editor_column(shell: Shell) -> impl IntoElement {
 fn status_bar(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
     view()
-        .h(px(24.0))
+        .h(px(28.0))
         .px(px(6.0))
         .flex_row()
         .items_center()

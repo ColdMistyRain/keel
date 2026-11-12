@@ -18,6 +18,9 @@
     "tool_window_tab_underline": "#4A88C7",
     "tab_background": "#191A1C",
     "tab_selected_background": "#233558",
+    "tab_selected_border": "#2E4D89",
+    "editor_border": "#33353B",
+    "menu_separator": "#33353B",
     "status_bar": "#26282C",
     "brand": "#3871E1",
     "brand_hover": "#2F5EB9",
@@ -46,8 +49,8 @@
     "dark_icons": true,
     "radius": 4.0,
     "island_radius": 8.0,
-    "tab_height": 34.0,
-    "status_bar_height": 24.0
+    "tab_height": 36.0,
+    "status_bar_height": 28.0
   },
   "palettes": {
     "project_gradient": [

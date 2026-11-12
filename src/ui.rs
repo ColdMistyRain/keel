@@ -24,57 +24,119 @@ pub fn popup_style(s: StyleRefinement) -> StyleRefinement {
         .shadow_md()
 }
 
-/// 菜单栏 / 子菜单的触发器。
-pub fn menu_trigger(label: impl Into<SharedString>) -> impl IntoElement {
+/// 带助记符的标签：`文件(F)`，括号里的字母带下划线；省略号排在助记符之后
+/// （`打开项目(P)…`，与 IDEA 中文界面一致）。
+pub fn mnemonic_label(label: impl Into<SharedString>, mnemonic: Option<char>) -> View {
     let label = label.into();
-    view()
-        .h(px(28.0))
-        .px(px(8.0))
+    let (body, ellipsis) = match label.as_ref().strip_suffix('…') {
+        Some(body) => (SharedString::from(body.to_owned()), Some("…")),
+        None => (label, None),
+    };
+    let mut row = view()
+        .flex_row()
         .items_center()
-        .rounded(px(4.0))
-        .hover(|s| s.bg(move || color_of("control-hover")))
-        .child(text(label).text_size(px(13.0)))
+        .child(text(body).text_size(px(13.0)));
+    if let Some(key) = mnemonic {
+        row = row
+            .child(
+                text("(")
+                    .text_size(px(13.0))
+                    .text_color(move || color_of("muted-fg")),
+            )
+            .child(
+                text(SharedString::from(key.to_ascii_uppercase().to_string()))
+                    .text_size(px(13.0))
+                    .underline(),
+            )
+            .child(
+                text(")")
+                    .text_size(px(13.0))
+                    .text_color(move || color_of("muted-fg")),
+            );
+    }
+    if let Some(ellipsis) = ellipsis {
+        row = row.child(text(ellipsis).text_size(px(13.0)));
+    }
+    row
+}
+
+/// 菜单项的图标槽：没有图标时也占 16px，保证文字对齐。
+pub fn icon_slot(icon: Option<ImageAsset>) -> View {
+    let mut slot = view()
+        .w(px(16.0))
+        .h(px(16.0))
+        .items_center()
+        .justify_center();
+    if let Some(icon) = icon {
+        slot = slot.child(
+            svg(icon)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("secondary-fg")),
+        );
+    }
+    slot
+}
+
+/// 菜单栏的触发器。IDEA 主菜单的选中块高 30、圆角 6，横向铺满菜单项。
+pub fn menu_trigger(label: impl Into<SharedString>, mnemonic: Option<char>) -> View {
+    view()
+        .h(px(30.0))
+        .px(px(4.0))
+        .items_center()
+        .rounded(px(6.0))
+        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .child(mnemonic_label(label, mnemonic))
 }
 
 /// 子菜单的触发器：左标签、右箭头。
-pub fn submenu_trigger(label: impl Into<SharedString>) -> View {
-    let label = label.into();
+///
+/// IDEA 的弹出菜单项高 26（`List.rowHeight 24 + Selection.outerInsets 1+1`），
+/// 选中块的左右内缩 7、圆角 4（arc 8）。
+pub fn submenu_trigger(label: impl Into<SharedString>, mnemonic: Option<char>) -> View {
     view()
-        .h(px(28.0))
-        .px(px(10.0))
+        .h(px(26.0))
+        .mx(px(7.0))
+        .my(px(1.0))
+        .px(px(6.0))
         .flex_row()
         .items_center()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .rounded(px(4.0))
         .hover(|s| s.bg(move || theme().accent))
-        .child(text(label).text_size(px(13.0)).flex_1())
+        .child(mnemonic_label(label, mnemonic).flex_1())
         .child(
-            text("›")
-                .text_size(px(12.0))
+            svg(crate::icons::CHEVRON_RIGHT)
+                .w(px(12.0))
+                .h(px(12.0))
                 .text_color(move || color_of("muted-fg")),
         )
 }
 
-/// 菜单项：左标签、右快捷键。
+/// 菜单项：图标、左标签、右快捷键。
 pub fn menu_action(
+    icon: Option<ImageAsset>,
     label: impl Into<SharedString>,
+    mnemonic: Option<char>,
     shortcut: Option<String>,
     action: impl Fn() + 'static,
 ) -> impl IntoElement {
-    let label = label.into();
     let shortcut = SharedString::from(shortcut.unwrap_or_default());
     menu_item()
         .on_select(action)
-        .px(px(10.0))
-        .py(px(5.0))
+        .h(px(26.0))
+        .mx(px(7.0))
+        .my(px(1.0))
+        .px(px(6.0))
         .rounded(px(4.0))
         .hover(|s| s.bg(move || theme().accent))
         .child(
             view()
                 .flex_row()
                 .items_center()
-                .gap(px(20.0))
-                .child(text(label).text_size(px(13.0)).flex_1())
+                .gap(px(8.0))
+                .child(icon_slot(icon))
+                .child(mnemonic_label(label, mnemonic).flex_1())
                 .child(
                     text(shortcut)
                         .text_size(px(12.0))
@@ -83,19 +145,20 @@ pub fn menu_action(
         )
 }
 
-/// 菜单分隔线。
+/// 菜单分隔线。IDEA 弹出菜单的分隔线是 `gray-150`，比工具窗口里的分隔线更浅。
 pub fn menu_separator() -> impl IntoElement {
     base_menu_separator()
         .h(px(1.0))
-        .my(px(4.0))
-        .bg(move || color_of("separator-line"))
+        .mx(px(7.0))
+        .my(px(3.0))
+        .bg(move || color_of("menu-separator"))
 }
 
-/// 工具窗口标题栏里的小图标按钮。
-pub fn icon_button(glyph: &'static str, label: &'static str, action: impl Fn() + 'static) -> View {
+/// 工具窗口标题栏 / 标题栏里的小图标按钮。
+pub fn icon_button(icon: ImageAsset, label: &'static str, action: impl Fn() + 'static) -> View {
     view()
-        .w(px(22.0))
-        .h(px(22.0))
+        .w(px(24.0))
+        .h(px(24.0))
         .items_center()
         .justify_center()
         .rounded(px(4.0))
@@ -104,8 +167,9 @@ pub fn icon_button(glyph: &'static str, label: &'static str, action: impl Fn() +
         .hover(|s| s.bg(move || color_of("control-hover")))
         .on_press(action)
         .child(
-            text(glyph)
-                .text_size(px(13.0))
+            svg(icon)
+                .w(px(16.0))
+                .h(px(16.0))
                 .text_color(move || color_of("muted-fg")),
         )
 }

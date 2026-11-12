@@ -6,6 +6,7 @@
 use nsh_base::theme;
 use nsh_core::prelude::*;
 
+use crate::icons;
 use crate::shell::{Bottom, Shell};
 use crate::ui::{color_of, icon_button};
 
@@ -72,37 +73,53 @@ fn panel_header(shell: Shell) -> impl IntoElement {
                         .map(move |bottom| tab_button(shell, bottom)),
                 ),
         )
-        .child(icon_button("⚙", "运行配置", move || {
+        .child(icon_button(icons::SETTINGS, "运行配置", move || {
             shell.ws.say("运行配置将在 P4 迁移")
         }))
-        .child(icon_button("×", "关闭底部窗口", move || {
+        .child(icon_button(icons::CLOSE, "关闭底部窗口", move || {
             shell.bottom.set(None)
         }))
 }
 
 /// 面板标题栏里的标签（问题 / 运行 / 终端）。
+///
+/// IDEA 底部工具窗口的选中标签没有底色，只有 3px 下划线
+/// （`DefaultTabs.underlineHeight = 3`、颜色 `#4083C9`）。
 fn tab_button(shell: Shell, bottom: Bottom) -> View {
     let active = move || shell.bottom.get() == Some(bottom);
+    let underline = move || shell.bottom.get() == Some(bottom);
     view()
-        .h(px(26.0))
-        .px(px(8.0))
+        .h(px(30.0))
+        .flex_col()
         .items_center()
-        .rounded(px(4.0))
         .role(AccessibilityRole::Button)
         .label(bottom.label())
-        .style_when(active, |s| s.bg(move || color_of("control-hover")))
         .hover(|s| s.bg(move || color_of("hover-overlay")))
         .on_press(move || shell.bottom.set(Some(bottom)))
         .child(
-            text(bottom.label())
-                .text_size(px(12.0))
-                .text_color(move || {
-                    if active() {
-                        theme().foreground
-                    } else {
-                        color_of("muted-fg")
-                    }
-                }),
+            view()
+                .flex_1()
+                .px(px(8.0))
+                .items_center()
+                .justify_center()
+                .child(
+                    text(bottom.label())
+                        .text_size(px(12.0))
+                        .text_color(move || {
+                            if active() {
+                                theme().foreground
+                            } else {
+                                color_of("muted-fg")
+                            }
+                        }),
+                ),
+        )
+        .child(
+            view()
+                .h(px(3.0))
+                .w_full()
+                .bg(move || color_of("tool-window-tab-underline"))
+                .style_when(move || !underline(), |s| s.hidden()),
         )
 }
 

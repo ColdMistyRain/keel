@@ -303,7 +303,7 @@ keel-core
 
 | 区域 | 实现 |
 | --- | --- |
-| 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；项目名；右侧搜索 / 运行 / 设置快捷图标；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
+| 标题栏 | 应用菜单来自注册表：文件 / 视图 / 导航 / 帮助；菜单项带 16×16 SVG 图标与助记符下划线（`文件(F)`、`打开项目(P)…`，省略号在助记符之后）；项目名；右侧搜索 / 运行 / 设置快捷图标；快捷键也从注册表绑定（`mod+o`、`shift+mod+o`、`mod+s`、`mod+w`、`alt+1`、`alt+6`、`alt+f12`） |
 | 启动与项目 | `KEEL_OPEN=<路径>`（开发）或打包产物的第一个路径参数；文件会向上识别项目根（`.git` / `pom.xml` / `Cargo.toml` 等） |
 | 左侧工具窗口 | 项目 / 搜索 / 版本控制；`h_resizable` + `resizable_panel`，宽度 180–460、可折叠；标题栏有刷新 / 收起全部 / 隐藏 |
 | 项目树 | 单击预览、双击固定；右键菜单（打开 / 预览 / 复制路径 / 在项目中定位） |
@@ -352,8 +352,8 @@ keel-core
 | 设置、持久化（最近项目、会话） | 无 | 缺口 P4 |
 | 运行 / 调试、VCS | 占位 | 缺口 P4/P5 |
 
-已知视觉差异：菜单没有助记符下划线与图标；工具窗口头没有齿轮菜单；没有
-“最近项目”欢迎页；文件图标仍是字母徽标。这些不影响最小可用流程。
+已知视觉差异：工具窗口头没有齿轮菜单；没有“最近项目”欢迎页；项目树里的
+文件图标仍是字母徽标（菜单与右键菜单已用 SVG 图标）。这些不影响最小可用流程。
 
 ### 4.5 架构审计：平台层与 IDEA 社区版对照（2026-11-12）
 
@@ -399,32 +399,50 @@ keel-core
 
 ### 4.6 源码级视觉对照（2026-11-12）
 
-对照 `intellij-community/platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`、
-`expUI_light.theme.json` 与 `platform/util/ui/src/com/intellij/util/ui/JBUI.java`，
-本轮校准了以下度量与颜色：
+对照 `intellij-community/platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`
+与 `platform/util/ui/src/com/intellij/util/ui/JBUI.java`、
+`platform/platform-api/src/com/intellij/ui/tabs/impl/themes/TabTheme.kt`、
+`platform/platform-impl/src/com/intellij/openapi/application/impl/islands/IslandsTabPainter.kt`、
+`platform/platform-impl/src/com/intellij/ui/plaf/beg/{BegMenuItemUI,IdeaMenuUI}.java`、
+`platform/platform-impl/src/com/intellij/ide/ui/laf/darcula/ui/DarculaMenuItemBorder.java`，
+并在本机 IDEA 2026.2（`IU-262.10968.63`）里打开 `samples/demo` 逐项对照
+（源码为 `271.SNAPSHOT`，少量度量以源码为准）：
 
 | 项 | IDEA 源值 | 本轮调整 |
 | --- | --- | --- |
 | 主窗口背景 | `main-window-bg = layer-0-bg = gray-150 #E9EAEE` | 一致（`canvas`） |
 | Tool window 背景 | `tool-window-bg = layer-2-bg = white` | 一致（`island-bg`） |
 | Tool window 头高 | `JBUI.defaultHeaderHeight() = 41` | 32 → 41，并补底部分隔线 |
+| Tool window 头内缩 | `headerLabelLeftRightInsets = 0,12,0,16` | 统一 10 → 左 12 / 右 8，标题后加下拉箭头 |
+| Tool window 头按钮 | 16×16 图标（刷新 / 收起全部 / 关闭） | 文本字形 → 随包 SVG 图标 |
 | Tool window 头字号 | `ToolWindow.Header.font.size.offset = 0`（默认 UI 字号） | 12 → 13 |
 | 选中条纹按钮 | `ToolWindow.Button.selectedBackground = accent-brand-bg #3871E1`，`selectedForeground = text-over-accent` | 灰底 → 蓝底白图标 |
-| 选中编辑器标签 | `underlinedTabBackground = blue-150 #E3EBFE`，`underline = blue-120 #A7C5FF`，`underlineHeight = 4` | 补 4px 下划线；标签 28 → 30 |
-| 标签未选中 | `unselectedAlpha = 0.75`、`unselectedBlend = 0.9` | 仍用 `muted-fg` 近似 |
+| 编辑器标签（Islands） | `IslandsTabPainter`：胶囊高 28、`hOffset 4`、`firstTabOffset 3`、`arc 12`（半径 6）；`underlinedTabBackground = blue-150 #E3EBFE`、`underlinedBorderColor = blue-120 #A7C5FF` | 4px 下划线 → 胶囊标签：条高 36、标签高 28、圆角 6、选中 1px 边框 |
+| 标签未选中 | `unselectedAlpha = 0.75`、`unselectedBlend = 0.9` | 仍用 `muted-fg` 近似；未选中标签无底色 |
+| 标签底边 | `EditorTabs.underTabsBorderColor = editor-border #E9EAEE` | 补 1px 分隔线 |
+| 标签关闭 | 仅选中标签 / 悬停时显示 | 未选中且未修改时隐藏 |
 | 项目树行高 / 字号 | IDEA 常规 24 / 13 | 22 → 24，12 → 13 |
-| 状态栏 | `background = main-window-bg`、`topBorderWidth = 0` | 一致；字号 11 → 12 |
+| 项目树缩进 | `Tree.leftChildIndent = 7`、`rightChildIndent = 11`；`Tree.border = 4,12,4,12` | 每级 12 → 18，列表左右各 12 |
+| 项目树图标 | 16×16 文件 / 文件夹图标，展开箭头用 `chevronRight/Down.svg` | 字母徽标 → `folder.svg` / `file.svg`，箭头改用 SVG |
+| 菜单项度量 | 高 26（`List.rowHeight 24 + Selection.outerInsets 1+1`）、选中块左右内缩 7、`Selection.arc = 8`、内容内缩 6 | 全宽高亮 → 左右内缩 7、圆角 4、高 26 |
+| 主菜单触发器 | `Menu.Selection.outerInsets = 5,0`、`MainToolbar.Dropdown.arc = 12`，选中色 `toolbar-bg-hovered #00000008` | 高 30、圆角 6、左右内缩 4 |
+| 菜单分隔线 | 弹出菜单用 `gray-150 #E9EAEE` | 新增 `menu_separator` 令牌 |
+| 菜单项内容 | IDEA 的 16×16 动作图标 + 下划线助记符（中文界面为 `文件(F)`） | `icon_slot` 图标槽 + `mnemonic_label`（省略号在助记符之后） |
+| 面包屑 | `BreadcrumbsComponent`：crumb 圆角 2、文字内缩 7、悬停 `toolbar-bg-hovered` | 纯文本 → 可悬停 crumb |
+| 底部工具窗口标签 | `DefaultTabs.underlineHeight = 3`、`underlineColor #4083C9`，选中无底色 | 灰底 → 3px 下划线 |
+| 状态栏 | `background = main-window-bg`、`topBorderWidth = 0`、`Widget.iconBorder` 上下 6 | 高 24 → 28；字号 11 → 12 |
 | 条纹按钮尺寸 | `StripeToolbar.Button = 37×40` | 32 → 36（条纹宽 40） |
-| 弹出菜单 | `popup-bg = layer-2-bg`、`popup-border = layer-2-border` | 一致 |
+| 弹出菜单 | `popup-bg = layer-2-bg`、`popup-border = layer-2-border`、`PopupMenu.borderCornerRadius = 8` | 一致 |
 
 仍存在的视觉差距：
 
-- 菜单没有图标 / 助记符下划线；文件图标仍是字母徽标；
-- 面包屑是纯文本，IDEA 是可点击的 crumb（悬停底色、箭头）；
-- 标签关闭按钮始终显示，IDEA 悬停 / 激活才显示；标签溢出时没有滚动箭头；
+- 文件图标是通用的 `file.svg` / `folder.svg`，不是 Java 等语言专用彩色图标；
+- 标签溢出时没有滚动箭头；未选中标签的悬停关闭按钮尚未实现（只在选中 / 修改时显示）；
 - 主工具栏只有搜索 / 运行 / 设置三个图标，IDEA 有完整的 run widget 与搜索框；
+- 菜单栏常驻，IDEA 默认收进左上角汉堡菜单（点击后才展开菜单栏）；
 - 窗口按钮由系统绘制，不是自绘；
-- 状态栏缺少内存、后台任务等部件。
+- 状态栏缺少内存、后台任务、通知等部件；底部工具窗口条仍在状态栏左侧，
+  IDEA 把问题 / 终端放在左侧条纹的下半区。
 
 
 ### P1：抽 `keel-core`

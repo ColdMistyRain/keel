@@ -5,11 +5,12 @@
 //! 项目树用 `scroll` + `dynamic` 自绘（`nsh_base::Tree` 在 0.5.0 Windows
 //! 下不绘制行，见 `docs/NSH_MIGRATION_PLAN.md`）。
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use nsh_base::{button, context_menu, theme};
 use nsh_core::prelude::*;
 
+use crate::icons;
 use crate::shell::{Shell, Tool};
 use crate::ui::{color_of, icon_button, menu_action, menu_separator, popup_style, stripe_button};
 use crate::workspace::{TreeRow, Workspace};
@@ -49,31 +50,48 @@ pub fn side_panel(shell: Shell) -> View {
         )
 }
 
-/// 面板标题栏：标题 + 刷新 / 收起全部 / 隐藏。
+/// 面板标题栏：标题 + 下拉箭头，右侧刷新 / 收起全部 / 隐藏。
+///
+/// IDEA `ToolWindow.Header`：高 41、标题左右内缩 12 / 16，标题后有展开箭头。
 fn panel_header(shell: Shell) -> impl IntoElement {
     view()
         .h(px(41.0))
         .flex_row()
         .items_center()
-        .px(px(10.0))
+        .pl(px(12.0))
+        .pr(px(8.0))
         .gap(px(2.0))
         .child(
-            text(move || shell.tool.get().label())
-                .text_size(px(13.0))
-                .font_weight(FontWeight::SEMIBOLD)
-                .flex_1(),
+            view()
+                .flex_row()
+                .items_center()
+                .gap(px(2.0))
+                .flex_1()
+                .child(
+                    text(move || shell.tool.get().label())
+                        .text_size(px(13.0))
+                        .font_weight(FontWeight::SEMIBOLD),
+                )
+                .child(
+                    svg(icons::CHEVRON_DOWN)
+                        .w(px(12.0))
+                        .h(px(12.0))
+                        .text_color(move || color_of("muted-fg")),
+                ),
         )
         .child(
-            icon_button("⟳", "刷新项目", move || shell.ws.refresh_project())
-                .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
+            icon_button(icons::REFRESH, "刷新项目", move || {
+                shell.ws.refresh_project()
+            })
+            .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
         )
         .child(
-            icon_button("⊟", "收起全部", move || {
+            icon_button(icons::COLLAPSE_ALL, "收起全部", move || {
                 shell.ws.expanded.set(Vec::new())
             })
             .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
         )
-        .child(icon_button("×", "隐藏工具窗口", move || {
+        .child(icon_button(icons::CLOSE, "隐藏工具窗口", move || {
             shell.tools.set(false)
         }))
 }
@@ -127,11 +145,14 @@ fn project_panel(shell: Shell) -> View {
 }
 
 /// 项目树：自绘的 `scroll` 列表。
+///
+/// IDEA `Tree`：行高 24、左右边框各 12，子层级缩进 = `leftChildIndent 7 +
+/// rightChildIndent 11`。
 fn project_tree(shell: Shell) -> View {
     view()
         .flex_1()
         .child(scroll().flex_1().child(dynamic(move || {
-            view().py(px(4.0)).children(
+            view().py(px(4.0)).px(px(12.0)).children(
                 shell
                     .ws
                     .visible_rows()
@@ -154,9 +175,9 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         .h(px(24.0))
         .flex_row()
         .items_center()
-        .gap(px(4.0))
-        .pl(px(6.0 + row.depth as f32 * 12.0))
-        .pr(px(6.0))
+        .gap(px(6.0))
+        .pl(px(8.0 + row.depth as f32 * 18.0))
+        .pr(px(8.0))
         .rounded(px(4.0))
         .style_when(selected, |s| s.bg(move || theme().accent))
         .hover(|s| s.bg(move || color_of("hover-overlay")))
@@ -182,23 +203,30 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         })
         .child(
             view()
-                .w(px(12.0))
-                .h(px(12.0))
+                .w(px(16.0))
+                .h(px(16.0))
                 .items_center()
                 .justify_center()
-                .child(
-                    text(if !folder {
-                        ""
-                    } else if open {
-                        "▾"
+                .child(if folder {
+                    svg(if open {
+                        icons::CHEVRON_DOWN
                     } else {
-                        "▸"
+                        icons::CHEVRON_RIGHT
                     })
-                    .text_size(px(9.0))
-                    .text_color(move || color_of("muted-fg")),
-                ),
+                    .w(px(12.0))
+                    .h(px(12.0))
+                    .text_color(move || color_of("muted-fg"))
+                    .into_element()
+                } else {
+                    view().into_element()
+                }),
         )
-        .child(file_badge(row.id.as_ref(), row.folder))
+        .child(
+            svg(if folder { icons::FOLDER } else { icons::FILE })
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("secondary-fg")),
+        )
         .child(
             text(row.label)
                 .text_size(px(13.0))
@@ -214,34 +242,66 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
     if folder {
         menu = menu
             .child(menu_action(
+                Some(if open {
+                    icons::CHEVRON_DOWN
+                } else {
+                    icons::CHEVRON_RIGHT
+                }),
                 if open { "收起" } else { "展开" },
+                Some(if open { 'C' } else { 'X' }),
                 None,
                 move || toggle_expanded(ws, &toggle_id),
             ))
-            .child(menu_action("刷新项目", None, move || {
-                ws.refresh_project()
-            }))
-            .child(menu_action("收起全部", None, move || {
-                ws.expanded.set(Vec::new())
-            }));
+            .child(menu_action(
+                Some(icons::REFRESH),
+                "刷新项目",
+                Some('R'),
+                None,
+                move || ws.refresh_project(),
+            ))
+            .child(menu_action(
+                Some(icons::COLLAPSE_ALL),
+                "收起全部",
+                Some('L'),
+                None,
+                move || ws.expanded.set(Vec::new()),
+            ));
     } else {
         let (open_path, preview_path, reveal_path) = (path.clone(), path.clone(), path.clone());
         let clipboard = path.display().to_string();
         menu = menu
-            .child(menu_action("打开", None, move || {
-                ws.open_files(vec![open_path.clone()])
-            }))
-            .child(menu_action("预览", None, move || {
-                ws.preview_file(preview_path.clone())
-            }))
+            .child(menu_action(
+                Some(icons::FILE),
+                "打开",
+                Some('O'),
+                None,
+                move || ws.open_files(vec![open_path.clone()]),
+            ))
+            .child(menu_action(
+                Some(icons::EYE),
+                "预览",
+                Some('P'),
+                None,
+                move || ws.preview_file(preview_path.clone()),
+            ))
             .child(menu_separator())
-            .child(menu_action("复制路径", None, move || {
-                set_clipboard(clipboard.clone());
-                ws.say("已复制路径");
-            }))
-            .child(menu_action("在项目中定位", None, move || {
-                shell.reveal_path(&reveal_path)
-            }));
+            .child(menu_action(
+                Some(icons::COPY),
+                "复制路径",
+                Some('C'),
+                None,
+                move || {
+                    set_clipboard(clipboard.clone());
+                    ws.say("已复制路径");
+                },
+            ))
+            .child(menu_action(
+                Some(icons::LOCATE),
+                "在项目中定位",
+                Some('E'),
+                None,
+                move || shell.reveal_path(&reveal_path),
+            ));
     }
     menu.into_element()
 }
@@ -254,35 +314,4 @@ fn toggle_expanded(ws: Workspace, id: &SharedString) {
             ids.push(id.clone());
         }
     });
-}
-
-/// 文件类型徽标：文件夹用方块，文件用首字母，先代替 IDEA 的文件图标。
-fn file_badge(path: &str, folder: bool) -> impl IntoElement {
-    let letter = if folder {
-        "▣".to_owned()
-    } else {
-        Path::new(path)
-            .extension()
-            .map(|ext| {
-                let ext = ext.to_string_lossy();
-                ext.chars()
-                    .next()
-                    .map(|c| c.to_ascii_uppercase().to_string())
-                    .unwrap_or_else(|| "F".to_owned())
-            })
-            .unwrap_or_else(|| "F".to_owned())
-    };
-    view()
-        .w(px(14.0))
-        .h(px(14.0))
-        .items_center()
-        .justify_center()
-        .rounded(px(3.0))
-        .bg(move || color_of("hover-overlay"))
-        .child(
-            text(letter)
-                .text_size(px(9.0))
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(move || color_of("secondary-fg")),
-        )
 }

@@ -9,8 +9,11 @@ use keel_commands::{
 use nsh_base::{menu, menu_item, submenu, theme};
 use nsh_core::prelude::*;
 
+use crate::icons;
 use crate::shell::{Bottom, Shell, Tool, UiState, appearance_id};
-use crate::ui::{color_of, menu_separator, menu_trigger, popup_style, submenu_trigger};
+use crate::ui::{
+    color_of, icon_slot, menu_separator, menu_trigger, mnemonic_label, popup_style, submenu_trigger,
+};
 
 /// 注册全部动作与菜单分组。
 pub fn build(shell: Shell) -> ActionRegistry {
@@ -174,7 +177,10 @@ pub fn app_menu(shell: Shell, group: &ActionGroup) -> impl IntoElement {
     let mut element = menu()
         .offset(px(4.0))
         .popup_style(popup_style)
-        .trigger(menu_trigger(group.text()));
+        .trigger(menu_trigger(
+            group.text(),
+            icons::group_mnemonic(group.id()),
+        ));
     for node in shell.registry().menu(group.id(), &shell.context()) {
         element = element.child(menu_node(shell, node));
     }
@@ -185,8 +191,12 @@ fn menu_node(shell: Shell, node: MenuNode) -> AnyElement {
     match node {
         MenuNode::Action { id, presentation } => action_item(shell, id, presentation),
         MenuNode::Separator => menu_separator().into_element(),
-        MenuNode::Submenu { text, entries, .. } => {
-            let mut element = submenu().offset(px(4.0)).trigger(submenu_trigger(text));
+        MenuNode::Submenu {
+            id, text, entries, ..
+        } => {
+            let mut element = submenu()
+                .offset(px(4.0))
+                .trigger(submenu_trigger(text, icons::group_mnemonic(id)));
             for entry in entries {
                 element = element.child(menu_node(shell, entry));
             }
@@ -195,10 +205,12 @@ fn menu_node(shell: Shell, node: MenuNode) -> AnyElement {
     }
 }
 
-/// 菜单项：可用性、勾选态和执行都回到注册表。
+/// 菜单项：图标、可用性、勾选态和执行都回到注册表。
 fn action_item(shell: Shell, id: ActionId, presentation: Presentation) -> AnyElement {
     let label = SharedString::from(presentation.text);
     let shortcut = SharedString::from(presentation.shortcut.unwrap_or_default());
+    let icon = icons::for_action(id);
+    let mnemonic = icons::action_mnemonic(id);
     menu_item()
         .disabled(move || !shell.action_enabled(id))
         .checked(move || shell.action_checked(id))
@@ -211,8 +223,9 @@ fn action_item(shell: Shell, id: ActionId, presentation: Presentation) -> AnyEle
             view()
                 .flex_row()
                 .items_center()
-                .gap(px(20.0))
-                .child(text(label).text_size(px(13.0)).flex_1())
+                .gap(px(8.0))
+                .child(icon_slot(icon))
+                .child(mnemonic_label(label, mnemonic).flex_1())
                 .child(
                     text(shortcut)
                         .text_size(px(12.0))
