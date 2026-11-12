@@ -67,7 +67,9 @@ impl KeelApp {
             .mt(px(4.))
             .child(
                 div()
-                    .h(px(28.))
+                    // 工具窗口标题栏（这里承载标签）的高度是 `ToolWindow.Header.height`
+                    // = 41（`ToolWindowHeader.getUnscaledHeight()`，新 UI）。
+                    .h(px(41.))
                     .flex()
                     .items_center()
                     .flex_shrink_0()
