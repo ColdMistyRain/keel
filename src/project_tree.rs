@@ -4,7 +4,6 @@ use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::menu::{PopupMenu, PopupMenuItem};
-use gpui_component_assets::IconName;
 
 use crate::actions::{
     CollapseProjectTree, LocateInProject, RefreshProjectTree, ToggleProjectPanel,
@@ -19,10 +18,8 @@ impl KeelApp {
 
         let header = div()
             .h(px(41.))
-            // 标题与右侧工具栏的左右内边距取自
-            // `ToolWindow.Header.labelLeftRightInsets`（0,12,0,16）与
-            // `toolbarLeftRightInsets`（0,12,0,8）。
-            .pl(px(12.))
+            // 标题的左边距属于标题自身（`ContentComboLabel` 的 border insets），
+            // 右侧工具栏取 `toolbarLeftRightInsets`（0,12,0,8）的右边距。
             .pr(px(8.))
             .flex()
             .items_center()
@@ -36,11 +33,22 @@ impl KeelApp {
                     .ghost()
                     .small()
                     .h(px(24.))
-                    .pl_0()
+                    // `headerLabelLeftRightInsets` 的左 12；箭头紧跟文字，
+                    // 因此右侧不留内边距（`ContentComboLabel` 的 3px 偏移
+                    // 由组件库 small 按钮的 4px 间距近似）。
+                    .pl(px(12.))
+                    .pr_0()
                     // 标题字号跟随 `ToolWindow.Header.font.size.offset=0`，即 13px。
                     .text_size(px(13.))
                     .label("项目")
-                    .icon(IconName::ChevronDown),
+                    // IDEA 的标题下拉箭头在文字右侧（`ContentComboLabel` 把
+                    // `LinkDropTriangle` 画在文字宽度之后），不是左侧。
+                    .child(
+                        svg()
+                            .path(SharedString::from(icon("link_drop_triangle")))
+                            .size(px(14.))
+                            .text_color(chrome.muted_fg),
+                    ),
                 |menu, _, _| {
                     menu.menu("在项目中定位", Box::new(LocateInProject))
                         .separator()
@@ -93,21 +101,23 @@ impl KeelApp {
                 )
             })
             .child(div().w(px(1.)).h(px(16.)).mx_1().bg(chrome.border))
+            // `ProjectViewToolbar` 的标题动作依次是 SelectInProjectView、
+            // 展开、折叠；这里先补齐「在项目中定位」与「折叠全部」。
+            .child(crate::tooltip::with_tooltip(
+                "tip-project-locate",
+                "在项目中定位",
+                crate::app::icon_button("project-locate", icon("locate"), chrome.muted_fg)
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.locate_active_document(cx);
+                    })),
+                cx,
+            ))
             .child(crate::tooltip::with_tooltip(
                 "tip-project-collapse-all",
                 "折叠全部",
                 crate::app::icon_button("project-collapse-all", icon("collapse"), chrome.muted_fg)
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
-                    ),
-                cx,
-            ))
-            .child(crate::tooltip::with_tooltip(
-                "tip-project-refresh",
-                "从磁盘重新加载",
-                crate::app::icon_button("project-refresh", icon("refresh"), chrome.muted_fg)
-                    .on_click(
-                        cx.listener(|this, _event, _window, cx| this.refresh_project_tree(cx)),
                     ),
                 cx,
             ))

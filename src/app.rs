@@ -1117,6 +1117,17 @@ impl KeelApp {
         (closed, kept)
     }
 
+    /// IDEA 的 `SelectInProjectView`：把当前编辑器里的文件定位到项目树。
+    pub fn locate_active_document(&mut self, cx: &mut Context<Self>) {
+        match self.active_document().map(|doc| doc.path.clone()) {
+            Some(path) => self.locate_in_project(path, cx),
+            None => {
+                self.status = StatusMessage::info("没有打开的编辑器");
+                cx.notify();
+            }
+        }
+    }
+
     /// 标签右键菜单「在项目中定位」：展开祖先目录并选中文件。
     pub fn locate_in_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         let Some(root) = self.project.root.clone() else {
@@ -1736,13 +1747,7 @@ impl KeelApp {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match self.active_document().map(|doc| doc.path.clone()) {
-            Some(path) => self.locate_in_project(path, cx),
-            None => {
-                self.status = StatusMessage::info("没有打开的编辑器");
-                cx.notify();
-            }
-        }
+        self.locate_active_document(cx);
     }
 
     fn on_close_other_tabs(

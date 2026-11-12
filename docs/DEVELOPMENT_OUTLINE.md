@@ -368,6 +368,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-29：工具窗口标题与状态栏部件内边距对齐——项目面板标题栏改为左 12 / 右 8（`ToolWindow.Header.labelLeftRightInsets` 与 `toolbarLeftRightInsets` 的默认值）；状态栏右端部件由悬停内边距 3/4 改为 `StatusBar.Widget.border`（6,8），部件间距与原版一致
 - [x] Phase 1 · UI-30：编辑器标签卡片与多色文件图标——标签行高按 `SingleHeightTabs.UNSCALED_PREF_HEIGHT` 改为 28，卡片高 24（`IslandsTabPainter.fullHeight`）、圆角 8（`MainToolbar.Button.arc.compact`）、左右各留 2px（`getHOffsetUnscaled`）、首个标签左偏 3px（`firstTabOffset`）；树/标签/面包屑的文件类型图标改用 `img()` 渲染——`svg()` 在 GPUI 中是单色蒙版，会把 expUI 的彩色图标压成灰色
 - [x] Phase 1 · UI-31：工具提示、状态栏与树缩进——(1) 新增 `src/tooltip.rs` 自绘提示（悬停 500ms、鼠标偏移 12/20），表面按 IDEA `ToolTip`：6px 圆角、`feedback-border` 1px 描边、`feedback-bg` 底色、13px 正文、无阴影（组件库 `Tooltip` 写死 `theme.radius` 8 与 `theme.border`，且 `ManagedTooltipExt` 为 crate 私有，无法复用）；10 处 `.tooltip(...)` 改为 `tooltip::with_tooltip`，点击任意位置收起；(2) 去掉状态栏左侧重复的项目选择器，只保留面包屑（IDEA 状态栏左侧只有 `NAVBAR_WIDGET_KEY` 一个部件）；(3) 项目树每级缩进 20 → 18（`Tree.leftChildIndent` 7 + `Tree.rightChildIndent` 11）
+- [x] Phase 1 · UI-32：项目面板标题栏对齐 IDEA 的工具窗口标题——(1) 标题下拉箭头从文字左侧移到右侧（`ContentComboLabel` 把 `LinkDropTriangle` 画在文字宽度之后），图标改用 expUI `general/linkDropTriangle`（14px），标题左边距 12 归到标题自身（`headerLabelLeftRightInsets`），箭头右侧不再留白；(2) 标题动作按 `ProjectViewToolbar` 顺序重排并补齐 `SelectInProjectView`（新「在项目中定位」按钮，图标 expUI `general/locate`，复用 `locate_in_project`，没有打开的编辑器时在状态栏提示）；(3) 去掉 IDEA 标题栏里没有的「刷新」按钮（「从磁盘重新加载」仍保留在标题 “…” 菜单与快捷键可达处），删除随之不再使用的 `refresh.svg`；(4) 新图标在 `assets.rs` 显式登记——GPUI 的 `AssetSource` 只加载登记过的路径，未登记的 `svg()` 会静默渲染空白
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven
