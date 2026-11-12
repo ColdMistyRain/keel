@@ -48,6 +48,8 @@ pub struct Chrome {
     pub control_hover: Hsla,
     /// 侧边条分组、工具栏分隔线（`toolbar-border`）。
     pub separator: Hsla,
+    /// 通知气泡底色（`feedback-bg`）。
+    pub feedback: Hsla,
     /// 列表/树选中态的背景与文字色。
     pub selection: Hsla,
     pub selection_fg: Hsla,
@@ -85,6 +87,7 @@ impl Chrome {
             hover_bg: crate::idea_theme::color_rgba(tokens.hover),
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
             separator: crate::idea_theme::color_rgba(tokens.separator),
+            feedback: crate::idea_theme::color(tokens.feedback),
             selection: crate::idea_theme::color(tokens.selection),
             selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
@@ -2045,9 +2048,10 @@ impl KeelApp {
                     .px_3()
                     .py_2()
                     .rounded_md()
-                    .bg(chrome.panel)
-                    .border_1()
-                    .border_color(chrome.border)
+                    // 通知气泡用 `feedback-bg` + 阴影，不额外画边框（IDEA 的
+                    // `Notification.borderColor` 与背景同色）。
+                    .bg(chrome.feedback)
+                    .shadow_md()
                     .text_xs()
                     .text_color(chrome.panel_fg)
                     .cursor_pointer()

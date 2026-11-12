@@ -163,8 +163,9 @@ impl KeelApp {
         let right_path = row_path.clone();
         let is_dir = row.is_dir;
         // 根行在项目名后附带完整路径，和 IDEA 的项目树一致。
-        let root_path = (row.depth == 0).then(|| row.path.display().to_string());
-        // IDEA 树左右各留 12px，每级缩进 20px。
+        let is_root = row.depth == 0;
+        let root_path = is_root.then(|| row.path.display().to_string());
+        // IDEA 树文字左右各留 8px（`Tree.border.compact`），每级缩进 20px。
         let indent = px(8.0 + row.depth as f32 * 20.0);
         let icon_path = if is_dir {
             crate::file_icons::folder_icon(chrome.icon_suffix)
@@ -216,6 +217,8 @@ impl KeelApp {
                     .min_w_0()
                     .overflow_hidden()
                     .whitespace_nowrap()
+                    // IDEA 把项目根节点名称加粗，路径后缀仍是次要色。
+                    .when(is_root, |name| name.font_weight(FontWeight::BOLD))
                     .child(row.name.clone()),
             )
             .children(root_path.map(|path| {

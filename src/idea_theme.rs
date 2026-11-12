@@ -68,10 +68,14 @@ pub struct Tokens {
     pub brand_active: u32,
     /// `CARET_COLOR`：编辑器光标
     pub caret: u32,
+    /// 编辑器文本选中色（配色方案里的 `SELECTION_BACKGROUND`，比列表选中更饱和）
+    pub editor_selection: u32,
     /// `popup-bg`：弹层背景
     pub popover: u32,
     /// `toolbar-border`：侧边条分组、工具栏分隔线
     pub separator: u32,
+    /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
+    pub feedback: u32,
     /// `Island.arc`
     pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
@@ -104,8 +108,10 @@ pub const LIGHT: Tokens = Tokens {
     brand_hover: 0x2f5eb9,             // blue-70
     brand_active: 0x2e4d89,            // blue-60
     caret: 0x000000,                   // CARET_COLOR（浅色方案未覆盖，取默认黑）
+    editor_selection: 0xa6d2ff,        // expUI_lightScheme.xml / SELECTION_BACKGROUND
     popover: 0xffffff,                 // popup-bg = layer-2-bg
     separator: 0x00000020,             // toolbar-border = transparent-black-30
+    feedback: 0xffffff,                // feedback-bg = layer-2-bg
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
@@ -118,7 +124,7 @@ pub const DARK: Tokens = Tokens {
     content: 0x191a1c,      // gray-10 / editor-bg(layer-0)
     foreground: 0xd1d3d9,   // gray-130 / text-default
     border: 0x26282c,       // gray-30 / editor-border
-    indent_guide: 0x313438, // INDENT_GUIDE
+    indent_guide: 0x323438, // IslandSchemeDark.xml / INDENT_GUIDE
     muted: 0x9fa2a8,        // gray-100 / text-muted
     secondary: 0x73767c,    // gray-80 / text-secondary
     selection: 0x2a4371,    // blue-50 / selection-bg-active
@@ -134,8 +140,10 @@ pub const DARK: Tokens = Tokens {
     brand_hover: 0x2f5eb9,             // blue-70
     brand_active: 0x2e4d89,            // blue-60
     caret: 0xced0d6,                   // CARET_COLOR（expUI_darkScheme.xml）
+    editor_selection: 0x214283,        // Darcula 配色方案的 SELECTION_BACKGROUND
     popover: 0x26282c,                 // popup-bg = layer-1-bg
     separator: 0xffffff21,             // toolbar-border = transparent-white-30
+    feedback: 0x33353b,                // feedback-bg = layer-2-bg(gray-40)
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
@@ -229,7 +237,7 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.primary_active = color(tokens.brand_active);
         theme.accent = color(tokens.selection);
         theme.accent_foreground = color(tokens.selection_fg);
-        theme.selection = color(tokens.selection);
+        theme.selection = color(tokens.editor_selection);
         theme.caret = color(tokens.caret);
 
         // Primary 按钮的背景是 `Button.default.startBackground`（control-brand-bg）。
@@ -241,7 +249,7 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.tokens.button_primary_hover = color(tokens.brand_hover).into();
         theme.tokens.button_primary_active = color(tokens.brand_active).into();
         theme.tokens.button_primary_foreground = color(0xffffff).into();
-        theme.tokens.selection = color(tokens.selection).into();
+        theme.tokens.selection = color(tokens.editor_selection).into();
         theme.tokens.caret = color(tokens.caret).into();
 
         // 弹层背景取 `popup-bg`，正文色沿用 `text-default`。
@@ -334,7 +342,7 @@ const DARK_SYNTAX: &str = r##"
   "style": {
     "editor.background": "#191A1C",
     "editor.foreground": "#BCBEC4",
-    "editor.active_line.background": "#26282E",
+    "editor.active_line.background": "#1F2024",
     "editor.line_number": "#4B5059",
     "editor.active_line_number": "#A1A3AB",
     "editor.gutter.background": "#191A1C",
