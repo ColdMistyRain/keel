@@ -4,8 +4,9 @@
 > 结论：**可行，且比继续堆 GPUI 更符合长期目标**；但不建议直接推倒重写，先做 shell spike，再按阶段迁移。
 > 参考版本：nsh `v0.5.0`，Apache-2.0，官方文档 `https://nsh.dev/zh-CN/`。
 >
-> **当前决策（2026-11-12）：只保留评估文档，暂不动代码、不安装 nsh、不创建 spike。**
-> 若启动迁移：UI 用 Rust-only，先验证 Windows，再扩展 macOS/Linux。
+> **当前决策（2026-11-12）：迁移已启动。** nsh 0.5.0 已安装，P0 spike 落在
+> `spike/keel-nsh-spike/`（Rust-only UI，Windows 优先）；现有 GPUI 版本继续作为基线保留。
+> P0 的记录见 §4.1。
 
 ---
 
@@ -157,6 +158,61 @@ macOS/Linux 放到后续阶段。
   - `nsh package` 能产出 Windows 包；
   - 截图与现有 GPUI 版本对比，差距可接受。
 
+### 4.1 P0 spike 记录（2026-11-12）
+
+**结论：P0 通过（Windows，nsh 0.5.0）。** spike 位于 `spike/keel-nsh-spike/`，
+纯 Rust UI，不改动仓库根目录的 GPUI 版本。运行方式与结构见
+[`spike/keel-nsh-spike/README.md`](../spike/keel-nsh-spike/README.md)。
+
+已实现：
+
+- 自绘 40px 标题栏：`.window_drag(true)` 拖动窗口、按 `title_bar().right`
+  给系统窗口按钮留白；
+- 应用菜单（文件 / 视图 / 帮助）、外观切换（自动 / 浅色 / 深色，`set_color_scheme`）；
+- 左侧 40px 工具窗口条 + 项目面板（`nsh_base::tree`），数据来自真实目录扫描；
+- 编辑器区：自绘标签页、面包屑、`nsh_base::editor`（Java 高亮、行号、折叠）；
+- 状态栏：分支、提示、语言、编码、换行、缩进、光标位置；
+- `theme.json`：IDEA Islands Light/Dark → shadcn `cssVars`，组件不写字面色值；
+- 原生打开对话框（`pick_paths`）+ `std::fs` 读写保存，快捷键
+  `mod+o` / `shift+mod+o` / `mod+s` / `mod+w`；
+- 示例项目 `samples/demo`，`KEEL_SPIKE_DEMO=1` 时启动即打开，便于截图与验收。
+
+验证结果：
+
+| 项 | 结果 | 说明 |
+| --- | --- | --- |
+| `cargo fmt` / `clippy` | 通过 | spike crate 无警告 |
+| `nsh run`（Windows） | 通过 | Win32 后端打开 1180×680 窗口 |
+| Rust 热重载 | 通过 | 改动后约 5 秒编译 + 7 秒重建 runner |
+| 编辑器 | 通过 | Java 高亮、行号、折叠、中文显示 |
+| 标签页 / 面包屑 / 状态栏 | 通过 | 截图与 headless 均确认 |
+| 项目树数据与挂载 | 通过 | `nsh test --trace` 里出现 `TreeItem src/main/pom.xml/Main.java` |
+| 项目树可见性 | 修复待复验 | 初次截图空白：`tree()` 的 `flex_1` 需要父链有确定高度；已把侧栏内容改为直接 flex 子项，桌面锁屏未能补截图 |
+| 主题令牌 | 浅色通过，深色待截图 | `theme.json` 生效，外观切换调用 `set_color_scheme` |
+| IME 中文输入 | 未验证 | 本机验证时桌面进入锁屏，无法人工输入 |
+| `nsh test` | 通过 | `1 test: 1 passed`（headless，Rust 根组件从 TypeScript 侧打开） |
+| `nsh package --target windows` | 通过 | `.nsh/out/Keel.zip`（约 2 分半 release 构建）；`.iss` 已生成，安装包需要本机装 Inno Setup 6 |
+
+需要注意的坑（已写进 spike 代码）：
+
+1. **`when` / `otherwise` 的分支不参与父级 flex 高度分配。** 需要高度的组件
+   （`tree`、`editor`）要么直接作为 flex 子项，要么用 `style_when(.., |s| s.hidden())`
+   常驻并切换可见性；否则组件会以内容高度塌缩，看起来“什么都没画”。
+2. **组件样式方法作用在组件节点上。** `tree().h(px(360.0))` 只约束组件节点，
+   内容根视图仍可能塌缩；spike 用「父视图给高度 + 组件 `flex_1`」验证通过。
+3. **`*_style` 闭包的类型是 `StyleRefinement -> StyleRefinement`**，不是 `Style`；
+   写 `fn popup_style(s: Style) -> Style` 会编译失败。
+4. **`nsh test` 继承环境变量**：设了 `KEEL_SPIKE_DEMO` 时测试也会打开示例项目，
+   断言不能依赖「就绪」这类启动文案。
+5. **自定义主题令牌可以直接进类名**：`bg-editor-bg`、`text-muted-fg`
+   与 `theme().color("editor-bg")` 等价，深色值由 `dark` 节点提供。
+6. Windows 上窗口尺寸默认值要小于屏幕可用高度（本机 1280×720），否则窗口按钮
+   会被挤出屏幕。
+
+下一步（P1）：把 `src/workspace.rs` 抽成 `keel-workspace`，把 IDEA 令牌到
+`theme.json` 的映射抽成 `keel-theme`，让 GPUI 版本和 nsh 版本共用；
+之后再按 P2 用 `dock_area` 替换自研分栏。
+
 ### P1：抽 `keel-core`
 
 - 把与 UI 无关的逻辑从 `KeelApp` 抽出：
@@ -220,22 +276,19 @@ macOS/Linux 放到后续阶段。
 
 ---
 
-## 7. 当前状态与启动条件
+## 7. 当前状态
 
-**当前不执行迁移**：现有 `src/` 继续使用 GPUI，不安装 `nsh`，不创建 spike。
+**P0 已完成（2026-11-12）**：nsh 0.5.0 已安装，`spike/keel-nsh-spike/`
+是纯 Rust 的工作台 spike；现有 `src/` 的 GPUI 版本保持可运行，作为迁移期基线。
 
-启动 P0 的条件（满足任意两条再评估）：
+进行中的工作：
 
-- nsh 发布更稳定的版本，且 Editor/Dock/Tree 的 API 不再频繁变动；
-- 现有 GPUI 在 IME、无障碍或跨平台上出现无法接受的瓶颈；
-- Keel 需要正式支持 macOS/Linux，且希望复用同一套原生 UI；
-- 决定引入 nsh 的签名 TSX 包作为插件/动态 UI 方案。
+- 待桌面解锁后补：项目树修复后的截图、深色主题截图、中文 IME 手动输入验证；
+- P1：抽 `keel-workspace` / `keel-theme`，让 GPUI 与 nsh 两个 UI 共用；
+- P2：用 `nsh_base::dock` 替换自研分栏与工具窗口。
 
-启动时按以下顺序执行：
+约束：
 
-1. 安装 `nsh` 并创建 `nsh-spike` Rust 模板；
-2. 跑通 Windows 主窗口 + 编辑器 + 主题；
-3. 用截图对比现有 GPUI 版本；
-4. spike 通过后，按 P1–P5 迁移。
-
-在 spike 结果出来前，不修改现有 `src/` 的 GPUI 实现。
+- 迁移期不删除 GPUI，直到 nsh 版本功能对齐（P5）；
+- 固定 nsh 版本（当前 0.5.0），升级单独做任务卡；
+- 不修改 nsh 源码，只读参考。

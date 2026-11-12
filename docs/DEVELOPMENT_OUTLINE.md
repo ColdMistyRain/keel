@@ -7,7 +7,7 @@
 > - IDEA 源码：`D:\Programming\Workspace\intellij-community`
 > - IDEA 架构参考文档：[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
 > - 复刻项目架构对照：[REPLICA_ARCHITECTURE_COMPARISON.md](./REPLICA_ARCHITECTURE_COMPARISON.md)
-> - nsh 迁移评估：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（当前只保留评估，不改代码）
+> - nsh 迁移：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（P0 spike 在 `spike/keel-nsh-spike/`；GPUI 版本仍是基线）
 > - 另一个 IDEA 复刻品：`D:\Programming\Workspace\Lithe-IDEA`
 > - Rust 复刻参考：`D:\Programming\Workspace\openidea`
 >

@@ -1,0 +1,76 @@
+# Keel nsh spike（P0）
+
+这是 Keel 迁移到 [Native Shell（nsh）](https://nsh.dev/zh-CN/) 的 P0 验证工程：
+用 **纯 Rust UI** 复刻 IDEA 风格工作台外壳，验证 nsh 能否承载 Keel 的主界面。
+
+它不改动仓库根目录下 GPUI 版本的 `src/`；GPUI 版本仍是可运行基线。
+
+## 运行
+
+```powershell
+# 安装（仅首次）
+irm https://nsh.dev/install.ps1 | iex
+
+# 启动工作台
+nsh run .
+
+# 自动打开内置示例项目（截图/验收用）
+$env:KEEL_SPIKE_DEMO = "1"; nsh run .
+
+# 无头测试
+nsh test
+
+# 打包 Windows 产物（release 构建约 2 分半；安装包需要本机装 Inno Setup 6）
+nsh package --target windows
+```
+
+`nsh run` 会监听 Rust 源码：改动后自动重新编译并重启（本机约 5 秒编译 + 7 秒重建 runner）。
+
+## 界面结构
+
+| 区域 | 实现 |
+| --- | --- |
+| 标题栏 | 自绘 40px 标题栏，`.window_drag(true)` 拖动窗口，右侧给系统窗口按钮留白（`title_bar().right`） |
+| 应用菜单 | 文件 / 视图 / 帮助，`nsh_base::menu` + `menu_item` |
+| 工具窗口条 | 左侧 40px 竖条：项目、搜索、版本控制、终端 |
+| 项目面板 | `nsh_base::tree`，数据来自 `src/workspace.rs` 扫描的真实目录 |
+| 编辑器区 | 自绘标签页 + 面包屑 + `nsh_base::editor`（Java 高亮、行号、折叠） |
+| 状态栏 | 分支、提示、语言、编码、换行、缩进、光标位置 |
+
+配色全部来自 `theme.json`（IDEA Islands Light/Dark 的 shadcn `cssVars` 令牌），
+组件里不写字面色值。外观跟随系统，标题栏右侧可切换「自动 / 浅色 / 深色」。
+
+## 代码结构
+
+```
+src/lib.rs        界面：标题栏、工具窗口、项目树、标签页、编辑器、状态栏
+src/workspace.rs  非 UI 状态：项目目录、文件树、文档、保存、语言识别
+samples/demo/     Java 示例项目（pom.xml + Main.java + Greeter.java）
+theme.json        IDEA 令牌 → nsh 主题
+nsh.json          应用配置：窗口尺寸、隐藏标题栏、主题
+```
+
+`workspace.rs` 是 P1「抽 `keel-core` / `keel-workspace`」的雏形：只读写文件、
+持有信号，不画界面。
+
+## P0 验收记录
+
+见仓库文档 [`docs/NSH_MIGRATION_PLAN.md`](../../docs/NSH_MIGRATION_PLAN.md) 的
+「P0 spike 记录」一节。要点：
+
+- nsh 0.5.0 在 Windows 上可构建、可运行，`nsh run` 热重载可用；
+- 编辑器、标签页、面包屑、状态栏、自绘标题栏、菜单可正常渲染；
+- IDEA 主题可以通过 `theme.json` 表达，不需要改组件源码；
+- 项目树的尺寸需要显式约束（父容器要有确定高度），spike 已改为让面板直接作为
+  侧栏的 flex 子项；
+- 文件选择用 `pick_paths`（原生打开对话框，返回真实路径），配合 `std::fs` 读写；
+- 字体、图标、停靠布局、LSP 适配留给 P2/P3。
+
+## 已知缺口
+
+- 文件图标用字母徽标代替 IDEA 图标；
+- 工具窗口只有「项目」有内容，其余为占位；
+- 底部面板、命令面板、查找替换、设置页未迁移；
+- 每次按键都会把整段文本写回信号（`editor` 的受控用法），大文件应改用
+  `default_value` + 保存时读取（P3 处理）；
+- 中文 IME 需要人工在窗口里输入验证（本机验证时桌面处于锁屏，未完成）。
