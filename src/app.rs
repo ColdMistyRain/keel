@@ -1979,7 +1979,9 @@ impl KeelApp {
                 linear_color_stop(fade, 1.),
             ));
 
-        let control = |id: &'static str, area: WindowControlArea, glyph: &'static str| {
+        // 窗口控制按钮用 expUI 的 Windows 图标（`AllIcons.Windows.MinimizeSmall`
+        // / `MaximizeSmall` / `CloseSmall`，16×16），单色图标交给 `svg()` 按前景色着色。
+        let control = |id: &'static str, area: WindowControlArea, icon: &'static str| {
             div()
                 .id(id)
                 .w(px(40.))
@@ -1987,11 +1989,15 @@ impl KeelApp {
                 .flex()
                 .items_center()
                 .justify_center()
-                .text_color(chrome.muted_fg)
                 .bg(chrome.canvas)
                 .hover(|style| style.bg(chrome.control_hover))
                 .window_control_area(area)
-                .child(glyph)
+                .child(
+                    svg()
+                        .path(SharedString::from(format!("icons/{icon}.svg")))
+                        .size(px(16.))
+                        .text_color(chrome.muted_fg),
+                )
         };
 
         // `MainToolbar.Button`：30×30 按钮、20px 图标、圆角半径 6（arc 12），
@@ -2047,9 +2053,21 @@ impl KeelApp {
                 )),
                 cx,
             ))
-            .child(control("window-min", WindowControlArea::Min, "—"))
-            .child(control("window-max", WindowControlArea::Max, "□"))
-            .child(control("window-close", WindowControlArea::Close, "✕"))
+            .child(control(
+                "window-min",
+                WindowControlArea::Min,
+                "window_minimize",
+            ))
+            .child(control(
+                "window-max",
+                WindowControlArea::Max,
+                "window_maximize",
+            ))
+            .child(control(
+                "window-close",
+                WindowControlArea::Close,
+                "window_close",
+            ))
             .into_any_element()
     }
 
@@ -2113,12 +2131,13 @@ impl KeelApp {
         if let Some(doc) = self.active_document() {
             let position = doc.state.read(cx).cursor_position();
             widgets.push(status_widget(
+                "status-position",
                 format!("{}:{}", position.line + 1, position.character + 1),
                 chrome,
             ));
-            widgets.push(status_widget(doc.eol, chrome));
-            widgets.push(status_widget("UTF-8", chrome));
-            widgets.push(status_widget("4 个空格", chrome));
+            widgets.push(status_widget("status-eol", doc.eol, chrome));
+            widgets.push(status_widget("status-encoding", "UTF-8", chrome));
+            widgets.push(status_widget("status-indent", "4 个空格", chrome));
         }
 
         div()
@@ -2883,13 +2902,25 @@ pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, colo
 
 /// 状态栏右端的一个部件，悬停时前景变正文色并给出轻微底色。
 /// 内边距取自 `StatusBar.Widget.border`（6,8）。
-fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
+fn status_widget(id: &'static str, text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
+    // 部件的内边距是 `StatusBar.Widget.border` = (6,8,6,8)；悬停高亮再按
+    // `StatusBar.Widget.hoverInsets` = (3,4,1,4) 内缩：左右各 4、上 3、下 5
+    // （`WidgetEffectRenderer.calcHoverInsetsCorrection`）。
     div()
-        .h_full()
+        // GPUI 的 `hover()` 依赖元素 id 注册命中区域，没有 id 就永远不触发。
+        .id(id)
+        // 高亮块高 20（状态栏 28 减去上 3 / 下 5），左右各内缩 4；
+        // 文字左右再留 4，距部件边缘仍是 8。
+        .h(px(20.))
+        .mt(px(3.))
+        .mb(px(5.))
+        .mx(px(4.))
+        .px(px(4.))
         .flex()
         .items_center()
-        .px(px(8.))
-        .py(px(6.))
+        // 新 UI 的悬停高亮是圆角矩形，弧 4 → 半径 2
+        // （`WidgetEffectRenderer.paintHover`）。
+        .rounded(px(2.))
         .text_color(chrome.muted_fg)
         .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
         .child(text.into())
