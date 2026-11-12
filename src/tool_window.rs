@@ -100,14 +100,17 @@ impl KeelApp {
             .bg(chrome.canvas)
             .child(project)
             .child(commit)
-            // IDEA 用 `ToolWindow.Stripe.separatorColor` 把侧边条分成若干组。
+            // IDEA 用 `ToolWindow.Stripe.separatorColor` 把侧边条分成若干组：
+            // 分隔组件 32×11，中间画 24×1 的短线（`StripeButtonSeparator`）。
             .child(
                 div()
-                    .w(px(20.))
-                    .h(px(1.))
-                    .my_1()
+                    .w(px(32.))
+                    .h(px(11.))
                     .flex_shrink_0()
-                    .bg(chrome.separator),
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(div().w(px(24.)).h(px(1.)).bg(chrome.separator)),
             )
             .child(bookmarks)
             .child(structure)
@@ -146,12 +149,15 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .w(px(29.))
-                    .h(px(32.))
+                    // 高亮块 = 按钮尺寸减去 `StripeToolbar.Button.leftStripeIcon.padding`
+                    // "5,5,5,2"：37-5-2 = 30、40-5-5 = 30；圆角取
+                    // `Button.ToolWindow.arc`（非紧凑密度）12。
+                    .w(px(30.))
+                    .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(8.))
+                    .rounded(px(12.))
                     .when(active, |item| item.bg(chrome.accent).text_color(icon_color))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
@@ -194,12 +200,14 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .w(px(29.))
-                    .h(px(32.))
+                    // 与侧边条图标按钮同一套度量（`StripeToolbar.Button` 37×40、
+                    // 高亮块 30×30、圆角 12）。
+                    .w(px(30.))
+                    .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(8.))
+                    .rounded(px(12.))
                     .when(active, |item| item.bg(chrome.accent))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
@@ -269,12 +277,13 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .w(px(29.))
-                    .h(px(32.))
+                    // 与侧边条图标按钮同一套度量（高亮块 30×30、圆角 12）。
+                    .w(px(30.))
+                    .h(px(30.))
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(8.))
+                    .rounded(px(12.))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
                     .child(render_icon(icon_color)),
