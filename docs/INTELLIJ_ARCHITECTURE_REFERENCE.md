@@ -637,5 +637,6 @@ keel/
 ## 16. 维护说明
 
 - 本文只覆盖“架构骨架”，不替代 SDK 文档。
+- 同类复刻项目的架构对照见 [REPLICA_ARCHITECTURE_COMPARISON.md](./REPLICA_ARCHITECTURE_COMPARISON.md)。
 - 改动 IDEA 相关结论时，优先以当前 checkout 的源码和 `docs/` 为准。
 - 如果 Keel 的架构发生变化，建议同步更新第 13 节的映射与目标结构。

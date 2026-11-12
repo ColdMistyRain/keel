@@ -6,7 +6,9 @@
 > 参考项目：
 > - IDEA 源码：`D:\Programming\Workspace\intellij-community`
 > - IDEA 架构参考文档：[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
-> - 另一个 IDEA 复刻品：`D:\CodeWorkSpace\Lithe-IDEA`
+> - 复刻项目架构对照：[REPLICA_ARCHITECTURE_COMPARISON.md](./REPLICA_ARCHITECTURE_COMPARISON.md)
+> - 另一个 IDEA 复刻品：`D:\Programming\Workspace\Lithe-IDEA`
+> - Rust 复刻参考：`D:\Programming\Workspace\openidea`
 >
 > 最近更新：2026-11-11（对应提交 `b94bd3e` 之后的 UI 复刻阶段）
 
