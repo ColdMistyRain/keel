@@ -188,7 +188,7 @@ pub fn icon_button(icon: ImageAsset, label: &'static str, action: impl Fn() + 's
 
 /// 工具窗口条 / 底部条上的方形按钮。
 pub fn stripe_button(
-    glyph: &'static str,
+    icon: ImageAsset,
     label: &'static str,
     active: impl Fn() -> bool + 'static,
     action: impl Fn() + 'static,
@@ -206,7 +206,7 @@ pub fn stripe_button(
         .style_when(move || bg_active(), |s| s.bg(move || theme().primary))
         .hover(|s| s.bg(move || color_of("hover-overlay")))
         .on_press(action)
-        .child(text(glyph).text_size(px(15.0)).text_color(move || {
+        .child(svg(icon).w(px(16.0)).h(px(16.0)).text_color(move || {
             if fg_active() {
                 theme().primary_foreground
             } else {

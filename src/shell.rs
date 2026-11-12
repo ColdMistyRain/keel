@@ -40,14 +40,6 @@ impl Tool {
         }
     }
 
-    pub fn glyph(self) -> &'static str {
-        match self {
-            Tool::Project => "▤",
-            Tool::Search => "⌕",
-            Tool::Version => "⑂",
-        }
-    }
-
     pub fn label(self) -> &'static str {
         match self {
             Tool::Project => "项目",
@@ -81,14 +73,6 @@ impl Bottom {
             Bottom::Problems => "view.bottom.problems",
             Bottom::Run => "view.bottom.run",
             Bottom::Terminal => "view.bottom.terminal",
-        }
-    }
-
-    pub fn glyph(self) -> &'static str {
-        match self {
-            Bottom::Problems => "!",
-            Bottom::Run => "▷",
-            Bottom::Terminal => "❯",
         }
     }
 

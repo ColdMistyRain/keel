@@ -436,6 +436,7 @@ keel-core
 | Run widget | `RedesignedRunWidget`：高 30、按钮 30×30、绿色 `#4E9D6C`（dark `#338555`）、停止红 `#E4656E`（dark `#C54E58`）；`Shift+F10` / `Ctrl+F2` / `Shift+F9` | 标题栏加运行按钮 + 配置选择器 + 调试按钮；运行中变红色停止按钮，底部「运行」窗口与状态栏同步 |
 | 状态栏 | `background = main-window-bg`、`topBorderWidth = 0`、`Widget.iconBorder` 上下 6 | 高 24 → 28；字号 11 → 12 |
 | 条纹按钮尺寸 | `StripeToolbar.Button = 37×40` | 32 → 36（条纹宽 40） |
+| 条纹图标 | 工具窗口用 16×16 expui 图标（项目 / 搜索 / 分支），底部工具窗口按钮在条纹下半区 | 文本字形 → SVG 图标；问题 / 运行 / 终端从状态栏移到条纹底部 |
 | 弹出菜单 | `popup-bg = layer-2-bg`、`popup-border = layer-2-border`、`PopupMenu.borderCornerRadius = 8` | 一致 |
 
 仍存在的视觉差距：
@@ -443,8 +444,7 @@ keel-core
 - 只有 Java / XML 有语言专用彩色图标，其他语言仍是通用 `file.svg`；
 - 主工具栏还没有 AI、账号、通知等 widget；搜索框只打开动作面板，未接入文件 / 类搜索；
 - 窗口按钮由系统绘制，不是自绘；
-- 状态栏缺少内存、后台任务、通知等部件；底部工具窗口条仍在状态栏左侧，
-  IDEA 把问题 / 终端放在左侧条纹的下半区。
+- 状态栏缺少内存、后台任务、通知等部件；
 - 运行只驱动 UI，没有真正的进程执行器。
 
 

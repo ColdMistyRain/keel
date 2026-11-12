@@ -11,23 +11,36 @@ use nsh_base::{button, context_menu, theme};
 use nsh_core::prelude::*;
 
 use crate::icons;
-use crate::shell::{Shell, Tool};
+use crate::shell::{Bottom, Shell, Tool};
 use crate::ui::{color_of, icon_button, menu_action, menu_separator, popup_style, stripe_button};
 use crate::workspace::{TreeRow, Workspace};
 
 /// 左侧 40 点宽的工具窗口条。
+///
+/// IDEA 的条纹上半区是工具窗口按钮，下半区是问题 / 终端等底部工具窗口按钮。
 pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
     view()
         .w(px(40.0))
+        .h_full()
+        .flex_col()
         .items_center()
         .gap(px(4.0))
         .py(px(6.0))
         .children(Tool::ALL.into_iter().map(move |tool| {
             stripe_button(
-                tool.glyph(),
+                icons::for_action(tool.action_id()).unwrap_or(icons::FILE),
                 tool.label(),
                 move || shell.tools.get() && shell.tool.get() == tool,
                 move || shell.toggle_tool(tool),
+            )
+        }))
+        .child(view().flex_1())
+        .children(Bottom::ALL.into_iter().map(move |bottom| {
+            stripe_button(
+                icons::for_action(bottom.action_id()).unwrap_or(icons::FILE),
+                bottom.label(),
+                move || shell.bottom.get() == Some(bottom),
+                move || shell.toggle_bottom(bottom),
             )
         }))
 }

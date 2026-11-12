@@ -197,13 +197,6 @@ fn status_bar(shell: Shell) -> impl IntoElement {
         .gap(px(10.0))
         .bg(move || color_of("status-bar"))
         .text_color(move || color_of("muted-fg"))
-        .child(bottom_panel::bottom_bar(shell))
-        .child(
-            view()
-                .w(px(1.0))
-                .h(px(14.0))
-                .bg(move || color_of("separator-line")),
-        )
         .child(
             text(move || ws.message.get())
                 .text_size(px(12.0))
