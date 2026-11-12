@@ -4,7 +4,8 @@
 > 本文档用于指导后续 AI 按阶段、按任务卡推进实现，避免一次性铺开大架构或反复推翻已有工作。
 >
 > 参考项目：
-> - IDEA 源码：`D:\CodeWorkSpace\intellij-community`
+> - IDEA 源码：`D:\Programming\Workspace\intellij-community`
+> - IDEA 架构参考文档：[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
 > - 另一个 IDEA 复刻品：`D:\CodeWorkSpace\Lithe-IDEA`
 >
 > 最近更新：2026-11-11（对应提交 `b94bd3e` 之后的 UI 复刻阶段）
