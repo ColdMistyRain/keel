@@ -358,6 +358,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-19：拆开按钮与输入框的圆角——`theme.radius` 改为 8（`Button.arc`、`PopupMenu.borderCornerRadius`），两处 `Input`（命令面板、文件操作对话框）在使用处覆盖为 6（`Component.arc.compact`）
 - [x] Phase 1 · UI-20：补齐岛屿间距——窗口顶部补 4px、侧边条与工具窗口岛屿之间补 4px（`Island.borderWidth.compact`），并修正项目面板拖拽的坐标偏移（原先少减了 4px 内边距，现按 4+37+4 计算）
 - [x] Phase 1 · UI-21：修正标签与选中行的交互视觉——未选中标签文字按 `EditorTabs.unselectedBlend=0.9` 改为 90% 不透明（原 75% 偏灰），悬停时恢复满对比度（`paintDimmed`）；项目树/命令面板的选中行悬停时保留选中底色；底部工具窗口标题字号改为 13（`ToolWindow.Header.font.size.offset=0`）
+- [x] Phase 1 · UI-22：编辑器字体回到 IDEA 默认——JetBrains Mono 由 15px 改为 13px（`FontPreferences.DEFAULT_FONT_SIZE`，Windows + JetBrains Mono），行高按 `LINE_SPACING=1.2` 换算为 1.6 倍（约 20.8px），文本密度与原版一致
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

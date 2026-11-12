@@ -580,8 +580,9 @@ impl KeelApp {
                     .h(relative(1.))
                     .font_family(chrome.mono_font.clone())
                     .text_size(chrome.mono_size)
-                    // IDEA 编辑器行高约为字号的 1.44 倍（字体 15px → 21.6px）。
-                    .line_height(relative(1.44)),
+                    // IDEA 的行高 = 字体自然高度 × `LINE_SPACING`(1.2)，
+                    // JetBrains Mono 13px 约 20.8px 一行。
+                    .line_height(relative(1.6)),
             )
             .into_any_element()
     }

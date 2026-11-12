@@ -222,7 +222,8 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.font_family = ui_font_family().into();
         theme.font_size = px(13.);
         theme.mono_font_family = "JetBrains Mono".into();
-        theme.mono_font_size = px(15.);
+        // IDEA 在 Windows 上的编辑器默认字体是 JetBrains Mono 13px。
+        theme.mono_font_size = px(13.);
         // 按钮与弹层的圆角是 8px（`Button.arc`、`PopupMenu.borderCornerRadius`）。
         // 输入框在 COMPACT 密度下是 6px（`Component.arc.compact`），
         // 组件库共用同一个 `radius`，输入框在使用处单独覆盖。
