@@ -113,12 +113,17 @@ impl KeelApp {
             items.push(
                 div()
                     .id(("palette-item", ix))
+                    // 结果行 = `List.rowHeight`(24)，选中块左右各内缩
+                    // `Popup.Selection.leftRightInset`(8)，圆角半径 =
+                    // `Popup.Selection.arc`(8) / 2 = 4（`LcrRowImpl.initItem`）。
+                    .h(px(24.))
+                    .mx(px(8.))
+                    .px(px(8.))
+                    .rounded(px(4.))
                     .flex()
                     .items_center()
                     .justify_between()
                     .gap_4()
-                    .px_3()
-                    .py_2()
                     .cursor_pointer()
                     .when(ix == selected, |item| {
                         item.bg(chrome.selection).text_color(chrome.selection_fg)
@@ -164,7 +169,8 @@ impl KeelApp {
             .items_start()
             .justify_center()
             .pt(px(120.))
-            .bg(hsla(0.0, 0.0, 0.0, 0.35))
+            // IDEA 的 Search Everywhere 不压暗背后的窗口，只浮出一个弹层。
+            .bg(hsla(0.0, 0.0, 0.0, 0.))
             .child(
                 div()
                     .w(px(560.))
@@ -172,21 +178,23 @@ impl KeelApp {
                     .flex()
                     .flex_col()
                     .overflow_hidden()
+                    // 弹层表面圆角 8（`PopupMenu.borderCornerRadius`），
+                    // 1px 描边取 `Popup.borderColor`。
                     .rounded_lg()
                     .bg(chrome.bg)
                     .text_color(chrome.fg)
                     .border_1()
-                    .border_color(chrome.border)
+                    .border_color(chrome.popup_border)
                     .shadow_lg()
                     .child(
                         div()
                             .px_2()
                             .py_2()
                             .border_b_1()
-                            .border_color(chrome.border)
-                            // 输入框圆角 = `Component.arc`(8) / 2 = 4，
-                            // 直接用组件库的主题半径。
-                            .child(Input::new(&palette.query)),
+                            .border_color(chrome.popup_border)
+                            // `SearchEverywhere.SearchField.background` 是弹层自身
+                            // 底色，输入框不带边框与焦点环（`appearance(false)`）。
+                            .child(Input::new(&palette.query).appearance(false)),
                     )
                     .child(
                         div()
