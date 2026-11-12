@@ -428,6 +428,7 @@ keel-core
 | 文件类型图标 | `platform/icons/src/expui/fileTypes/java.svg`、`xml.svg`（Apache 2.0，含深色变体） | Java / XML 使用 expui 彩色图标，其余仍用通用文件图标 |
 | 菜单项度量 | 高 26（`List.rowHeight 24 + Selection.outerInsets 1+1`）、选中块左右内缩 7、`Selection.arc = 8`、内容内缩 6 | 全宽高亮 → 左右内缩 7、圆角 4、高 26 |
 | 主菜单（汉堡） | `MainMenuButton.kt`：`WinMenu_20x20` 图标、弹出主菜单组的垂直列表（`menuPopupMinWidth = 180`、悬停展开子菜单、组本身无图标） | 菜单栏常驻 → 收进左上角汉堡按钮，弹出层按主菜单组渲染 |
+| 主工具栏搜索框 | `SeToolbarSearchField`：首选宽 350、最小 150，高 30（`MainToolbar.Button.size`）；`control-bg` 背景、`control-border` 1px 边框、`Component.arc = 8`（半径 4）；放大镜后紧跟占位文字与灰色快捷键 | 搜索图标 → 350 宽搜索框，点击打开命令面板 |
 | 菜单分隔线 | 弹出菜单用 `gray-150 #E9EAEE` | 新增 `menu_separator` 令牌 |
 | 菜单项内容 | IDEA 的 16×16 动作图标 + 下划线助记符（中文界面为 `文件(F)`） | `icon_slot` 图标槽 + `mnemonic_label`（省略号在助记符之后） |
 | 面包屑 | `BreadcrumbsComponent`：crumb 圆角 2、文字内缩 7、悬停 `toolbar-bg-hovered` | 纯文本 → 可悬停 crumb |
@@ -440,7 +441,7 @@ keel-core
 仍存在的视觉差距：
 
 - 只有 Java / XML 有语言专用彩色图标，其他语言仍是通用 `file.svg`；
-- 主工具栏没有 IDEA 的完整搜索框、AI 与其他 widget（当前是 run widget + 搜索 + 设置）；
+- 主工具栏还没有 AI、账号、通知等 widget；搜索框只打开动作面板，未接入文件 / 类搜索；
 - 窗口按钮由系统绘制，不是自绘；
 - 状态栏缺少内存、后台任务、通知等部件；底部工具窗口条仍在状态栏左侧，
   IDEA 把问题 / 终端放在左侧条纹的下半区。

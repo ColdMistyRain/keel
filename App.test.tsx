@@ -34,6 +34,14 @@ test("opens the command palette and filters actions", async () => {
   await app.waitFor("text:保存", { state: "gone" });
 });
 
+test("opens the command palette from the toolbar search field", async () => {
+  const app = await open(".");
+  await app.press("label:搜索操作");
+  await app.waitFor("text:关闭标签页");
+  await app.keyboard.press("escape");
+  await app.waitFor("text:关闭标签页", { state: "gone" });
+});
+
 test("opens the project tree context menu", async () => {
   const app = await open(".");
   // 没有打开示例项目时跳过。

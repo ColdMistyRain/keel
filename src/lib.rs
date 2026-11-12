@@ -19,7 +19,7 @@ use nsh_base::{h_resizable, resizable_panel, theme, v_resizable};
 use nsh_core::keymap::When;
 use nsh_core::{element::desktop::title_bar, prelude::*};
 
-use crate::shell::{Shell, Tool};
+use crate::shell::Shell;
 use crate::ui::{color_of, icon_button};
 
 /// 注册给 TSX 入口的 Rust 组件集合与随包资源。
@@ -97,12 +97,49 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
         )
         .child(view().flex_1())
         .child(run_widget::run_widget(shell))
-        .child(icon_button(icons::SEARCH, "搜索", move || {
-            shell.toggle_tool(Tool::Search)
-        }))
+        .child(search_field(shell))
         .child(icon_button(icons::SETTINGS, "设置", move || {
             shell.ws.say("设置页将在 P4 迁移")
         }))
+}
+
+/// 主工具栏的搜索框（IDEA 的 `SeToolbarSearchField`）。
+///
+/// 首选宽 350、最小 150，高 30（`MainToolbar.Button.size`）；背景 `control-bg`、
+/// 1px `control-border`、圆角 4（`Component.arc = 8`）。放大镜后紧跟占位文字和
+/// 灰色快捷键（IDEA 把快捷键拼在占位文字后面，不右对齐）。当前点击打开命令面板。
+fn search_field(shell: Shell) -> View {
+    view()
+        .w(px(350.0))
+        .min_w(px(150.0))
+        .h(px(30.0))
+        .px(px(8.0))
+        .flex_row()
+        .items_center()
+        .gap(px(6.0))
+        .rounded(px(4.0))
+        .bg(move || color_of("control-bg"))
+        .border_1()
+        .border_color(move || color_of("control-border"))
+        .role(AccessibilityRole::Button)
+        .label("搜索操作")
+        .on_press(move || shell.open_palette())
+        .child(
+            svg(icons::SEARCH)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("muted-fg")),
+        )
+        .child(
+            text("搜索操作")
+                .text_size(px(13.0))
+                .text_color(move || color_of("muted-fg")),
+        )
+        .child(
+            text("Ctrl+Shift+A")
+                .text_size(px(12.0))
+                .text_color(move || color_of("muted-fg")),
+        )
 }
 
 /// 工具窗口条 + 左侧工具窗口 + 编辑器区（可拖宽、可折叠）。

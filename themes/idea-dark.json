@@ -21,6 +21,8 @@
     "tab_selected_border": "#2E4D89",
     "editor_border": "#33353B",
     "menu_separator": "#33353B",
+    "control_bg": "#191A1C",
+    "control_border": "#40434A",
     "status_bar": "#26282C",
     "brand": "#3871E1",
     "brand_hover": "#2F5EB9",
