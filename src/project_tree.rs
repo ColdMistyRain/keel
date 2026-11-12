@@ -1,25 +1,80 @@
 use std::path::{Path, PathBuf};
 
 use gpui::{prelude::*, *};
+use gpui_component::Sizable as _;
+use gpui_component::button::{Button, ButtonVariants as _};
+use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
 use gpui_component_assets::IconName;
 
-use crate::app::{Chrome, KeelApp};
+use crate::actions::{CollapseProjectTree, RefreshProjectTree, ToggleProjectPanel};
+use crate::app::{Chrome, CommandId, KeelApp};
 use crate::model::VisibleRow;
 
 impl KeelApp {
     pub fn render_project_panel(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let header = div()
             .h(px(30.))
-            .px_3()
+            .px_2()
             .flex()
             .items_center()
+            .gap_1()
             .flex_shrink_0()
             .bg(chrome.header)
             .border_b_1()
             .border_color(chrome.border)
             .text_xs()
             .text_color(chrome.muted_fg)
-            .child(self.project.model.title());
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .child(self.project.model.title()),
+            )
+            .child(
+                Button::new("project-collapse-all")
+                    .small()
+                    .ghost()
+                    .icon(IconName::ChevronsDownUp)
+                    .tooltip("折叠全部")
+                    .on_click(
+                        cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
+                    ),
+            )
+            .child(
+                Button::new("project-refresh")
+                    .small()
+                    .ghost()
+                    .icon(IconName::RefreshCw)
+                    .tooltip("从磁盘重新加载")
+                    .on_click(
+                        cx.listener(|this, _event, _window, cx| this.refresh_project_tree(cx)),
+                    ),
+            )
+            .child(
+                Button::new("project-options")
+                    .small()
+                    .ghost()
+                    .icon(IconName::Settings)
+                    .tooltip("项目视图选项")
+                    .dropdown_menu(|menu, _, _| {
+                        menu.menu("从磁盘重新加载", Box::new(RefreshProjectTree))
+                            .menu("折叠全部", Box::new(CollapseProjectTree))
+                            .separator()
+                            .menu("隐藏工具窗口", Box::new(ToggleProjectPanel))
+                    }),
+            )
+            .child(
+                Button::new("project-hide")
+                    .small()
+                    .ghost()
+                    .icon(IconName::ChevronsLeft)
+                    .tooltip("隐藏到侧边条")
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.run_command(CommandId::ToggleProjectPanel, cx)
+                    })),
+            );
 
         let body = if self.project.rows.is_empty() {
             let message = match &self.project.root {
@@ -34,11 +89,13 @@ impl KeelApp {
         } else {
             let rows = self.project.rows.clone();
             let selected = self.project.selected.clone();
+            let scroll = self.project.scroll.clone();
             let mut list = div()
                 .id("project-tree-scroll")
                 .flex_1()
                 .min_h_0()
                 .overflow_y_scroll()
+                .track_scroll(&scroll)
                 .py_1();
 
             let mut children = Vec::new();
@@ -50,15 +107,13 @@ impl KeelApp {
         };
 
         div()
-            .w(px(260.))
+            .w_full()
+            .min_w_0()
             .h_full()
-            .flex_shrink_0()
             .flex()
             .flex_col()
             .bg(chrome.bg)
             .text_color(chrome.fg)
-            .border_r_1()
-            .border_color(chrome.border)
             .child(header)
             .child(body)
             .into_any_element()
@@ -74,6 +129,8 @@ impl KeelApp {
     ) -> AnyElement {
         let is_selected = selected == Some(row.path.as_path());
         let row_path: PathBuf = row.path.clone();
+        let left_path = row_path.clone();
+        let right_path = row_path.clone();
         let is_dir = row.is_dir;
         let indent = px(8.0 + row.depth as f32 * 14.0);
         let marker = if is_dir {
@@ -92,7 +149,7 @@ impl KeelApp {
             crate::file_icons::file_icon(&row.path, chrome.muted_fg)
         };
 
-        div()
+        let row = div()
             .id(("tree-row", ix))
             .h(px(24.))
             .w_full()
@@ -118,16 +175,116 @@ impl KeelApp {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
-                    this.project.selected = Some(row_path.clone());
+                    this.project.selected = Some(left_path.clone());
                     if is_dir {
-                        this.toggle_dir(row_path.clone(), cx);
+                        this.toggle_dir(left_path.clone(), cx);
                     } else if event.click_count >= 2 {
-                        this.open_file(row_path.clone(), window, cx);
+                        this.open_file(left_path.clone(), window, cx);
                     } else {
                         cx.notify();
                     }
                 }),
             )
-            .into_any_element()
+            // 右键只选中，不展开目录，随后弹出文件操作菜单。
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                    this.project.selected = Some(right_path.clone());
+                    cx.notify();
+                }),
+            );
+
+        let menu_app = cx.entity().downgrade();
+        let menu_path = row_path.clone();
+        let menu_is_dir = is_dir;
+        row.context_menu(move |menu, _, _| {
+            let path = menu_path.clone();
+            let dir = if menu_is_dir {
+                path.clone()
+            } else {
+                path.parent()
+                    .map(|parent| parent.to_path_buf())
+                    .unwrap_or_else(|| path.clone())
+            };
+            let mut menu = menu;
+
+            let new_file_app = menu_app.clone();
+            let new_file_dir = dir.clone();
+            menu = menu.item(
+                PopupMenuItem::new("新建文件…").on_click(move |_, window, cx| {
+                    new_file_app
+                        .update(cx, |this, cx| {
+                            this.open_new_file_dialog(new_file_dir.clone(), window, cx)
+                        })
+                        .ok();
+                }),
+            );
+
+            let new_folder_app = menu_app.clone();
+            let new_folder_dir = dir;
+            menu = menu.item(
+                PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
+                    new_folder_app
+                        .update(cx, |this, cx| {
+                            this.open_new_folder_dialog(new_folder_dir.clone(), window, cx)
+                        })
+                        .ok();
+                }),
+            );
+
+            menu = menu.separator();
+
+            let rename_app = menu_app.clone();
+            let rename_path = path.clone();
+            menu = menu.item(
+                PopupMenuItem::new("重命名…").on_click(move |_, window, cx| {
+                    rename_app
+                        .update(cx, |this, cx| {
+                            this.open_rename_dialog(rename_path.clone(), window, cx)
+                        })
+                        .ok();
+                }),
+            );
+
+            let delete_app = menu_app.clone();
+            let delete_path = path.clone();
+            menu = menu.item(PopupMenuItem::new("删除").on_click(move |_, _, cx| {
+                delete_app
+                    .update(cx, |this, cx| {
+                        this.request_delete(delete_path.clone(), menu_is_dir, cx)
+                    })
+                    .ok();
+            }));
+
+            menu = menu.separator();
+
+            let copy_app = menu_app.clone();
+            let copy_path = path.clone();
+            menu = menu.item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
+                cx.write_to_clipboard(ClipboardItem::new_string(copy_path.display().to_string()));
+                copy_app
+                    .update(cx, |this, cx| {
+                        this.status = crate::app::StatusMessage::info("已复制路径");
+                        cx.notify();
+                    })
+                    .ok();
+            }));
+
+            if !menu_is_dir {
+                let open_app = menu_app.clone();
+                let open_path = path;
+                menu = menu.separator();
+                menu = menu.item(PopupMenuItem::new("在编辑器中打开").on_click(
+                    move |_, window, cx| {
+                        open_app
+                            .update(cx, |this, cx| this.open_file(open_path.clone(), window, cx))
+                            .ok();
+                    },
+                ));
+            }
+
+            menu
+        })
+        .into_any_element()
     }
 }

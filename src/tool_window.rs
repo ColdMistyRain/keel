@@ -3,6 +3,9 @@ use gpui_component_assets::IconName;
 
 use crate::app::{Chrome, CommandId, KeelApp, StatusMessage};
 
+/// 左侧工具窗口侧边条的宽度，项目面板的拖拽计算也依赖它。
+pub const STRIPE_WIDTH: f32 = 40.;
+
 impl KeelApp {
     /// IDEA 风格的左侧工具窗口侧边条。
     pub fn render_tool_window_stripe(
@@ -54,7 +57,7 @@ impl KeelApp {
         );
 
         div()
-            .w(px(40.))
+            .w(px(STRIPE_WIDTH))
             .h_full()
             .flex_shrink_0()
             .flex()
@@ -85,7 +88,7 @@ impl KeelApp {
     ) -> AnyElement {
         div()
             .id(id)
-            .size(px(40.))
+            .size(px(STRIPE_WIDTH))
             .flex()
             .items_center()
             .justify_center()

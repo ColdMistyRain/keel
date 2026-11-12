@@ -106,6 +106,31 @@ pub fn read_dir_sorted(path: &Path) -> io::Result<Vec<TreeNode>> {
     Ok(nodes)
 }
 
+/// 重新读取已经加载过的目录，未加载的目录继续保持按需加载。
+/// 该函数只在后台线程调用。
+pub fn refresh_tree(node: &TreeNode) -> TreeNode {
+    if !node.is_dir || !node.loaded {
+        return node.clone();
+    }
+
+    let mut refreshed = TreeNode::directory(node.path.clone(), node.name.clone());
+    refreshed.loaded = true;
+    refreshed.children = read_dir_sorted(&node.path).unwrap_or_default();
+    for child in &mut refreshed.children {
+        if !child.is_dir {
+            continue;
+        }
+        if let Some(previous) = node
+            .children
+            .iter()
+            .find(|old| old.is_dir && old.loaded && old.path == child.path)
+        {
+            *child = refresh_tree(previous);
+        }
+    }
+    refreshed
+}
+
 /// 项目树中实际绘制的一行。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VisibleRow {
@@ -154,6 +179,18 @@ pub struct PersistedState {
     pub bottom_panel_visible: bool,
     #[serde(default)]
     pub bottom_tab: Option<String>,
+    /// 项目面板宽度（像素），拖动分隔条后写入。
+    #[serde(default)]
+    pub project_panel_width: Option<f32>,
+    /// 导航栏面包屑，默认关闭。
+    #[serde(default)]
+    pub breadcrumbs_visible: Option<bool>,
+    /// 是否使用 Darcula 深色主题，缺省为 IntelliJ Light。
+    #[serde(default)]
+    pub theme_dark: Option<bool>,
+    /// 是否使用次像素（ClearType）文本渲染，缺省为灰度抗锯齿。
+    #[serde(default)]
+    pub subpixel_text: Option<bool>,
     #[serde(default)]
     pub window_width: Option<f32>,
     #[serde(default)]
@@ -171,6 +208,10 @@ impl Default for PersistedState {
             project_panel_visible: true,
             bottom_panel_visible: true,
             bottom_tab: None,
+            project_panel_width: None,
+            breadcrumbs_visible: None,
+            theme_dark: None,
+            subpixel_text: None,
             window_width: None,
             window_height: None,
         }
@@ -338,6 +379,10 @@ mod tests {
             project_panel_visible: false,
             bottom_panel_visible: false,
             bottom_tab: Some("run".to_string()),
+            project_panel_width: Some(320.0),
+            breadcrumbs_visible: Some(true),
+            theme_dark: Some(true),
+            subpixel_text: Some(false),
             window_width: Some(1280.0),
             window_height: Some(800.0),
         };
@@ -349,6 +394,10 @@ mod tests {
         assert!(!restored.project_panel_visible);
         assert!(!restored.bottom_panel_visible);
         assert_eq!(restored.bottom_tab.as_deref(), Some("run"));
+        assert_eq!(restored.project_panel_width, Some(320.0));
+        assert_eq!(restored.breadcrumbs_visible, Some(true));
+        assert_eq!(restored.theme_dark, Some(true));
+        assert_eq!(restored.subpixel_text, Some(false));
         assert_eq!(restored.window_width, Some(1280.0));
     }
 
@@ -358,5 +407,9 @@ mod tests {
         assert!(restored.project_panel_visible);
         assert!(restored.bottom_panel_visible);
         assert!(restored.last_workspace.is_none());
+        assert!(restored.project_panel_width.is_none());
+        assert!(restored.breadcrumbs_visible.is_none());
+        assert!(restored.theme_dark.is_none());
+        assert!(restored.subpixel_text.is_none());
     }
 }

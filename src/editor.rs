@@ -1,9 +1,14 @@
 use std::path::PathBuf;
 
 use gpui::{prelude::*, *};
+use gpui_component::Sizable as _;
+use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{Editor, EditorState};
+use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
+use gpui_component_assets::IconName;
 
 use crate::app::{Chrome, KeelApp, empty_editor_state};
+use crate::tool_window::STRIPE_WIDTH;
 
 /// 一个已打开的文件。
 pub struct Document {
@@ -46,6 +51,104 @@ impl Document {
 }
 
 impl KeelApp {
+    /// 工具窗口条右侧的工作区：项目面板与编辑器区之间可拖拽调宽。
+    pub fn render_workspace_area(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
+        let main_column = self.render_main_column(chrome, cx);
+        if !self.project_panel_visible {
+            return main_column;
+        }
+
+        let panel_width = px(self.project_panel_width);
+        let project_panel = self.render_project_panel(chrome, cx);
+        let app = cx.entity().downgrade();
+
+        // 拖拽状态由窗口级鼠标事件驱动；GPUI 只允许在 paint 阶段注册这些监听。
+        let tracker = canvas(|_, _, _| {}, {
+            let app = app.clone();
+            move |_, _, window, _| {
+                let move_app = app.clone();
+                window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
+                    if !phase.bubble() {
+                        return;
+                    }
+                    move_app
+                        .update(cx, |app, cx| {
+                            if !app.resizing_project_panel {
+                                return;
+                            }
+                            let width = (event.position.x - px(STRIPE_WIDTH)).as_f32();
+                            app.project_panel_width = width.clamp(180., 600.);
+                            cx.notify();
+                        })
+                        .ok();
+                });
+
+                let up_app = app;
+                window.on_mouse_event(move |_: &MouseUpEvent, phase, _window, cx| {
+                    if !phase.bubble() {
+                        return;
+                    }
+                    up_app
+                        .update(cx, |app, cx| {
+                            if !app.resizing_project_panel {
+                                return;
+                            }
+                            app.resizing_project_panel = false;
+                            app.persisted.project_panel_width = Some(app.project_panel_width);
+                            app.persist();
+                            cx.notify();
+                        })
+                        .ok();
+                });
+            }
+        })
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full();
+
+        let splitter = div()
+            .id("project-splitter")
+            .w(px(6.))
+            .h_full()
+            .flex_shrink_0()
+            .flex()
+            .justify_center()
+            .cursor_col_resize()
+            .when(self.resizing_project_panel, |splitter| {
+                splitter.bg(chrome.hover_bg)
+            })
+            .hover(|style| style.bg(chrome.hover_bg))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _event: &MouseDownEvent, window, cx| {
+                    this.resizing_project_panel = true;
+                    window.refresh();
+                    cx.notify();
+                }),
+            )
+            .child(div().w(px(1.)).h_full().bg(chrome.border));
+
+        div()
+            .flex_1()
+            .min_w_0()
+            .min_h_0()
+            .flex()
+            .flex_row()
+            .relative()
+            .child(tracker)
+            .child(
+                div()
+                    .w(panel_width)
+                    .h_full()
+                    .flex_shrink_0()
+                    .child(project_panel),
+            )
+            .child(splitter)
+            .child(main_column)
+            .into_any_element()
+    }
+
     pub fn render_main_column(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let editor_area = self.render_editor_area(chrome, cx);
         let bottom_panel = if self.bottom_panel_visible {
@@ -75,37 +178,141 @@ impl KeelApp {
         }
 
         let tab_bar = self.render_tab_bar(chrome, cx);
+        let breadcrumbs = self
+            .breadcrumbs_visible
+            .then(|| self.render_breadcrumbs(chrome, cx));
         let editor = self.render_active_editor(chrome);
 
+        let mut column = div().flex_1().min_h_0().flex().flex_col().child(tab_bar);
+        if let Some(breadcrumbs) = breadcrumbs {
+            column = column.child(breadcrumbs);
+        }
+
+        column.child(editor).into_any_element()
+    }
+
+    /// 导航栏面包屑：按项目根拆成路径段，点击任一段在项目树中选中它。
+    fn render_breadcrumbs(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
+        let Some(doc) = self.active_document() else {
+            return div().into_any_element();
+        };
+        let path = doc.path.clone();
+
+        // 项目外的文件直接显示完整路径，避免出现拼接错误的片段。
+        let mut segments: Vec<(String, PathBuf)> = Vec::new();
+        match self
+            .project
+            .root
+            .as_deref()
+            .and_then(|root| path.strip_prefix(root).ok().map(|rest| (root, rest)))
+        {
+            Some((root, rest)) => {
+                // 首段是项目根，和 IDEA 一致，点它回到项目根节点。
+                let root_label = root
+                    .file_name()
+                    .map(|name| name.to_string_lossy().to_string())
+                    .unwrap_or_else(|| root.display().to_string());
+                segments.push((root_label, root.to_path_buf()));
+
+                let mut cursor = PathBuf::new();
+                for component in rest.components() {
+                    cursor.push(component);
+                    segments.push((
+                        component.as_os_str().to_string_lossy().to_string(),
+                        root.join(&cursor),
+                    ));
+                }
+            }
+            None => segments.push((path.display().to_string(), path.clone())),
+        }
+
+        let mut children = Vec::new();
+        let last = segments.len().saturating_sub(1);
+        for (ix, (label, segment_path)) in segments.into_iter().enumerate() {
+            if ix > 0 {
+                children.push(
+                    div()
+                        .text_color(chrome.muted_fg)
+                        .child("›")
+                        .into_any_element(),
+                );
+            }
+            let is_last = ix == last;
+            let is_dir = segment_path.is_dir();
+            let (icon, icon_color) = if is_dir {
+                (IconName::Folder, chrome.muted_fg)
+            } else {
+                crate::file_icons::file_icon(&segment_path, chrome.muted_fg)
+            };
+            children.push(
+                div()
+                    .id(("breadcrumb", ix))
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px_1()
+                    .rounded_sm()
+                    .cursor_pointer()
+                    .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
+                    .hover(|style| style.bg(chrome.hover_bg))
+                    .child(div().text_color(icon_color).child(icon))
+                    .child(div().whitespace_nowrap().child(label))
+                    .on_click(cx.listener(move |this, _event, _window, cx| {
+                        this.locate_in_project(segment_path.clone(), cx);
+                    }))
+                    .into_any_element(),
+            );
+        }
+
         div()
-            .flex_1()
-            .min_h_0()
             .flex()
-            .flex_col()
-            .child(tab_bar)
-            .child(editor)
+            .items_center()
+            .gap_1()
+            .h(px(26.))
+            .px_2()
+            .flex_shrink_0()
+            .overflow_hidden()
+            .bg(chrome.bg)
+            .border_b_1()
+            .border_color(chrome.border)
+            .text_xs()
+            .children(children)
             .into_any_element()
     }
 
     fn render_tab_bar(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let active = self.active;
+        let drag = self.tab_drag.clone();
+        let tab_scroll = self.tab_scroll.clone();
         let tabs: Vec<(usize, String, bool, PathBuf)> = self
             .documents
             .iter()
             .enumerate()
             .map(|(ix, doc)| (ix, doc.title(), doc.dirty, doc.path.clone()))
             .collect();
+        let documents: Vec<(PathBuf, String, bool)> = self
+            .documents
+            .iter()
+            .map(|doc| (doc.path.clone(), doc.title(), doc.dirty))
+            .collect();
 
+        let app = cx.entity().downgrade();
         let mut children = Vec::new();
         for (ix, title, dirty, path) in tabs {
             let is_active = active == Some(ix);
+            let is_drop_target = drag
+                .as_ref()
+                .is_some_and(|drag| drag.path != path && drag.hover.as_ref() == Some(&path));
             let activate_path = path.clone();
+            let activate_right_path = path.clone();
+            let hover_path = path.clone();
             let close_path = path.clone();
             let (icon, icon_color) = crate::file_icons::file_icon(&path, chrome.muted_fg);
 
             let mut tab = div()
                 .id(("editor-tab", ix))
                 .h_full()
+                .flex_shrink_0()
                 .flex()
                 .items_center()
                 .gap_2()
@@ -122,12 +329,31 @@ impl KeelApp {
                 .when(!is_active, |tab| {
                     tab.bg(chrome.panel).text_color(chrome.muted_fg)
                 })
+                .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
                 .child(div().text_color(icon_color).child(icon))
-                .child(div().child(title))
+                .child(div().whitespace_nowrap().child(title))
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
+                        this.begin_tab_drag(activate_path.clone());
                         if let Some(idx) = this.index_of(&activate_path) {
+                            this.activate_document(idx, window, cx);
+                        }
+                    }),
+                )
+                // 拖拽经过时记录落点，松开鼠标才真正换位。
+                .on_mouse_move(
+                    cx.listener(move |this, _event: &MouseMoveEvent, _window, cx| {
+                        if this.hover_tab(hover_path.clone()) {
+                            cx.notify();
+                        }
+                    }),
+                )
+                // 右键同样先激活标签，和 IDEA 一致。
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
+                        if let Some(idx) = this.index_of(&activate_right_path) {
                             this.activate_document(idx, window, cx);
                         }
                     }),
@@ -164,10 +390,104 @@ impl KeelApp {
                 );
             }
 
+            // IDEA 的标签右键菜单：关闭 / 关闭其他 / 关闭全部 / 在项目中定位。
+            let menu_app = app.clone();
+            let menu_close_path = path.clone();
+            let menu_other_path = path.clone();
+            let menu_locate_path = path.clone();
+            let tab = tab.context_menu(move |menu, _, _| {
+                let close_app = menu_app.clone();
+                let close_path = menu_close_path.clone();
+                let other_app = menu_app.clone();
+                let other_path = menu_other_path.clone();
+                let all_app = menu_app.clone();
+                let copy_app = menu_app.clone();
+                let copy_path = menu_close_path.clone();
+                let locate_app = menu_app.clone();
+                let locate_path = menu_locate_path.clone();
+
+                menu.item(PopupMenuItem::new("关闭").on_click(move |_, _, cx| {
+                    close_app
+                        .update(cx, |this, cx| this.request_close(close_path.clone(), cx))
+                        .ok();
+                }))
+                .item(PopupMenuItem::new("关闭其他").on_click(move |_, _, cx| {
+                    other_app
+                        .update(cx, |this, cx| this.close_other_documents(&other_path, cx))
+                        .ok();
+                }))
+                .item(PopupMenuItem::new("关闭全部").on_click(move |_, _, cx| {
+                    all_app
+                        .update(cx, |this, cx| this.close_all_documents(cx))
+                        .ok();
+                }))
+                .separator()
+                .item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
+                    cx.write_to_clipboard(ClipboardItem::new_string(
+                        copy_path.display().to_string(),
+                    ));
+                    copy_app
+                        .update(cx, |this, cx| {
+                            this.status = crate::app::StatusMessage::info("已复制路径");
+                            cx.notify();
+                        })
+                        .ok();
+                }))
+                .item(
+                    PopupMenuItem::new("在项目中定位").on_click(move |_, _, cx| {
+                        locate_app
+                            .update(cx, |this, cx| {
+                                this.locate_in_project(locate_path.clone(), cx)
+                            })
+                            .ok();
+                    }),
+                )
+            });
+
             children.push(tab.into_any_element());
         }
 
+        // 标签超出宽度时横向滚动；右侧按钮提供完整的已打开文件列表。
+        let overflow_app = app.clone();
+        let overflow = Button::new("editor-tab-overflow")
+            .small()
+            .ghost()
+            .icon(IconName::ChevronDown)
+            .tooltip("已打开的文件")
+            .dropdown_menu(move |menu, _, _| {
+                let mut menu = menu;
+                for (path, title, dirty) in documents.clone() {
+                    let item_app = overflow_app.clone();
+                    let label = if dirty { format!("● {title}") } else { title };
+                    menu = menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
+                        item_app
+                            .update(cx, |this, cx| this.open_file(path.clone(), window, cx))
+                            .ok();
+                    }));
+                }
+                menu
+            });
+
+        let tracker_app = app.clone();
+        let tracker = canvas(
+            |_, _, _| {},
+            move |_, _, window, _| {
+                let up_app = tracker_app.clone();
+                window.on_mouse_event(move |_: &MouseUpEvent, phase, _window, cx| {
+                    if !phase.bubble() {
+                        return;
+                    }
+                    up_app.update(cx, |app, cx| app.finish_tab_drag(cx)).ok();
+                });
+            },
+        )
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full();
+
         div()
+            .relative()
             .flex()
             .items_center()
             .h(px(32.))
@@ -175,7 +495,20 @@ impl KeelApp {
             .bg(chrome.panel)
             .border_b_1()
             .border_color(chrome.border)
-            .children(children)
+            .child(tracker)
+            .child(
+                div()
+                    .id("editor-tab-scroll")
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .flex()
+                    .items_center()
+                    .overflow_x_scroll()
+                    .track_scroll(&tab_scroll)
+                    .children(children),
+            )
+            .child(div().flex_shrink_0().pr_1().child(overflow))
             .into_any_element()
     }
 
