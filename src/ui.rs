@@ -33,7 +33,7 @@ pub fn menu_trigger(label: impl Into<SharedString>) -> impl IntoElement {
         .items_center()
         .rounded(px(4.0))
         .hover(|s| s.bg(move || color_of("control-hover")))
-        .child(text(label).text_size(px(12.0)))
+        .child(text(label).text_size(px(13.0)))
 }
 
 /// 子菜单的触发器：左标签、右箭头。
@@ -47,10 +47,10 @@ pub fn submenu_trigger(label: impl Into<SharedString>) -> View {
         .gap(px(12.0))
         .rounded(px(4.0))
         .hover(|s| s.bg(move || theme().accent))
-        .child(text(label).text_size(px(12.0)).flex_1())
+        .child(text(label).text_size(px(13.0)).flex_1())
         .child(
             text("›")
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(move || color_of("muted-fg")),
         )
 }
@@ -74,10 +74,10 @@ pub fn menu_action(
                 .flex_row()
                 .items_center()
                 .gap(px(20.0))
-                .child(text(label).text_size(px(12.0)).flex_1())
+                .child(text(label).text_size(px(13.0)).flex_1())
                 .child(
                     text(shortcut)
-                        .text_size(px(11.0))
+                        .text_size(px(12.0))
                         .text_color(move || color_of("muted-fg")),
                 ),
         )
@@ -105,7 +105,7 @@ pub fn icon_button(glyph: &'static str, label: &'static str, action: impl Fn() +
         .on_press(action)
         .child(
             text(glyph)
-                .text_size(px(12.0))
+                .text_size(px(13.0))
                 .text_color(move || color_of("muted-fg")),
         )
 }
@@ -120,22 +120,19 @@ pub fn stripe_button(
     let active: Rc<dyn Fn() -> bool> = Rc::new(active);
     let (bg_active, fg_active) = (active.clone(), active.clone());
     view()
-        .w(px(32.0))
-        .h(px(32.0))
+        .w(px(36.0))
+        .h(px(36.0))
         .items_center()
         .justify_center()
         .rounded(px(6.0))
         .role(AccessibilityRole::Button)
         .label(label)
-        .style_when(
-            move || bg_active(),
-            |s| s.bg(move || color_of("control-hover")),
-        )
+        .style_when(move || bg_active(), |s| s.bg(move || theme().primary))
         .hover(|s| s.bg(move || color_of("hover-overlay")))
         .on_press(action)
         .child(text(glyph).text_size(px(15.0)).text_color(move || {
             if fg_active() {
-                theme().foreground
+                theme().primary_foreground
             } else {
                 color_of("muted-fg")
             }

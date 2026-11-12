@@ -38,6 +38,7 @@ pub fn side_panel(shell: Shell) -> View {
         .rounded(px(8.0))
         .bg(move || color_of("island-bg"))
         .child(panel_header(shell))
+        .child(view().h(px(1.0)).bg(move || color_of("separator-line")))
         .child(
             project_panel(shell)
                 .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
@@ -51,14 +52,14 @@ pub fn side_panel(shell: Shell) -> View {
 /// 面板标题栏：标题 + 刷新 / 收起全部 / 隐藏。
 fn panel_header(shell: Shell) -> impl IntoElement {
     view()
-        .h(px(32.0))
+        .h(px(41.0))
         .flex_row()
         .items_center()
         .px(px(10.0))
         .gap(px(2.0))
         .child(
             text(move || shell.tool.get().label())
-                .text_size(px(12.0))
+                .text_size(px(13.0))
                 .font_weight(FontWeight::SEMIBOLD)
                 .flex_1(),
         )
@@ -85,12 +86,12 @@ fn placeholder(shell: Shell) -> View {
         .gap(px(6.0))
         .child(
             text(move || format!("{}工具窗口", shell.tool.get().label()))
-                .text_size(px(12.0))
+                .text_size(px(13.0))
                 .text_color(move || color_of("muted-fg")),
         )
         .child(
             text("内容将在 P4 迁移")
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(move || color_of("muted-fg")),
         )
 }
@@ -150,7 +151,7 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
     let open = row.open;
     let selected = move || ws.selected.get().as_ref() == Some(&selected_id);
     let body = view()
-        .h(px(22.0))
+        .h(px(24.0))
         .flex_row()
         .items_center()
         .gap(px(4.0))
@@ -200,7 +201,7 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         .child(file_badge(row.id.as_ref(), row.folder))
         .child(
             text(row.label)
-                .text_size(px(12.0))
+                .text_size(px(13.0))
                 .text_color(move || theme().foreground)
                 .number_of_lines(1),
         );

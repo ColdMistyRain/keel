@@ -92,7 +92,7 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
         .children(menus)
         .child(
             text(move || shell.ws.root_name())
-                .text_size(px(12.0))
+                .text_size(px(13.0))
                 .text_color(move || color_of("muted-fg"))
                 .number_of_lines(1)
                 .pl(px(8.0)),
@@ -173,14 +173,14 @@ fn status_bar(shell: Shell) -> impl IntoElement {
         )
         .child(
             text(move || ws.message.get())
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .number_of_lines(1),
         )
         .child(view().flex_1())
-        .child(text("main").text_size(px(11.0)))
-        .child(text(move || editor_area::active_language(ws)).text_size(px(11.0)))
-        .child(text("UTF-8").text_size(px(11.0)))
-        .child(text("LF").text_size(px(11.0)))
-        .child(text("4 spaces").text_size(px(11.0)))
-        .child(text(move || ws.cursor.get()).text_size(px(11.0)))
+        .child(text("main").text_size(px(12.0)))
+        .child(text(move || editor_area::active_language(ws)).text_size(px(12.0)))
+        .child(text("UTF-8").text_size(px(12.0)))
+        .child(text("LF").text_size(px(12.0)))
+        .child(text("4 spaces").text_size(px(12.0)))
+        .child(text(move || ws.cursor.get()).text_size(px(12.0)))
 }

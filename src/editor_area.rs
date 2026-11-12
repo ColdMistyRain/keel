@@ -68,12 +68,9 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
     let reveal_path = path.clone();
     let selected = move || ws.active.get() == Some(index.get());
     let body = view()
-        .h(px(28.0))
+        .h(px(30.0))
         .max_w(px(220.0))
-        .flex_row()
-        .items_center()
-        .gap(px(6.0))
-        .px(px(10.0))
+        .flex_col()
         .rounded(px(4.0))
         .style_when(selected, |s| s.bg(move || color_of("tab-selected-bg")))
         .hover(|s| s.bg(move || color_of("control-hover")))
@@ -83,45 +80,61 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
             ws.activate_path(&select_path);
         })
         .child(
-            text(move || doc_name(ws, &name_path))
-                .text_size(px(12.0))
-                .number_of_lines(1)
-                .style_when(move || doc_preview(ws, &preview_path), |s| s.italic())
-                .text_color(move || {
-                    if selected() {
-                        theme().foreground
-                    } else {
-                        color_of("muted-fg")
-                    }
-                }),
-        )
-        .child(
-            text(move || {
-                if doc_dirty(ws, &dirty_path) {
-                    "●"
-                } else {
-                    ""
-                }
-            })
-            .text_size(px(8.0))
-            .text_color(move || color_of("muted-fg")),
+            view()
+                .flex_1()
+                .flex_row()
+                .items_center()
+                .gap(px(6.0))
+                .px(px(10.0))
+                .child(
+                    text(move || doc_name(ws, &name_path))
+                        .text_size(px(13.0))
+                        .number_of_lines(1)
+                        .style_when(move || doc_preview(ws, &preview_path), |s| s.italic())
+                        .text_color(move || {
+                            if selected() {
+                                theme().foreground
+                            } else {
+                                color_of("muted-fg")
+                            }
+                        }),
+                )
+                .child(
+                    text(move || {
+                        if doc_dirty(ws, &dirty_path) {
+                            "●"
+                        } else {
+                            ""
+                        }
+                    })
+                    .text_size(px(8.0))
+                    .text_color(move || color_of("muted-fg")),
+                )
+                .child(
+                    view()
+                        .w(px(16.0))
+                        .h(px(16.0))
+                        .items_center()
+                        .justify_center()
+                        .rounded(px(3.0))
+                        .role(AccessibilityRole::Button)
+                        .label("关闭")
+                        .hover(|s| s.bg(move || color_of("control-hover")))
+                        .on_press(move || ws.close_path(&close_path))
+                        .child(
+                            text("×")
+                                .text_size(px(12.0))
+                                .text_color(move || color_of("muted-fg")),
+                        ),
+                ),
         )
         .child(
             view()
-                .w(px(16.0))
-                .h(px(16.0))
-                .items_center()
-                .justify_center()
-                .rounded(px(3.0))
-                .role(AccessibilityRole::Button)
-                .label("关闭")
-                .hover(|s| s.bg(move || color_of("control-hover")))
-                .on_press(move || ws.close_path(&close_path))
-                .child(
-                    text("×")
-                        .text_size(px(12.0))
-                        .text_color(move || color_of("muted-fg")),
-                ),
+                .h(px(4.0))
+                .w_full()
+                .rounded(px(2.0))
+                .bg(move || color_of("tab-underline"))
+                .style_when(move || !selected(), |s| s.hidden()),
         );
 
     context_menu()
@@ -157,9 +170,9 @@ fn breadcrumbs(ws: Workspace) -> impl IntoElement {
             }
             text_value.push_str(&part);
         }
-        view().h(px(26.0)).px(px(12.0)).justify_center().child(
+        view().h(px(28.0)).px(px(12.0)).justify_center().child(
             text(text_value)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(move || color_of("muted-fg"))
                 .number_of_lines(1),
         )

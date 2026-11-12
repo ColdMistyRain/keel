@@ -397,6 +397,35 @@ keel-core
 4. **ToolWindow 描述表**：把硬编码枚举换成描述符注册表，先不实现浮动 / 拖放。
 5. **设置与持久化**：最近项目、会话、主题选择（P4）。
 
+### 4.6 源码级视觉对照（2026-11-12）
+
+对照 `intellij-community/platform/platform-resources/src/themes/islands/ManyIslandsLight.theme.json`、
+`expUI_light.theme.json` 与 `platform/util/ui/src/com/intellij/util/ui/JBUI.java`，
+本轮校准了以下度量与颜色：
+
+| 项 | IDEA 源值 | 本轮调整 |
+| --- | --- | --- |
+| 主窗口背景 | `main-window-bg = layer-0-bg = gray-150 #E9EAEE` | 一致（`canvas`） |
+| Tool window 背景 | `tool-window-bg = layer-2-bg = white` | 一致（`island-bg`） |
+| Tool window 头高 | `JBUI.defaultHeaderHeight() = 41` | 32 → 41，并补底部分隔线 |
+| Tool window 头字号 | `ToolWindow.Header.font.size.offset = 0`（默认 UI 字号） | 12 → 13 |
+| 选中条纹按钮 | `ToolWindow.Button.selectedBackground = accent-brand-bg #3871E1`，`selectedForeground = text-over-accent` | 灰底 → 蓝底白图标 |
+| 选中编辑器标签 | `underlinedTabBackground = blue-150 #E3EBFE`，`underline = blue-120 #A7C5FF`，`underlineHeight = 4` | 补 4px 下划线；标签 28 → 30 |
+| 标签未选中 | `unselectedAlpha = 0.75`、`unselectedBlend = 0.9` | 仍用 `muted-fg` 近似 |
+| 项目树行高 / 字号 | IDEA 常规 24 / 13 | 22 → 24，12 → 13 |
+| 状态栏 | `background = main-window-bg`、`topBorderWidth = 0` | 一致；字号 11 → 12 |
+| 条纹按钮尺寸 | `StripeToolbar.Button = 37×40` | 32 → 36（条纹宽 40） |
+| 弹出菜单 | `popup-bg = layer-2-bg`、`popup-border = layer-2-border` | 一致 |
+
+仍存在的视觉差距：
+
+- 菜单没有图标 / 助记符下划线；文件图标仍是字母徽标；
+- 面包屑是纯文本，IDEA 是可点击的 crumb（悬停底色、箭头）；
+- 标签关闭按钮始终显示，IDEA 悬停 / 激活才显示；标签溢出时没有滚动箭头；
+- 主工具栏只有搜索 / 运行 / 设置三个图标，IDEA 有完整的 run widget 与搜索框；
+- 窗口按钮由系统绘制，不是自绘；
+- 状态栏缺少内存、后台任务等部件。
+
 
 ### P1：抽 `keel-core`
 

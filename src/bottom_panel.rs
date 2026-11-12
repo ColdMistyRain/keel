@@ -25,7 +25,7 @@ pub fn bottom_bar(shell: Shell) -> impl IntoElement {
                 .rounded(px(4.0))
                 .role(AccessibilityRole::Button)
                 .label(bottom.label())
-                .style_when(active, |s| s.bg(move || color_of("control-hover")))
+                .style_when(active, |s| s.bg(move || theme().primary))
                 .hover(|s| s.bg(move || color_of("hover-overlay")))
                 .on_press(move || shell.toggle_bottom(bottom))
                 .child(
@@ -33,7 +33,7 @@ pub fn bottom_bar(shell: Shell) -> impl IntoElement {
                         .text_size(px(11.0))
                         .text_color(move || {
                             if active() {
-                                color_of("secondary-fg")
+                                theme().primary_foreground
                             } else {
                                 color_of("muted-fg")
                             }
@@ -49,12 +49,13 @@ pub fn bottom_panel(shell: Shell) -> impl IntoElement {
         .rounded(px(8.0))
         .bg(move || color_of("island-bg"))
         .child(panel_header(shell))
+        .child(view().h(px(1.0)).bg(move || color_of("separator-line")))
         .child(panel_content(shell))
 }
 
 fn panel_header(shell: Shell) -> impl IntoElement {
     view()
-        .h(px(30.0))
+        .h(px(41.0))
         .flex_row()
         .items_center()
         .px(px(8.0))
@@ -83,7 +84,7 @@ fn panel_header(shell: Shell) -> impl IntoElement {
 fn tab_button(shell: Shell, bottom: Bottom) -> View {
     let active = move || shell.bottom.get() == Some(bottom);
     view()
-        .h(px(22.0))
+        .h(px(26.0))
         .px(px(8.0))
         .items_center()
         .rounded(px(4.0))
@@ -94,7 +95,7 @@ fn tab_button(shell: Shell, bottom: Bottom) -> View {
         .on_press(move || shell.bottom.set(Some(bottom)))
         .child(
             text(bottom.label())
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(move || {
                     if active() {
                         theme().foreground
@@ -117,10 +118,10 @@ fn panel_content(shell: Shell) -> impl IntoElement {
             .flex_1()
             .p(px(12.0))
             .gap(px(6.0))
-            .child(text(title).text_size(px(12.0)))
+            .child(text(title).text_size(px(13.0)))
             .child(
                 text(hint)
-                    .text_size(px(11.0))
+                    .text_size(px(12.0))
                     .text_color(move || color_of("muted-fg")),
             )
     })

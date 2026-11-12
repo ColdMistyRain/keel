@@ -212,10 +212,10 @@ fn action_item(shell: Shell, id: ActionId, presentation: Presentation) -> AnyEle
                 .flex_row()
                 .items_center()
                 .gap(px(20.0))
-                .child(text(label).text_size(px(12.0)).flex_1())
+                .child(text(label).text_size(px(13.0)).flex_1())
                 .child(
                     text(shortcut)
-                        .text_size(px(11.0))
+                        .text_size(px(12.0))
                         .text_color(move || color_of("muted-fg")),
                 ),
         )
