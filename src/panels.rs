@@ -104,7 +104,7 @@ impl KeelApp {
                     .py_2()
                     .cursor_pointer()
                     .when(ix == selected, |item| {
-                        item.bg(chrome.accent).text_color(chrome.accent_fg)
+                        item.bg(chrome.selection).text_color(chrome.selection_fg)
                     })
                     .hover(|style| style.bg(chrome.panel))
                     .child(div().child(command.label()))

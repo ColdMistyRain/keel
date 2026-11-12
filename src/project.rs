@@ -11,16 +11,6 @@ pub enum ProjectKind {
     Gradle,
 }
 
-impl ProjectKind {
-    pub fn label(self) -> &'static str {
-        match self {
-            ProjectKind::Plain => "目录",
-            ProjectKind::Maven => "Maven",
-            ProjectKind::Gradle => "Gradle",
-        }
-    }
-}
-
 /// 从构建文件中提取出的项目信息，仅用于界面展示与后续 LSP 定位，不做依赖解析。
 /// Maven/Gradle 接入暂缓，坐标、模块与源码根目前只解析不使用。
 #[allow(dead_code)]
@@ -31,16 +21,6 @@ pub struct ProjectModel {
     pub coordinates: Option<String>,
     pub modules: Vec<String>,
     pub source_roots: Vec<PathBuf>,
-}
-
-impl ProjectModel {
-    /// 项目面板标题，例如 `Maven · demo`。
-    pub fn title(&self) -> String {
-        match self.kind {
-            ProjectKind::Plain => "项目".to_string(),
-            _ => format!("{} · {}", self.kind.label(), self.name),
-        }
-    }
 }
 
 /// Maven `pom.xml` 中的关键字段。

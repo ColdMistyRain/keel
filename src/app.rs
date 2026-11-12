@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use gpui::{prelude::*, *};
 use gpui_component::ActiveTheme;
+use gpui_component::Sizable as _;
 use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{EditorState, Input, InputEvent, InputState, TabSize};
 use gpui_component::menu::AppMenuBar;
@@ -31,11 +32,22 @@ pub struct Chrome {
     pub panel: Hsla,
     pub panel_fg: Hsla,
     pub muted_fg: Hsla,
+    /// 面包屑等更次要的文字色。
+    pub secondary_fg: Hsla,
     pub accent: Hsla,
     pub accent_fg: Hsla,
     pub header: Hsla,
     pub hover_bg: Hsla,
+    /// 控件的中性悬停底色。
+    pub control_hover: Hsla,
+    /// 列表/树选中态的背景与文字色。
+    pub selection: Hsla,
+    pub selection_fg: Hsla,
     pub tab_underline: Hsla,
+    pub tab_bg: Hsla,
+    pub status_bg: Hsla,
+    /// 图标资源的主题后缀：`""` 或 `"_dark"`。
+    pub icon_suffix: &'static str,
     pub mono_font: SharedString,
     pub mono_size: Pixels,
 }
@@ -51,11 +63,18 @@ impl Chrome {
             panel: theme.sidebar,
             panel_fg: theme.sidebar_foreground,
             muted_fg: theme.muted_foreground,
+            secondary_fg: crate::idea_theme::color(tokens.secondary),
             accent: theme.primary,
             accent_fg: theme.primary_foreground,
             header: crate::idea_theme::color(tokens.tool_window_header),
             hover_bg: crate::idea_theme::color(tokens.tree_hover),
+            control_hover: crate::idea_theme::color(tokens.control_hover),
+            selection: crate::idea_theme::color(tokens.selection),
+            selection_fg: crate::idea_theme::color(tokens.selection_fg),
             tab_underline: crate::idea_theme::color(tokens.tab_underline),
+            tab_bg: crate::idea_theme::color(tokens.tab_background),
+            status_bg: crate::idea_theme::color(tokens.status_bar),
+            icon_suffix: if tokens.dark_icons { "_dark" } else { "" },
             mono_font: theme.mono_font_family.clone(),
             mono_size: theme.mono_font_size,
         }
@@ -161,16 +180,6 @@ impl CommandId {
         CommandId::ToggleProjectPanel,
         CommandId::ToggleBottomPanel,
     ];
-
-    pub fn id(self) -> &'static str {
-        match self {
-            CommandId::OpenProject => "open-project",
-            CommandId::SaveFile => "save-file",
-            CommandId::CloseEditor => "close-editor",
-            CommandId::ToggleProjectPanel => "toggle-project-panel",
-            CommandId::ToggleBottomPanel => "toggle-bottom-panel",
-        }
-    }
 
     pub fn label(self) -> &'static str {
         match self {
@@ -345,10 +354,11 @@ impl KeelApp {
             } else {
                 ThemeKind::Light
             },
-            breadcrumbs_visible: persisted.breadcrumbs_visible.unwrap_or(false),
+            // IDEA 新 UI 默认显示底部面包屑。
+            breadcrumbs_visible: persisted.breadcrumbs_visible.unwrap_or(true),
             project_panel_width: persisted
                 .project_panel_width
-                .unwrap_or(260.)
+                .unwrap_or(220.)
                 .clamp(180., 600.),
             resizing_project_panel: false,
             bottom_tab: persisted
@@ -356,7 +366,7 @@ impl KeelApp {
                 .as_deref()
                 .map(BottomTab::from_key)
                 .unwrap_or_default(),
-            status: StatusMessage::info("就绪"),
+            status: StatusMessage::info(""),
             toasts: Vec::new(),
             next_toast_id: 0,
             busy_tasks: 0,
@@ -467,7 +477,6 @@ impl KeelApp {
         self.refresh_rows();
         self.persisted.last_workspace = Some(root.clone());
         self.persist();
-        self.status = StatusMessage::info(format!("正在打开 {}", root.display()));
         cx.notify();
 
         let task = cx.spawn(async move |this, cx| {
@@ -493,7 +502,6 @@ impl KeelApp {
                         app.project.expanded.insert(root);
                         app.project.selected = None;
                         app.refresh_rows();
-                        app.status = StatusMessage::info("项目已打开");
                     }
                     Err(err) => {
                         app.status = StatusMessage::error(format!("打开目录失败：{err}"));
@@ -608,7 +616,6 @@ impl KeelApp {
             return;
         }
 
-        self.status = StatusMessage::info(format!("正在打开 {}", short_name(&path)));
         cx.notify();
 
         let task = cx.spawn_in(window, async move |this, cx| {
@@ -693,7 +700,6 @@ impl KeelApp {
         self.active = Some(self.documents.len() - 1);
         self.tab_scroll.scroll_to_item(self.documents.len() - 1);
         self.request_focus(FocusTarget::Document(path.clone()));
-        self.status = StatusMessage::info(format!("已打开 {}", short_name(&path)));
     }
 
     pub fn activate_document(&mut self, idx: usize, _window: &mut Window, cx: &mut Context<Self>) {
@@ -1699,122 +1705,128 @@ impl KeelApp {
 
     fn render_menu_bar(&self, chrome: &Chrome) -> AnyElement {
         div()
-            .h(px(30.))
+            .h(px(28.))
             .w_full()
             .flex_shrink_0()
             .bg(chrome.panel)
-            .border_b_1()
-            .border_color(chrome.border)
             .child(self.menu_bar.clone())
             .into_any_element()
     }
 
-    fn render_toolbar(&self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
-        let mut buttons = Vec::new();
-        for command in CommandId::ALL.iter().copied() {
-            buttons.push(
-                Button::new(command.id())
-                    .label(command.label())
-                    .ghost()
-                    .on_click(cx.listener(move |this, _event, _window, cx| {
-                        this.run_command(command, cx);
-                    }))
-                    .into_any_element(),
-            );
-        }
-
-        div()
-            .flex()
-            .items_center()
-            .gap_1()
-            .h(px(40.))
-            .px_2()
-            .flex_shrink_0()
-            .bg(chrome.panel)
-            .border_b_1()
-            .border_color(chrome.border)
-            .child(
-                div()
-                    .px_3()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(chrome.panel_fg)
-                    .child("Keel"),
-            )
-            .child(div().w(px(1.)).h(px(16.)).mx_1().bg(chrome.border))
-            .children(buttons)
-            .child(div().flex_1())
-            .child(
-                div()
-                    .px_3()
-                    .text_xs()
-                    .text_color(chrome.muted_fg)
-                    .child("Ctrl+Shift+P 命令面板"),
-            )
-            .into_any_element()
+    /// 项目根上的 git 分支名，读取 `.git/HEAD`；不是 git 仓库时返回 `None`。
+    fn git_branch(&self) -> Option<String> {
+        let root = self.project.root.as_deref()?;
+        let head = std::fs::read_to_string(root.join(".git").join("HEAD")).ok()?;
+        let head = head.trim();
+        head.strip_prefix("ref: refs/heads/")
+            .map(|branch| branch.to_string())
     }
 
-    fn render_status_bar(&self, chrome: &Chrome, cx: &App) -> AnyElement {
+    fn render_status_bar(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let left_color = if self.status.is_error {
             hsla(0.0, 0.65, 0.56, 1.0)
         } else {
             chrome.muted_fg
         };
 
-        // 右侧按 IDEA 状态栏的顺序排：行列号、换行符、编码、缩进、文件类型。
-        let mut widgets: Vec<AnyElement> = Vec::new();
-        match self.active_document() {
-            Some(doc) => {
-                let position = doc.state.read(cx).cursor_position();
-                widgets.push(status_widget(
-                    format!("{}:{}", position.line + 1, position.character + 1),
-                    chrome,
-                ));
-                widgets.push(status_widget(doc.eol, chrome));
-                widgets.push(status_widget("UTF-8", chrome));
-                widgets.push(status_widget("空格: 4", chrome));
-                widgets.push(status_widget(
-                    model::language_display_name(doc.language),
-                    chrome,
-                ));
-            }
-            None => widgets.push(status_widget(
-                format!("{} 个标签页", self.documents.len()),
-                chrome,
-            )),
+        // 左侧：分支组件 + 临时消息，和 IDEA 一致，不再显示“已打开 xxx”。
+        let mut left = div().min_w_0().flex().items_center().h_full();
+        if let Some(branch) = self.git_branch() {
+            left = left.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .h_full()
+                    .px_2()
+                    .text_color(chrome.muted_fg)
+                    .hover(|style| style.bg(chrome.control_hover))
+                    .child(
+                        svg()
+                            .path(SharedString::from(format!(
+                                "icons/branch{}.svg",
+                                chrome.icon_suffix
+                            )))
+                            .size(px(16.))
+                            .text_color(chrome.muted_fg),
+                    )
+                    .child(branch),
+            );
         }
+        if !self.status.text.is_empty() {
+            left = left.child(
+                div()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .px_2()
+                    .text_color(left_color)
+                    .child(self.status.text.clone()),
+            );
+        }
+        if self.busy_tasks > 0 {
+            left = left.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px_2()
+                    .text_color(chrome.muted_fg)
+                    .child("⟳")
+                    .child(format!("后台任务 {}", self.busy_tasks)),
+            );
+        }
+
+        // 右侧按 IDEA 状态栏的顺序排：行列号、换行符、编码、缩进、文件类型、设置。
+        let mut widgets: Vec<AnyElement> = Vec::new();
+        if let Some(doc) = self.active_document() {
+            let position = doc.state.read(cx).cursor_position();
+            widgets.push(status_widget(
+                format!("{}:{}", position.line + 1, position.character + 1),
+                chrome,
+            ));
+            widgets.push(status_widget(doc.eol, chrome));
+            widgets.push(status_widget("UTF-8", chrome));
+            widgets.push(status_widget("4 个空格", chrome));
+            widgets.push(status_widget(
+                model::language_display_name(doc.language),
+                chrome,
+            ));
+        }
+        widgets.push(
+            div()
+                .id("status-settings")
+                .flex()
+                .items_center()
+                .justify_center()
+                .w(px(28.))
+                .h_full()
+                .cursor_pointer()
+                .hover(|style| style.bg(chrome.control_hover))
+                .child(
+                    svg()
+                        .path(SharedString::from(format!(
+                            "icons/settings{}.svg",
+                            chrome.icon_suffix
+                        )))
+                        .size(px(16.))
+                        .text_color(chrome.muted_fg),
+                )
+                .on_click(cx.listener(|this, _event, _window, cx| {
+                    this.open_settings(SettingsPane::Appearance, cx);
+                }))
+                .into_any_element(),
+        );
 
         div()
             .flex()
             .items_center()
             .justify_between()
-            .gap_2()
-            .h(px(24.))
+            .h(px(26.))
             .flex_shrink_0()
             .text_xs()
-            .bg(chrome.panel)
-            .border_t_1()
-            .border_color(chrome.border)
-            .child(
-                div()
-                    .min_w_0()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .px_3()
-                    .when(self.busy_tasks > 0, |row| {
-                        row.child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_1()
-                                .text_color(chrome.accent)
-                                .child("⟳")
-                                .child(format!("后台任务 {}", self.busy_tasks)),
-                        )
-                        .child(div().w(px(1.)).h(px(10.)).bg(chrome.border))
-                    })
-                    .child(div().text_color(left_color).child(self.status.text.clone())),
-            )
+            .bg(chrome.status_bg)
+            .child(left)
             .child(div().flex().items_center().h_full().children(widgets))
             .into_any_element()
     }
@@ -2293,7 +2305,6 @@ impl Render for KeelApp {
         let chrome = Chrome::from_theme(cx, self.theme_kind);
 
         let menu_bar = self.render_menu_bar(&chrome);
-        let toolbar = self.render_toolbar(&chrome, cx);
         let status_bar = self.render_status_bar(&chrome, cx);
 
         let stripe = self.render_tool_window_stripe(&chrome, cx);
@@ -2343,7 +2354,6 @@ impl Render for KeelApp {
             .bg(chrome.bg)
             .text_color(chrome.fg)
             .child(menu_bar)
-            .child(toolbar)
             .child(body)
             .child(status_bar);
 
@@ -2438,6 +2448,17 @@ fn setting_row(
         .into_any_element()
 }
 
+/// IDEA 风格的图标按钮：图标来自随程序打包的 expUI SVG，悬停时铺浅色底。
+pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, color: Hsla) -> Button {
+    Button::new(id)
+        .small()
+        .ghost()
+        .w(px(24.))
+        .h(px(24.))
+        .p_0()
+        .child(svg().path(icon.into()).size(px(16.)).text_color(color))
+}
+
 /// 状态栏右端的一个部件，悬停时给出 IDEA 里的浅色高亮。
 fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
     div()
@@ -2446,7 +2467,7 @@ fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
         .items_center()
         .px_2()
         .text_color(chrome.muted_fg)
-        .hover(|style| style.bg(chrome.hover_bg))
+        .hover(|style| style.bg(chrome.control_hover))
         .child(text.into())
         .into_any_element()
 }

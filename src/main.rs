@@ -1,5 +1,6 @@
 mod actions;
 mod app;
+mod assets;
 mod editor;
 mod file_icons;
 mod idea_theme;
@@ -11,7 +12,6 @@ mod tool_window;
 
 use gpui::{prelude::*, *};
 use gpui_component::input::{Copy, Cut, Paste, Redo, SelectAll, Undo};
-use gpui_component_assets::AllAssets;
 
 use crate::actions::{
     CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, FindInFile,
@@ -24,8 +24,19 @@ use crate::model::PersistedState;
 
 fn main() {
     gpui_platform::application()
-        .with_assets(AllAssets)
+        .with_assets(assets::KeelAssets)
         .run(|cx| {
+            // IDEA 新 UI 用 Inter，随程序打包，避免依赖系统是否安装。
+            cx.text_system()
+                .add_fonts(vec![
+                    std::borrow::Cow::Borrowed(
+                        include_bytes!("../assets/fonts/Inter-Regular.ttf").as_slice(),
+                    ),
+                    std::borrow::Cow::Borrowed(
+                        include_bytes!("../assets/fonts/Inter-SemiBold.ttf").as_slice(),
+                    ),
+                ])
+                .expect("无法加载 Inter 字体");
             gpui_component::init(cx);
             // 先读配置，保证启动时就是上次使用的主题与文本渲染方式，避免闪一下浅色。
             let persisted = PersistedState::load();

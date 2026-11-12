@@ -183,12 +183,19 @@ impl KeelApp {
             .then(|| self.render_breadcrumbs(chrome, cx));
         let editor = self.render_active_editor(chrome);
 
-        let mut column = div().flex_1().min_h_0().flex().flex_col().child(tab_bar);
+        // IDEA 新 UI 把面包屑放在编辑器下方、状态栏上方。
+        let mut column = div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_col()
+            .child(tab_bar)
+            .child(editor);
         if let Some(breadcrumbs) = breadcrumbs {
             column = column.child(breadcrumbs);
         }
 
-        column.child(editor).into_any_element()
+        column.into_any_element()
     }
 
     /// 导航栏面包屑：按项目根拆成路径段，点击任一段在项目树中选中它。
@@ -233,7 +240,15 @@ impl KeelApp {
                 children.push(
                     div()
                         .text_color(chrome.muted_fg)
-                        .child("›")
+                        .child(
+                            svg()
+                                .path(SharedString::from(format!(
+                                    "icons/chevron_right{}.svg",
+                                    chrome.icon_suffix
+                                )))
+                                .size(px(16.))
+                                .text_color(chrome.secondary_fg),
+                        )
                         .into_any_element(),
                 );
             }
@@ -253,8 +268,12 @@ impl KeelApp {
                     .px_1()
                     .rounded_sm()
                     .cursor_pointer()
-                    .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
-                    .hover(|style| style.bg(chrome.hover_bg))
+                    .text_color(if is_last {
+                        chrome.fg
+                    } else {
+                        chrome.secondary_fg
+                    })
+                    .hover(|style| style.bg(chrome.control_hover))
                     .child(div().text_color(icon_color).child(icon))
                     .child(div().whitespace_nowrap().child(label))
                     .on_click(cx.listener(move |this, _event, _window, cx| {
@@ -268,13 +287,11 @@ impl KeelApp {
             .flex()
             .items_center()
             .gap_1()
-            .h(px(26.))
-            .px_2()
+            .h(px(24.))
+            .px_1()
             .flex_shrink_0()
             .overflow_hidden()
             .bg(chrome.bg)
-            .border_b_1()
-            .border_color(chrome.border)
             .text_xs()
             .children(children)
             .into_any_element()
@@ -311,23 +328,23 @@ impl KeelApp {
 
             let mut tab = div()
                 .id(("editor-tab", ix))
-                .h_full()
+                .h(px(28.))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
-                .gap_2()
-                .px_3()
-                .border_r_1()
-                .border_color(chrome.border)
+                .gap_1()
+                .px_2()
                 .cursor_pointer()
                 .when(is_active, |tab| {
-                    tab.bg(chrome.bg)
+                    // IDEA 新 UI 里选中标签与编辑器同色，只靠顶部 4px 蓝线区分。
+                    tab.bg(chrome.tab_bg)
                         .text_color(chrome.fg)
                         .border_t_2()
                         .border_color(chrome.tab_underline)
                 })
                 .when(!is_active, |tab| {
-                    tab.bg(chrome.panel).text_color(chrome.muted_fg)
+                    tab.text_color(chrome.muted_fg)
+                        .hover(|style| style.bg(chrome.control_hover))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
                 .child(div().text_color(icon_color).child(icon))
@@ -490,11 +507,9 @@ impl KeelApp {
             .relative()
             .flex()
             .items_center()
-            .h(px(32.))
+            .h(px(28.))
             .flex_shrink_0()
-            .bg(chrome.panel)
-            .border_b_1()
-            .border_color(chrome.border)
+            .bg(chrome.tab_bg)
             .child(tracker)
             .child(
                 div()

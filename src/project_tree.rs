@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use gpui::{prelude::*, *};
-use gpui_component::Sizable as _;
-use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenuItem};
 use gpui_component_assets::IconName;
 
@@ -12,52 +10,61 @@ use crate::model::VisibleRow;
 
 impl KeelApp {
     pub fn render_project_panel(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
+        let root = self.project.root.clone();
+        let name = root
+            .as_deref()
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| "项目".to_string());
+        let path = root
+            .as_deref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_default();
+        let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
+
         let header = div()
-            .h(px(30.))
+            .h(px(28.))
             .px_2()
             .flex()
             .items_center()
             .gap_1()
             .flex_shrink_0()
             .bg(chrome.header)
-            .border_b_1()
-            .border_color(chrome.border)
-            .text_xs()
-            .text_color(chrome.muted_fg)
             .child(
                 div()
                     .flex_1()
                     .min_w_0()
+                    .flex()
+                    .items_center()
+                    .gap_2()
                     .overflow_hidden()
-                    .whitespace_nowrap()
-                    .child(self.project.model.title()),
+                    .child(div().whitespace_nowrap().child(name))
+                    .child(
+                        div()
+                            .min_w_0()
+                            .overflow_hidden()
+                            .whitespace_nowrap()
+                            .text_xs()
+                            .text_color(chrome.muted_fg)
+                            .child(path),
+                    ),
             )
             .child(
-                Button::new("project-collapse-all")
-                    .small()
-                    .ghost()
-                    .icon(IconName::ChevronsDownUp)
+                crate::app::icon_button("project-collapse-all", icon("collapse"), chrome.muted_fg)
                     .tooltip("折叠全部")
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
                     ),
             )
             .child(
-                Button::new("project-refresh")
-                    .small()
-                    .ghost()
-                    .icon(IconName::RefreshCw)
+                crate::app::icon_button("project-refresh", icon("refresh"), chrome.muted_fg)
                     .tooltip("从磁盘重新加载")
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.refresh_project_tree(cx)),
                     ),
             )
             .child(
-                Button::new("project-options")
-                    .small()
-                    .ghost()
-                    .icon(IconName::Settings)
-                    .tooltip("项目视图选项")
+                crate::app::icon_button("project-options", icon("more"), chrome.muted_fg)
                     .dropdown_menu(|menu, _, _| {
                         menu.menu("从磁盘重新加载", Box::new(RefreshProjectTree))
                             .menu("折叠全部", Box::new(CollapseProjectTree))
@@ -66,10 +73,7 @@ impl KeelApp {
                     }),
             )
             .child(
-                Button::new("project-hide")
-                    .small()
-                    .ghost()
-                    .icon(IconName::ChevronsLeft)
+                crate::app::icon_button("project-hide", icon("chevron_left"), chrome.muted_fg)
                     .tooltip("隐藏到侧边条")
                     .on_click(cx.listener(|this, _event, _window, cx| {
                         this.run_command(CommandId::ToggleProjectPanel, cx)
@@ -112,8 +116,8 @@ impl KeelApp {
             .h_full()
             .flex()
             .flex_col()
-            .bg(chrome.bg)
-            .text_color(chrome.fg)
+            .bg(chrome.panel)
+            .text_color(chrome.panel_fg)
             .child(header)
             .child(body)
             .into_any_element()
@@ -132,46 +136,61 @@ impl KeelApp {
         let left_path = row_path.clone();
         let right_path = row_path.clone();
         let is_dir = row.is_dir;
-        let indent = px(8.0 + row.depth as f32 * 14.0);
-        let marker = if is_dir {
-            if row.expanded { "-" } else { "+" }
-        } else {
-            " "
-        };
+        // IDEA 树每级缩进 16px，最左侧留 4px。
+        let indent = px(4.0 + row.depth as f32 * 16.0);
         let (icon, icon_color) = if is_dir {
             let folder = if row.expanded {
                 IconName::FolderOpen
             } else {
                 IconName::Folder
             };
-            (folder, chrome.muted_fg)
+            (folder, chrome.secondary_fg)
         } else {
             crate::file_icons::file_icon(&row.path, chrome.muted_fg)
         };
+        let chevron = is_dir.then(|| {
+            svg()
+                .path(SharedString::from(format!(
+                    "icons/chevron_{}{}.svg",
+                    if row.expanded { "down" } else { "right" },
+                    chrome.icon_suffix
+                )))
+                .size(px(16.))
+                .text_color(chrome.muted_fg)
+        });
 
         let row = div()
             .id(("tree-row", ix))
             .h(px(24.))
-            .w_full()
+            .mx_1()
             .flex()
             .items_center()
             .gap_1()
             .pl(indent)
-            .pr_2()
+            .pr_1()
+            .rounded_sm()
             .cursor_pointer()
             .when(is_selected, |row| {
-                row.bg(chrome.accent).text_color(chrome.accent_fg)
+                row.bg(chrome.selection).text_color(chrome.selection_fg)
             })
             .hover(|style| style.bg(chrome.hover_bg))
             .child(
                 div()
-                    .w(px(10.))
-                    .text_xs()
+                    .w(px(16.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
                     .text_color(chrome.muted_fg)
-                    .child(marker),
+                    .children(chevron),
             )
             .child(div().text_color(icon_color).child(icon))
-            .child(div().min_w_0().child(row.name.clone()))
+            .child(
+                div()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .child(row.name.clone()),
+            )
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {

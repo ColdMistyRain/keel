@@ -175,14 +175,15 @@ pub struct PersistedState {
     pub last_workspace: Option<PathBuf>,
     #[serde(default = "default_true")]
     pub project_panel_visible: bool,
-    #[serde(default = "default_true")]
+    /// 底部工具窗口，IDEA 新 UI 默认隐藏。
+    #[serde(default)]
     pub bottom_panel_visible: bool,
     #[serde(default)]
     pub bottom_tab: Option<String>,
     /// 项目面板宽度（像素），拖动分隔条后写入。
     #[serde(default)]
     pub project_panel_width: Option<f32>,
-    /// 导航栏面包屑，默认关闭。
+    /// 导航栏面包屑，IDEA 新 UI 默认显示在编辑器底部。
     #[serde(default)]
     pub breadcrumbs_visible: Option<bool>,
     /// 是否使用 Darcula 深色主题，缺省为 IntelliJ Light。
@@ -206,7 +207,7 @@ impl Default for PersistedState {
         Self {
             last_workspace: None,
             project_panel_visible: true,
-            bottom_panel_visible: true,
+            bottom_panel_visible: false,
             bottom_tab: None,
             project_panel_width: None,
             breadcrumbs_visible: None,
@@ -405,7 +406,7 @@ mod tests {
     fn 缺失字段时使用默认值() {
         let restored: PersistedState = serde_json::from_str("{}").unwrap();
         assert!(restored.project_panel_visible);
-        assert!(restored.bottom_panel_visible);
+        assert!(!restored.bottom_panel_visible);
         assert!(restored.last_workspace.is_none());
         assert!(restored.project_panel_width.is_none());
         assert!(restored.breadcrumbs_visible.is_none());
