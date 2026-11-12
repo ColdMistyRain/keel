@@ -243,6 +243,7 @@ enum FocusTarget {
     Document(PathBuf),
     Palette,
     FileDialog,
+    Settings,
 }
 
 /// 右下角通知气泡的存活时间。
@@ -354,6 +355,8 @@ pub struct KeelApp {
     focus_retries: u8,
     pub persisted: PersistedState,
     pub focus_handle: FocusHandle,
+    /// 设置浮层自己的焦点，Esc 绑定在它的 key context 上。
+    settings_focus: FocusHandle,
     pub tasks: Vec<Task<()>>,
 }
 
@@ -397,6 +400,7 @@ impl KeelApp {
             pending_focus: None,
             focus_retries: 0,
             focus_handle: cx.focus_handle(),
+            settings_focus: cx.focus_handle(),
             persisted,
             tasks: Vec::new(),
         };
@@ -774,12 +778,15 @@ impl KeelApp {
     /// 打开设置窗口，`pane` 决定初始显示的页面。
     pub fn open_settings(&mut self, pane: SettingsPane, cx: &mut Context<Self>) {
         self.settings = Some(pane);
+        // 焦点移到浮层，Esc（`KeelSettings` 上下文）才能命中绑定。
+        self.request_focus(FocusTarget::Settings);
         cx.notify();
     }
 
     /// 关闭设置窗口。
     pub fn close_settings(&mut self, cx: &mut Context<Self>) {
         if self.settings.take().is_some() {
+            self.request_focus_root();
             cx.notify();
         }
     }
@@ -1462,6 +1469,7 @@ impl KeelApp {
                 .file_op
                 .as_ref()
                 .map(|dialog| dialog.input.focus_handle(cx)),
+            FocusTarget::Settings => Some(self.settings_focus.clone()),
         };
 
         let focused = match handle {
@@ -2186,6 +2194,7 @@ impl KeelApp {
         div()
             .id("settings-backdrop")
             .key_context("KeelSettings")
+            .track_focus(&self.settings_focus)
             .absolute()
             .top_0()
             .left_0()
@@ -2633,23 +2642,33 @@ pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, colo
 }
 
 /// 状态栏右端的一个部件，悬停时前景变正文色并给出轻微底色。
+/// 内边距取自 `StatusBar.Widget.hoverInsets`（3,4,1,4）。
 fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
     div()
         .h_full()
         .flex()
         .items_center()
-        .px_2()
+        .px(px(4.))
+        .pt(px(3.))
+        .pb(px(1.))
         .text_color(chrome.muted_fg)
         .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
         .child(text.into())
         .into_any_element()
 }
 
-pub fn empty_editor_state(chrome: &Chrome, root: Option<&Path>) -> AnyElement {
-    let hint = match root {
-        Some(root) => format!("在左侧项目树中双击文件开始编辑 · {}", root.display()),
-        None => "先通过“打开项目目录”选择一个工作区".to_string(),
-    };
+/// IDEA `DefaultEditorEmptyTextProvider` 的空编辑器提示：六行操作与快捷键，
+/// 整块水平居中、垂直位于编辑器的 37.5% 高度处。
+pub fn empty_editor_state(chrome: &Chrome) -> AnyElement {
+    // (说明, 快捷键)；最后一行没有快捷键。
+    let lines: [(&str, &str); 6] = [
+        ("随处搜索", "Shift Shift"),
+        ("项目视图", "Alt+1"),
+        ("转到文件", "Ctrl+Shift+N"),
+        ("最近的文件", "Ctrl+E"),
+        ("导航栏", "Alt+Home"),
+        ("将文件拖放到此处以打开", ""),
+    ];
 
     div()
         .flex_1()
@@ -2657,11 +2676,23 @@ pub fn empty_editor_state(chrome: &Chrome, root: Option<&Path>) -> AnyElement {
         .flex()
         .flex_col()
         .items_center()
-        .justify_center()
-        .gap_2()
-        .text_color(chrome.muted_fg)
-        .child(div().text_lg().child("没有打开的文件"))
-        .child(div().child(hint))
+        // IDEA 把提示放在编辑器高度的 37.5% 处；这里用上下弹性空白近似。
+        .child(div().flex_grow(0.75))
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .line_height(relative(1.8))
+                .children(lines.into_iter().map(|(label, shortcut)| {
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_3()
+                        .child(div().text_color(chrome.muted_fg).child(label))
+                        .child(div().text_color(chrome.fg).child(shortcut))
+                })),
+        )
+        .child(div().flex_grow(1.25))
         .into_any_element()
 }
 

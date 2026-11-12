@@ -63,6 +63,13 @@ pub struct Tokens {
     pub status_bar: u32,
     /// `accent-brand-bg`
     pub brand: u32,
+    /// 品牌色的悬停/按下态（blue-70 / blue-60）
+    pub brand_hover: u32,
+    pub brand_active: u32,
+    /// `CARET_COLOR`：编辑器光标
+    pub caret: u32,
+    /// `popup-bg`：弹层背景
+    pub popover: u32,
     /// `Island.arc`
     pub island_arc: f32,
     /// 图标资源是否使用 `_dark` 变体。
@@ -92,6 +99,10 @@ pub const LIGHT: Tokens = Tokens {
     tab_selected_background: 0xe3ebfe, // blue-150
     status_bar: 0xe9eaee,              // main-window-bg
     brand: 0x3871e1,                   // blue-80
+    brand_hover: 0x2f5eb9,             // blue-70
+    brand_active: 0x2e4d89,            // blue-60
+    caret: 0x000000,                   // CARET_COLOR（浅色方案未覆盖，取默认黑）
+    popover: 0xffffff,                 // popup-bg = layer-2-bg
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
@@ -117,6 +128,10 @@ pub const DARK: Tokens = Tokens {
     tab_selected_background: 0x233558, // blue-40
     status_bar: 0x26282c,              // main-window-bg(layer-1)
     brand: 0x3871e1,                   // blue-80
+    brand_hover: 0x2f5eb9,             // blue-70
+    brand_active: 0x2e4d89,            // blue-60
+    caret: 0xced0d6,                   // CARET_COLOR（expUI_darkScheme.xml）
+    popover: 0x26282c,                 // popup-bg = layer-1-bg
     island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
@@ -189,9 +204,10 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.font_size = px(13.);
         theme.mono_font_family = "JetBrains Mono".into();
         theme.mono_font_size = px(15.);
-        // IDEA 新 UI 的圆角基准值是 4px。
-        theme.radius = px(4.);
-        theme.radius_lg = px(6.);
+        // COMPACT 密度下组件圆角是 6px（`Component.arc.compact`），
+        // 弹层沿用 `PopupMenu` 的 8px。
+        theme.radius = px(6.);
+        theme.radius_lg = px(8.);
 
         theme.background = color(tokens.canvas);
         theme.foreground = color(tokens.foreground);
@@ -205,8 +221,30 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.muted_foreground = color(tokens.muted);
         theme.primary = color(tokens.brand);
         theme.primary_foreground = color(0xffffff);
+        theme.primary_hover = color(tokens.brand_hover);
+        theme.primary_active = color(tokens.brand_active);
         theme.accent = color(tokens.selection);
         theme.accent_foreground = color(tokens.selection_fg);
+        theme.selection = color(tokens.selection);
+        theme.caret = color(tokens.caret);
+
+        // Primary 按钮的背景是 `Button.default.startBackground`（control-brand-bg）。
+        theme.button_primary = color(tokens.brand);
+        theme.button_primary_hover = color(tokens.brand_hover);
+        theme.button_primary_active = color(tokens.brand_active);
+        theme.button_primary_foreground = color(0xffffff);
+        theme.tokens.button_primary = color(tokens.brand).into();
+        theme.tokens.button_primary_hover = color(tokens.brand_hover).into();
+        theme.tokens.button_primary_active = color(tokens.brand_active).into();
+        theme.tokens.button_primary_foreground = color(0xffffff).into();
+        theme.tokens.selection = color(tokens.selection).into();
+        theme.tokens.caret = color(tokens.caret).into();
+
+        // 弹层背景取 `popup-bg`，正文色沿用 `text-default`。
+        theme.popover = color(tokens.popover);
+        theme.popover_foreground = color(tokens.foreground);
+        theme.tokens.popover = color(tokens.popover).into();
+        theme.tokens.popover_foreground = color(tokens.foreground).into();
         theme.highlight_theme = highlight_theme(kind);
     }
     Theme::sync_base(cx);

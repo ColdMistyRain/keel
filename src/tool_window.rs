@@ -4,7 +4,8 @@ use gpui_component_assets::IconName;
 use crate::app::{BottomTab, Chrome, CommandId, KeelApp, StatusMessage};
 
 /// 左侧工具窗口侧边条的宽度，项目面板的拖拽计算也依赖它。
-pub const STRIPE_WIDTH: f32 = 44.;
+/// 取自 `StripeToolbar.Button.size` 的 37px。
+pub const STRIPE_WIDTH: f32 = 37.;
 
 impl KeelApp {
     /// IDEA 风格的左侧工具窗口侧边条：图标来自 expUI 图标集。
@@ -136,7 +137,8 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .size(px(34.))
+                    .w(px(29.))
+                    .h(px(32.))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -183,7 +185,8 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .size(px(34.))
+                    .w(px(29.))
+                    .h(px(32.))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -257,7 +260,8 @@ impl KeelApp {
             .cursor_pointer()
             .child(
                 div()
-                    .size(px(34.))
+                    .w(px(29.))
+                    .h(px(32.))
                     .flex()
                     .items_center()
                     .justify_center()

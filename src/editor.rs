@@ -176,10 +176,12 @@ impl KeelApp {
             return div()
                 .flex_1()
                 .min_h_0()
+                .flex()
+                .flex_col()
                 .bg(chrome.bg)
                 .rounded(chrome.island_arc)
                 .overflow_hidden()
-                .child(empty_editor_state(chrome, self.project.root.as_deref()))
+                .child(empty_editor_state(chrome))
                 .into_any_element();
         }
 
@@ -346,10 +348,11 @@ impl KeelApp {
                 .px(px(8.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
-                    // IDEA Islands 的选中标签是一张带 1px 蓝边的圆角卡片。
+                    // IDEA Islands 的选中标签是一张带 1px 蓝边的圆角卡片，
+                    // 圆角取 `EditorTabs.underlineArc`（4px）。
                     tab.bg(chrome.tab_selected_bg)
                         .text_color(chrome.fg)
-                        .rounded_sm()
+                        .rounded(px(4.))
                         .border_1()
                         .border_color(chrome.tab_underline)
                 })

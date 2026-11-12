@@ -18,7 +18,7 @@ impl KeelApp {
         let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
 
         let header = div()
-            .h(px(28.))
+            .h(px(41.))
             .px_2()
             .flex()
             .items_center()
@@ -182,13 +182,13 @@ impl KeelApp {
 
         let row = div()
             .id(("tree-row", ix))
-            .h(px(24.))
+            .h(px(22.))
             .mx_1()
             .flex()
             .items_center()
             .gap_1()
             .pl(indent)
-            .pr_1()
+            .pr_2()
             .rounded_sm()
             .cursor_pointer()
             .when(is_selected, |row| {
