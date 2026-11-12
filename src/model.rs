@@ -224,10 +224,10 @@ impl PersistedState {
         let Some(path) = config_file() else {
             return Self::default();
         };
-        let Ok(text) = std::fs::read_to_string(path) else {
+        let Ok(bytes) = std::fs::read(path) else {
             return Self::default();
         };
-        serde_json::from_str(&text).unwrap_or_default()
+        parse_state(&bytes)
     }
 
     pub fn save(&self) -> io::Result<()> {
@@ -245,6 +245,16 @@ impl PersistedState {
 
 fn config_file() -> Option<PathBuf> {
     config_dir().map(|dir| dir.join("state.json"))
+}
+
+/// 解析配置文件内容，容忍 UTF-8 BOM。
+///
+/// 记事本、PowerShell 5 的 `Set-Content` 等工具会写入 BOM，而 `serde_json`
+/// 不接受 BOM；不剥掉的话整份配置会静默回退默认值。
+fn parse_state(bytes: &[u8]) -> PersistedState {
+    const UTF8_BOM: &[u8] = &[0xef, 0xbb, 0xbf];
+    let bytes = bytes.strip_prefix(UTF8_BOM).unwrap_or(bytes);
+    serde_json::from_slice(bytes).unwrap_or_default()
 }
 
 fn config_dir() -> Option<PathBuf> {
@@ -388,5 +398,19 @@ mod tests {
         assert!(restored.breadcrumbs_visible.is_none());
         assert!(restored.theme_dark.is_none());
         assert!(restored.subpixel_text.is_none());
+    }
+
+    #[test]
+    fn 带_bom_的配置仍能解析() {
+        let mut bytes = vec![0xef, 0xbb, 0xbf];
+        bytes.extend_from_slice(br#"{ "theme_dark": true, "last_workspace": "D:/keel" }"#);
+
+        let restored = parse_state(&bytes);
+
+        assert_eq!(restored.theme_dark, Some(true));
+        assert_eq!(
+            restored.last_workspace.as_deref(),
+            Some(Path::new("D:/keel"))
+        );
     }
 }
