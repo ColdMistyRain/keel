@@ -1865,54 +1865,40 @@ impl KeelApp {
             crate::menu::dropdown_menu(
                 "main-menu",
                 chrome.popup_border,
+                // `MainToolbar.Button.size` = 30、`iconSize` = 20、`arc` = 12；
+                // Windows 上的汉堡图标是 expUI 的 `windowsMenu@20x20`（四条横线）。
                 Button::new("main-menu")
                     .ghost()
                     .small()
-                    .w(px(28.))
-                    .h(px(28.))
+                    .w(px(30.))
+                    .h(px(30.))
                     .p_0()
-                    .icon(IconName::Menu),
-                build_main_menu,
-            ),
-            cx,
-        );
-
-        let app_logo = crate::tooltip::with_tooltip(
-            "tip-app-logo",
-            "主菜单",
-            crate::menu::dropdown_menu(
-                "app-logo",
-                chrome.popup_border,
-                Button::new("app-logo")
-                    .ghost()
-                    .small()
-                    .w(px(28.))
-                    .h(px(28.))
-                    .p_0()
+                    .rounded(px(12.))
                     .child(
-                        div()
+                        svg()
+                            .path(SharedString::from(icon("menu_20")))
                             .size(px(20.))
-                            .rounded(px(4.))
-                            .bg(chrome.accent)
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .text_color(chrome.accent_fg)
-                            .text_xs()
-                            .child("K"),
+                            .text_color(chrome.muted_fg),
                     ),
                 build_main_menu,
             ),
             cx,
         );
 
+        // IDEA 新 UI 的工具栏没有单独的 App 徽标，最左就是汉堡菜单；
+        // 项目色由下面的项目部件承担。
         let project_widget = div()
             .id("title-project")
+            // 下拉部件与工具栏按钮同高 30（`MainToolbar.Button.size`），
+            // 内边距取 `MainToolbar.Dropdown.borderInsets` 新 UI 的 (5,10,5,6)，
+            // 悬停圆角取 `MainToolbar.Dropdown.arc` = 12。
+            .h(px(30.))
+            .ml(px(10.))
+            .pl(px(10.))
+            .pr(px(6.))
             .flex()
             .items_center()
-            .gap_1()
-            .px_1()
-            .rounded_sm()
+            .rounded(px(12.))
             .cursor_pointer()
             .hover(|style| style.bg(chrome.control_hover))
             .child(
@@ -1927,11 +1913,13 @@ impl KeelApp {
                     .text_xs()
                     .child(initials),
             )
-            .child(div().whitespace_nowrap().child(project_name))
+            // `iconTextGap` 默认 6，箭头前另有 `BEFORE_CHEVRON_GAP` = 2。
+            .child(div().ml(px(6.)).whitespace_nowrap().child(project_name))
             .child(
                 svg()
                     .path(icon("chevron_down"))
-                    .size(px(14.))
+                    .size(px(16.))
+                    .ml(px(2.))
                     .text_color(chrome.muted_fg),
             )
             .on_click(cx.listener(|this, _event, _window, cx| {
@@ -1941,11 +1929,12 @@ impl KeelApp {
         let branch_widget = branch.map(|branch| {
             div()
                 .id("title-branch")
+                .h(px(30.))
+                .pl(px(10.))
+                .pr(px(6.))
                 .flex()
                 .items_center()
-                .gap_1()
-                .px_1()
-                .rounded_sm()
+                .rounded(px(12.))
                 .text_color(chrome.muted_fg)
                 .hover(|style| style.bg(chrome.control_hover))
                 .child(
@@ -1954,7 +1943,7 @@ impl KeelApp {
                         .size(px(16.))
                         .text_color(chrome.muted_fg),
                 )
-                .child(div().whitespace_nowrap().child(branch))
+                .child(div().ml(px(6.)).whitespace_nowrap().child(branch))
         });
 
         let external = crate::tooltip::with_tooltip(
@@ -1963,9 +1952,10 @@ impl KeelApp {
             Button::new("title-external")
                 .small()
                 .ghost()
-                .w(px(24.))
-                .h(px(24.))
+                .w(px(30.))
+                .h(px(30.))
                 .p_0()
+                .rounded(px(12.))
                 .icon(IconName::ExternalLink)
                 .on_click(cx.listener(|this, _event, _window, _cx| {
                     this.open_project_in_file_manager();
@@ -2004,6 +1994,24 @@ impl KeelApp {
                 .child(glyph)
         };
 
+        // `MainToolbar.Button`：30×30 按钮、20px 图标、圆角 12，
+        // 图标内边距取主题里的 `MainToolbar.Icon.insets` = "6,5,4,5"。
+        let toolbar_button = |id: &'static str, icon_path: String| {
+            Button::new(id)
+                .small()
+                .ghost()
+                .w(px(30.))
+                .h(px(30.))
+                .p_0()
+                .rounded(px(12.))
+                .child(
+                    svg()
+                        .path(SharedString::from(icon_path))
+                        .size(px(20.))
+                        .text_color(chrome.muted_fg),
+                )
+        };
+
         div()
             .relative()
             .overflow_hidden()
@@ -2012,12 +2020,12 @@ impl KeelApp {
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap_2()
-            .pl(px(6.))
+            // 工具栏内的按钮/部件相邻排列（`ToolBar.horizontalToolbarInsets` 只给两侧留白）。
+            .gap_0()
+            .pl(px(7.))
             .bg(chrome.canvas)
             .window_control_area(WindowControlArea::Drag)
             .child(gradient)
-            .child(app_logo)
             .child(menu)
             .child(project_widget)
             .children(branch_widget)
@@ -2026,7 +2034,7 @@ impl KeelApp {
             .child(crate::tooltip::with_tooltip(
                 "tip-title-search",
                 "搜索文件与命令",
-                icon_button("title-search", icon("search"), chrome.muted_fg).on_click(
+                toolbar_button("title-search", icon("search_20")).on_click(
                     cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
                 ),
                 cx,
@@ -2034,11 +2042,9 @@ impl KeelApp {
             .child(crate::tooltip::with_tooltip(
                 "tip-title-settings",
                 "设置",
-                icon_button("title-settings", icon("settings"), chrome.muted_fg).on_click(
-                    cx.listener(|this, _event, _window, cx| {
-                        this.open_settings(SettingsPane::Appearance, cx)
-                    }),
-                ),
+                toolbar_button("title-settings", icon("settings_20")).on_click(cx.listener(
+                    |this, _event, _window, cx| this.open_settings(SettingsPane::Appearance, cx),
+                )),
                 cx,
             ))
             .child(control("window-min", WindowControlArea::Min, "—"))
