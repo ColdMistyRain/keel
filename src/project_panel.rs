@@ -170,6 +170,8 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
     let toggle_id = row.id.clone();
     let folder = row.folder;
     let open = row.open;
+    let dark = shell.appearance.get() == Appearance::Dark;
+    let row_path = row.id.clone();
     let selected = move || ws.selected.get().as_ref() == Some(&selected_id);
     let body = view()
         .h(px(24.0))
@@ -222,7 +224,7 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
                 }),
         )
         .child(
-            svg(if folder { icons::FOLDER } else { icons::FILE })
+            svg(icons::for_file(&row_path, folder, dark))
                 .w(px(16.0))
                 .h(px(16.0))
                 .text_color(move || color_of("secondary-fg")),

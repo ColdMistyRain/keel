@@ -76,6 +76,11 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
     let selected_bg = move || ws.active.get() == Some(index.get());
     let selected_fg = move || ws.active.get() == Some(index.get());
     let selected_close = move || ws.active.get() == Some(index.get());
+    let icon = icons::for_file(
+        &path.display().to_string(),
+        false,
+        shell.appearance.get() == Appearance::Dark,
+    );
     let body = view()
         .h(px(28.0))
         .max_w(px(220.0))
@@ -84,6 +89,7 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
         .gap(px(6.0))
         .px(px(10.0))
         .rounded(px(6.0))
+        .group_named("keel-tab")
         .style_when(selected_bg, |s| {
             s.bg(move || color_of("tab-selected-bg"))
                 .border_1()
@@ -96,7 +102,7 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
             ws.activate_path(&select_path);
         })
         .child(
-            svg(icons::FILE)
+            svg(icon)
                 .w(px(16.0))
                 .h(px(16.0))
                 .text_color(move || color_of("secondary-fg")),
@@ -138,8 +144,9 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
                 .on_press(move || ws.close_path(&close_path))
                 .style_when(
                     move || !selected_close() && !doc_dirty(ws, &close_dirty_path),
-                    |s| s.hidden(),
+                    |s| s.opacity(0.0),
                 )
+                .group_hover_named("keel-tab", |s| s.opacity(1.0))
                 .child(
                     svg(icons::CLOSE)
                         .w(px(12.0))

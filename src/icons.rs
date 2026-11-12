@@ -1,11 +1,17 @@
 //! 菜单与命令面板的图标、助记符。
 //!
-//! 图标是 16×16 的单色 SVG，`currentColor` 跟随主题；路径相对 `assets/`。
+//! 图标是 16×16 的 SVG，`currentColor` 跟随主题；路径相对 `assets/`。
+//! `java*.svg` / `xml*.svg` 取自 IntelliJ 社区版 `platform/icons/src/expui/fileTypes`
+//! （Apache 2.0，文件内保留版权头）。
 
 use nsh_core::prelude::*;
 
 pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
 pub const FILE: ImageAsset = asset!("icons/file.svg");
+pub const JAVA: ImageAsset = asset!("icons/java.svg");
+pub const JAVA_DARK: ImageAsset = asset!("icons/java_dark.svg");
+pub const XML: ImageAsset = asset!("icons/xml.svg");
+pub const XML_DARK: ImageAsset = asset!("icons/xml_dark.svg");
 pub const SAVE: ImageAsset = asset!("icons/save.svg");
 pub const CLOSE: ImageAsset = asset!("icons/close.svg");
 pub const SEARCH: ImageAsset = asset!("icons/search.svg");
@@ -23,6 +29,34 @@ pub const REFRESH: ImageAsset = asset!("icons/refresh.svg");
 pub const COLLAPSE_ALL: ImageAsset = asset!("icons/collapse_all.svg");
 pub const CHEVRON_RIGHT: ImageAsset = asset!("icons/chevron_right.svg");
 pub const CHEVRON_DOWN: ImageAsset = asset!("icons/chevron_down.svg");
+
+/// 树 / 标签页用的文件类型图标：Java、XML 用 expui 彩色图标，其余用通用文件图标。
+pub fn for_file(path: &str, folder: bool, dark: bool) -> ImageAsset {
+    if folder {
+        return FOLDER;
+    }
+    let extension = std::path::Path::new(path)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or_default();
+    match extension {
+        "java" => {
+            if dark {
+                JAVA_DARK
+            } else {
+                JAVA
+            }
+        }
+        "xml" => {
+            if dark {
+                XML_DARK
+            } else {
+                XML
+            }
+        }
+        _ => FILE,
+    }
+}
 
 /// 动作对应的菜单图标。
 pub fn for_action(id: &str) -> Option<ImageAsset> {
