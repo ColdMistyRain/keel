@@ -327,8 +327,11 @@ impl KeelApp {
             let activate_path = path.clone();
             let activate_right_path = path.clone();
             let hover_path = path.clone();
-            let close_path = path.clone();
+            let tab_hover_path = path.clone();
             let icon_path = crate::file_icons::file_icon(&path, chrome.icon_suffix);
+            // 标签是否被悬停、关闭按钮是否被悬停（决定动作面板的可见性与图标）。
+            let is_hovered = self.hovered_tab.as_deref() == Some(path.as_path());
+            let close_hovered = self.hovered_tab_close.as_deref() == Some(path.as_path());
 
             let mut tab = div()
                 .id(("editor-tab", ix))
@@ -388,49 +391,62 @@ impl KeelApp {
                             this.activate_document(idx, window, cx);
                         }
                     }),
-                );
+                )
+                // 记录悬停的标签：IDEA 的动作面板只在选中、悬停或未保存时绘制。
+                .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                    let next = if *hovered {
+                        Some(tab_hover_path.clone())
+                    } else {
+                        None
+                    };
+                    if this.hovered_tab != next {
+                        this.hovered_tab = next;
+                        cx.notify();
+                    }
+                }));
 
-            // IDEA 用蓝色圆点表示未保存，占的就是关闭按钮的位置。
-            if dirty {
-                tab = tab.child(
-                    div()
-                        .id(("editor-tab-dirty", ix))
-                        .size(px(16.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded_full()
-                        .cursor_pointer()
-                        .hover(|style| style.bg(chrome.control_hover))
-                        .child(div().size(px(8.)).rounded_full().bg(chrome.accent))
-                        .on_click(cx.listener(move |this, _event, _window, cx| {
-                            this.request_close(close_path.clone(), cx);
-                        })),
-                );
-            } else {
-                tab = tab.child(
-                    div()
-                        .id(("editor-tab-close", ix))
-                        .size(px(16.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded_sm()
-                        .cursor_pointer()
-                        .hover(|style| style.bg(chrome.control_hover))
-                        .child(
-                            svg()
-                                .path(SharedString::from(format!(
-                                    "icons/close{}.svg",
-                                    chrome.icon_suffix
-                                )))
-                                .size(px(14.))
-                                .text_color(chrome.muted_fg),
-                        )
-                        .on_click(cx.listener(move |this, _event, _window, cx| {
-                            this.request_close(close_path.clone(), cx);
-                        })),
-                );
+            // `ActionPanel.paint()`：新 UI 下未选中、未悬停、未修改的标签不绘制动作
+            // 面板，关闭按钮因此不占宽度；未保存的标签始终显示蓝点。
+            if is_active || is_hovered || dirty {
+                let marker_hover_path = path.clone();
+                let marker_close_path = path.clone();
+                let marker = div()
+                    .id(("editor-tab-marker", ix))
+                    .size(px(16.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .cursor_pointer()
+                    .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                        let next = if *hovered {
+                            Some(marker_hover_path.clone())
+                        } else {
+                            None
+                        };
+                        if this.hovered_tab_close != next {
+                            this.hovered_tab_close = next;
+                            cx.notify();
+                        }
+                    }))
+                    .on_click(cx.listener(move |this, _event, _window, cx| {
+                        this.request_close(marker_close_path.clone(), cx);
+                    }));
+
+                tab = tab.child(if dirty && !close_hovered {
+                    // 未保存标记取 `CloseTab.DotIcon` 的尺寸：6px 圆点（`IconBadge.INFORMATION`）。
+                    marker.child(div().size(px(6.)).rounded_full().bg(chrome.accent))
+                } else {
+                    // 关闭按钮用 expUI 的 `closeSmall` / `closeSmallHovered`：
+                    // 悬停版本自带 10% 前景色的圆形底，必须用 `img()` 才能保留圆底。
+                    marker.child(
+                        img(format!(
+                            "icons/close_small{}{}.svg",
+                            if close_hovered { "_hovered" } else { "" },
+                            chrome.icon_suffix
+                        ))
+                        .size(px(16.)),
+                    )
+                });
             }
 
             // IDEA 的标签右键菜单：关闭 / 关闭其他 / 关闭全部 / 在项目中定位。

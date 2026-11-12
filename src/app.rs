@@ -351,6 +351,10 @@ pub struct KeelApp {
     /// 标签栏滚动位置；打开或切换标签时把目标滚进视野。
     pub tab_scroll: ScrollHandle,
     pub tab_drag: Option<TabDrag>,
+    /// 鼠标悬停的标签（按文件路径记录，关闭其他标签后不会指向错的行）。
+    pub hovered_tab: Option<PathBuf>,
+    /// 鼠标悬停在标签关闭按钮上（用于切换 `closeSmallHovered` 图标）。
+    pub hovered_tab_close: Option<PathBuf>,
     pub project_panel_visible: bool,
     pub bottom_panel_visible: bool,
     /// 当前主题：IntelliJ Light 或 Darcula。
@@ -397,6 +401,8 @@ impl KeelApp {
             active: None,
             tab_scroll: ScrollHandle::new(),
             tab_drag: None,
+            hovered_tab: None,
+            hovered_tab_close: None,
             project_panel_visible: persisted.project_panel_visible,
             bottom_panel_visible: persisted.bottom_panel_visible,
             theme_kind: if persisted.theme_dark.unwrap_or(false) {
