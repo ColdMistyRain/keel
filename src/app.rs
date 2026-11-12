@@ -10,7 +10,7 @@ use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{
     Copy, Cut, EditorState, Input, InputEvent, InputState, Paste, Redo, SelectAll, TabSize, Undo,
 };
-use gpui_component::menu::PopupMenu;
+use gpui_component::menu::{PopupMenu, PopupMenuItem};
 use gpui_component_assets::IconName;
 
 use crate::actions::{
@@ -2182,8 +2182,12 @@ impl KeelApp {
             focus.focus(window, cx);
         }
 
-        let surface =
-            crate::menu::bordered_surface(menu, chrome.popup_border, crate::menu::menu_radius(cx));
+        let surface = crate::menu::bordered_surface(
+            menu,
+            chrome.popup_border,
+            crate::menu::menu_radius(cx),
+            cx.theme().popover,
+        );
         let size = window.bounds().size;
         deferred(
             anchored().child(
@@ -2306,26 +2310,74 @@ impl KeelApp {
 
         let content = match pane {
             SettingsPane::Appearance => {
-                let light_theme = if self.theme_kind == ThemeKind::Light {
-                    Button::new("theme-light").label("浅色").primary()
+                // IDEA 的外观设置用下拉框展示当前值。这里复用带 1px 描边的
+                // 菜单弹层，触发器按 `ComboBox` 的度量画成 28px 高、左对齐
+                // 文字 + 右侧箭头的选择框。
+                let is_dark = self.theme_kind.is_dark();
+                let theme_label = if is_dark { "深色" } else { "浅色" };
+                let theme_app = cx.entity().downgrade();
+                let theme_combo = crate::menu::dropdown_menu(
+                    "settings-theme",
+                    chrome.popup_border,
+                    settings_combo_trigger("settings-theme", theme_label, chrome),
+                    move |menu, _, _| {
+                        let light_app = theme_app.clone();
+                        let dark_app = theme_app.clone();
+                        menu.min_w(px(180.))
+                            .item(PopupMenuItem::new("浅色").checked(!is_dark).on_click(
+                                move |_, _window, cx| {
+                                    light_app
+                                        .update(cx, |this, cx| this.set_theme(ThemeKind::Light, cx))
+                                        .ok();
+                                },
+                            ))
+                            .item(PopupMenuItem::new("深色").checked(is_dark).on_click(
+                                move |_, _window, cx| {
+                                    dark_app
+                                        .update(cx, |this, cx| this.set_theme(ThemeKind::Dark, cx))
+                                        .ok();
+                                },
+                            ))
+                    },
+                );
+
+                let subpixel = self.subpixel_text;
+                let text_label = if subpixel {
+                    "次像素抗锯齿"
                 } else {
-                    Button::new("theme-light").label("浅色").ghost()
+                    "灰度抗锯齿"
                 };
-                let dark_theme = if self.theme_kind.is_dark() {
-                    Button::new("theme-dark").label("深色").primary()
-                } else {
-                    Button::new("theme-dark").label("深色").ghost()
-                };
-                let gray_text = if self.subpixel_text {
-                    Button::new("text-gray").label("灰度抗锯齿").ghost()
-                } else {
-                    Button::new("text-gray").label("灰度抗锯齿").primary()
-                };
-                let subpixel_text = if self.subpixel_text {
-                    Button::new("text-subpixel").label("次像素抗锯齿").primary()
-                } else {
-                    Button::new("text-subpixel").label("次像素抗锯齿").ghost()
-                };
+                let text_app = cx.entity().downgrade();
+                let text_combo = crate::menu::dropdown_menu(
+                    "settings-text-rendering",
+                    chrome.popup_border,
+                    settings_combo_trigger("settings-text-rendering", text_label, chrome),
+                    move |menu, _, _| {
+                        let gray_app = text_app.clone();
+                        let subpixel_app = text_app.clone();
+                        menu.min_w(px(180.))
+                            .item(
+                                PopupMenuItem::new("灰度抗锯齿")
+                                    .checked(!subpixel)
+                                    .on_click(move |_, _window, cx| {
+                                        gray_app
+                                            .update(cx, |this, cx| {
+                                                this.set_subpixel_text(false, cx)
+                                            })
+                                            .ok();
+                                    }),
+                            )
+                            .item(
+                                PopupMenuItem::new("次像素抗锯齿")
+                                    .checked(subpixel)
+                                    .on_click(move |_, _window, cx| {
+                                        subpixel_app
+                                            .update(cx, |this, cx| this.set_subpixel_text(true, cx))
+                                            .ok();
+                                    }),
+                            )
+                    },
+                );
 
                 div()
                     .flex()
@@ -2334,35 +2386,13 @@ impl KeelApp {
                     .child(setting_row(
                         "主题",
                         "切换后立即生效，并写入 state.json",
-                        div()
-                            .flex()
-                            .gap_2()
-                            .child(light_theme.on_click(cx.listener(
-                                |this, _event, _window, cx| {
-                                    this.set_theme(ThemeKind::Light, cx);
-                                },
-                            )))
-                            .child(dark_theme.on_click(cx.listener(
-                                |this, _event, _window, cx| {
-                                    this.set_theme(ThemeKind::Dark, cx);
-                                },
-                            ))),
+                        theme_combo,
                         chrome,
                     ))
                     .child(setting_row(
                         "文本渲染",
                         "灰度抗锯齿字形更干净，次像素渲染更接近 ClearType",
-                        div()
-                            .flex()
-                            .gap_2()
-                            .child(gray_text.on_click(cx.listener(|this, _event, _window, cx| {
-                                this.set_subpixel_text(false, cx);
-                            })))
-                            .child(subpixel_text.on_click(cx.listener(
-                                |this, _event, _window, cx| {
-                                    this.set_subpixel_text(true, cx);
-                                },
-                            ))),
+                        text_combo,
                         chrome,
                     ))
                     .into_any_element()
@@ -2893,6 +2923,31 @@ fn setting_row(
         )
         .child(div().flex_shrink_0().child(controls))
         .into_any_element()
+}
+
+/// 设置页里的下拉框触发器：28px 高、1px `Popup.borderColor` 描边、圆角 4，
+/// 当前值左对齐，右侧是 `chevronDown`（`ComboBox` 的布局）。
+fn settings_combo_trigger(id: &'static str, value: &'static str, chrome: &Chrome) -> Button {
+    Button::new(id)
+        .ghost()
+        .h(px(28.))
+        .min_w(px(180.))
+        .px(px(8.))
+        .justify_start()
+        .rounded(px(4.))
+        .border_1()
+        .border_color(chrome.popup_border)
+        .text_size(px(13.))
+        .child(div().flex_1().whitespace_nowrap().child(value))
+        .child(
+            svg()
+                .path(SharedString::from(format!(
+                    "icons/chevron_down{}.svg",
+                    chrome.icon_suffix
+                )))
+                .size(px(16.))
+                .text_color(chrome.muted_fg),
+        )
 }
 
 /// IDEA 风格的图标按钮：图标来自随程序打包的 expUI SVG，悬停时铺浅色底。

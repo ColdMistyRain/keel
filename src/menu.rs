@@ -13,22 +13,33 @@ use gpui_component::menu::PopupMenu;
 use gpui_component::popover::Popover;
 use gpui_component::{ActiveTheme as _, Selectable};
 
-/// 菜单表面的圆角上限，与组件库 `PopupMenu` 内部一致（`radius.min(8)`）。
-/// 菜单项的选中块用主题半径 4，对应 IDEA 的 `PopupMenu.Selection.arc`(8) / 2。
+/// 菜单表面的圆角，对应 `PopupMenu.borderCornerRadius` = 8（Jewel 桥接把它
+/// 当作实际圆角半径使用，不是弧直径）。组件库的 `popover_style` 用
+/// `theme.radius`（控件半径 4），所以这里单独取 `radius_lg`，避免菜单表面
+/// 跟着按钮一起变成 4。
 const MENU_RADIUS: Pixels = px(8.);
 
 /// 菜单表面的圆角（下拉菜单与右键菜单共用）。
 pub fn menu_radius(cx: &App) -> Pixels {
-    cx.theme().radius.min(MENU_RADIUS)
+    cx.theme().radius_lg.min(MENU_RADIUS)
 }
 
 /// 菜单表面 + IDEA 的 1px 描边。
 ///
 /// 组件库的 `popover_style` 只有阴影环，这里在菜单表面内侧补一层实线，
-/// 描边颜色取 `Popup.borderColor`。
-pub fn bordered_surface(menu: Entity<PopupMenu>, border: Hsla, radius: Pixels) -> AnyElement {
+/// 描边颜色取 `Popup.borderColor`。外层同时铺一层 `popover` 底色：组件库
+/// 内部仍按 `theme.radius`(4) 绘制菜单背景，外层 8px 圆角与内层 4px 之间的
+/// 空隙由这层底色补齐，菜单表面因此呈现 IDEA 的 8px 圆角。
+pub fn bordered_surface(
+    menu: Entity<PopupMenu>,
+    border: Hsla,
+    radius: Pixels,
+    background: Hsla,
+) -> AnyElement {
     div()
         .relative()
+        .rounded(radius)
+        .bg(background)
         .child(menu)
         // 盖在菜单背景之上画 1px 实线，模拟 IDEA 的 `Popup.borderColor`。
         .child(
@@ -99,6 +110,6 @@ where
                 }
             };
 
-            bordered_surface(menu, border, menu_radius(cx))
+            bordered_surface(menu, border, menu_radius(cx), cx.theme().popover)
         })
 }

@@ -282,6 +282,16 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.tokens.button_primary_hover = color(tokens.brand_hover).into();
         theme.tokens.button_primary_active = color(tokens.brand_active).into();
         theme.tokens.button_primary_foreground = color(0xffffff).into();
+        // 组件库的菜单项/列表项用 `tokens.accent` 画悬停与选中块
+        // （`MenuItemElement` 读的是 `tokens.accent`，不是 `theme.accent`）。
+        // 不覆盖时会落回组件库自带的灰色 accent，而不是 IDEA 的蓝色
+        // `selection-bg-active`。`primary` 同样用于单选/复选框指示器。
+        theme.tokens.primary = color(tokens.brand).into();
+        theme.tokens.primary_hover = color(tokens.brand_hover).into();
+        theme.tokens.primary_active = color(tokens.brand_active).into();
+        theme.tokens.primary_foreground = color(0xffffff).into();
+        theme.tokens.accent = color(tokens.selection).into();
+        theme.tokens.accent_foreground = color(tokens.selection_fg).into();
         theme.tokens.selection = color(tokens.editor_selection).into();
         theme.tokens.caret = color(tokens.caret).into();
 
