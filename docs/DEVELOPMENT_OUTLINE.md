@@ -140,6 +140,11 @@ serde_json = "1"
 
 保持**单 crate**，按职责拆模块；只有当某块需要独立测试或被外部进程复用时才拆 crate。
 
+已经抽出的独立 crate（GPUI 与 nsh 共用）：
+
+- `crates/keel-theme`：IDEA Islands 主题令牌（`ThemeKind` / `Tokens` / `LIGHT` / `DARK`）；
+- `crates/keel-workspace`：项目目录扫描、树摊平、语言识别。
+
 ```
 src/
   main.rs            入口、菜单、快捷键、主题

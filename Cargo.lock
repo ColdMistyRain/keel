@@ -3492,11 +3492,16 @@ dependencies = [
  "gpui_ce_components",
  "gpui_ce_components_assets",
  "gpui_ce_platform",
+ "keel-theme",
  "rfd",
  "roxmltree 0.20.0",
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "keel-theme"
+version = "0.1.0"
 
 [[package]]
 name = "khronos-egl"

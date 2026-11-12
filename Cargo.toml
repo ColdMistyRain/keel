@@ -5,6 +5,8 @@ edition = "2024"
 description = "借鉴 IntelliJ IDEA 交互范式的 Rust 原生 IDE"
 
 [dependencies]
+# 主题令牌与工作区模型抽成独立 crate，供 GPUI 版本与 nsh spike 共用。
+keel-theme = { path = "crates/keel-theme" }
 # gpui-ce 0.3.0 对应 GitHub 提交 58ff79777198b35e78467795eb50eb258d640eb9。
 # 组件仓库 main 仍按 crates.io 引用 gpui-ce =0.3.0，保持同一来源可避免重复 gpui 类型。
 gpui = { package = "gpui-ce", version = "=0.3.0" }

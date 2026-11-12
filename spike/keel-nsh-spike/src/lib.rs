@@ -605,8 +605,10 @@ fn code_editor(ws: Workspace) -> impl IntoElement {
     let language = computed(move || {
         ws.active.with(|active| {
             active.and_then(|index| {
-                ws.docs
-                    .with(|docs| docs.get(index).map(|doc| language_of(&doc.path)))
+                ws.docs.with(|docs| {
+                    docs.get(index)
+                        .map(|doc| SharedString::from(language_of(&doc.path)))
+                })
             })
         })
     });

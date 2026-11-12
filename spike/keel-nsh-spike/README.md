@@ -44,14 +44,14 @@ nsh package --target windows
 
 ```
 src/lib.rs        界面：标题栏、工具窗口、项目树、标签页、编辑器、状态栏
-src/workspace.rs  非 UI 状态：项目目录、文件树、文档、保存、语言识别
+src/workspace.rs  nsh 侧状态：把 keel-workspace 的模型包成信号，管理文档与保存
 samples/demo/     Java 示例项目（pom.xml + Main.java + Greeter.java）
 theme.json        IDEA 令牌 → nsh 主题
 nsh.json          应用配置：窗口尺寸、隐藏标题栏、主题
 ```
 
-`workspace.rs` 是 P1「抽 `keel-core` / `keel-workspace`」的雏形：只读写文件、
-持有信号，不画界面。
+`workspace.rs` 只持有 nsh 信号；目录扫描、树摊平、语言识别来自仓库里的
+[`keel-workspace`](../../crates/keel-workspace/src/lib.rs)，与 GPUI 版本共用。
 
 ## P0 验收记录
 

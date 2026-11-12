@@ -1,14 +1,16 @@
-//! Keel 工作区的非 UI 状态：项目目录、文件树、打开的文档和状态栏消息。
+//! Keel spike 的 UI 状态层：把 `keel-workspace` 的模型包成 nsh 信号。
 //!
-//! 这一层不画界面，只读写文件并持有信号，对应迁移方案 P1 里
-//! `keel-workspace` 的雏形；spike 先放在同一个 crate 内验证职责切分。
+//! 目录扫描、树摊平、语言识别都在 `crates/keel-workspace`（与 UI 框架无关）；
+//! 这里只保留 nsh 需要的信号、文档和保存逻辑。
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use nsh_base::TreeItem;
+use keel_workspace::{FlatRow, ProjectNode, flatten, scan_project};
 use nsh_core::prelude::*;
+
+pub use keel_workspace::{language_label, language_name as language_of};
 
 /// 编辑器里打开的一个文档。
 #[derive(Clone, PartialEq)]
@@ -42,8 +44,9 @@ impl Doc {
 pub struct Workspace {
     /// 已打开项目的根目录。
     pub root: Signal<Option<PathBuf>>,
-    /// 项目树的数据源（`id` 是绝对路径）。
-    pub tree: Signal<Vec<TreeItem>>,
+    /// 项目树的数据源（`keel-workspace` 的节点）。
+    pub tree: Signal<Vec<ProjectNode>>,
+    /// 展开的节点 id（绝对路径）。
     pub expanded: Signal<Vec<SharedString>>,
     pub selected: Signal<Option<SharedString>>,
     /// 打开的文档，顺序就是标签顺序。
@@ -103,14 +106,13 @@ impl Workspace {
             self.say(format!("不是目录：{}", dir.display()));
             return;
         }
-        let items = read_children(&dir, 0);
-        let mut expanded = Vec::new();
-        for item in &items {
-            if !item.children.is_empty() {
-                expanded.push(item.id.clone());
-            }
-        }
-        self.tree.set(items);
+        let nodes = scan_project(&dir);
+        let expanded = nodes
+            .iter()
+            .filter(|node| node.is_dir && !node.children.is_empty())
+            .map(|node| SharedString::from(node.path.display().to_string()))
+            .collect();
+        self.tree.set(nodes);
         self.expanded.set(expanded);
         self.selected.set(None);
         self.message
@@ -248,8 +250,16 @@ impl Workspace {
 
     /// 展开状态下的可见行（spike 不做虚拟化，项目规模足够小）。
     pub fn visible_rows(&self) -> Vec<TreeRow> {
-        let expanded = self.expanded.get();
+        let expanded: Vec<String> = self
+            .expanded
+            .get()
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
         flatten(&self.tree.get(), &expanded, 0)
+            .into_iter()
+            .map(TreeRow::from)
+            .collect()
     }
 
     /// 当前文档相对项目根的路径片段，用于面包屑（读取信号，供 `dynamic` 跟随）。
@@ -283,7 +293,7 @@ impl Workspace {
     }
 }
 
-/// 项目树里显示的一行（已展开的层级）。
+/// 项目树里显示的一行（nsh 侧，`keel-workspace` 的 `FlatRow` 转成共享字符串）。
 #[derive(Clone, PartialEq)]
 pub struct TreeRow {
     pub id: SharedString,
@@ -294,24 +304,16 @@ pub struct TreeRow {
     pub open: bool,
 }
 
-/// 按展开状态把树摊平成可见行。
-fn flatten(items: &[TreeItem], expanded: &[SharedString], depth: u32) -> Vec<TreeRow> {
-    let mut rows = Vec::new();
-    for item in items {
-        let folder = !item.children.is_empty();
-        let open = folder && expanded.contains(&item.id);
-        rows.push(TreeRow {
-            id: item.id.clone(),
-            label: item.label.clone(),
-            depth,
-            folder,
-            open,
-        });
-        if open {
-            rows.extend(flatten(&item.children, expanded, depth + 1));
+impl From<FlatRow> for TreeRow {
+    fn from(row: FlatRow) -> Self {
+        Self {
+            id: row.id.into(),
+            label: row.label.into(),
+            depth: row.depth,
+            folder: row.folder,
+            open: row.open,
         }
     }
-    rows
 }
 
 /// 示例项目的位置：`nsh run` 的工作目录是应用目录，直接从仓库根运行时再退一层。
@@ -323,92 +325,4 @@ fn demo_dir() -> Option<PathBuf> {
         }
     }
     None
-}
-
-/// 项目树：目录在前、文件在后，跳过构建产物和隐藏目录。
-fn read_children(dir: &Path, depth: usize) -> Vec<TreeItem> {
-    if depth >= 12 {
-        return Vec::new();
-    }
-    let Ok(entries) = fs::read_dir(dir) else {
-        return Vec::new();
-    };
-    let mut dirs = Vec::new();
-    let mut files = Vec::new();
-    for entry in entries.flatten().take(500) {
-        let path = entry.path();
-        let Some(name) = path
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-        else {
-            continue;
-        };
-        if skip(&name) {
-            continue;
-        }
-        let children = if path.is_dir() {
-            read_children(&path, depth + 1)
-        } else {
-            Vec::new()
-        };
-        let item = TreeItem::new(path.display().to_string(), name).children(children);
-        if path.is_dir() {
-            dirs.push(item);
-        } else {
-            files.push(item);
-        }
-    }
-    dirs.sort_by_key(|item| item.label.to_lowercase());
-    files.sort_by_key(|item| item.label.to_lowercase());
-    dirs.extend(files);
-    dirs
-}
-
-fn skip(name: &str) -> bool {
-    matches!(
-        name,
-        ".git" | ".idea" | ".nsh" | "target" | "node_modules" | "build" | "out" | ".gradle"
-    ) || name.starts_with('.')
-}
-
-/// 按扩展名给出编辑器语言（nsh Editor 接受语言名、扩展名或文件名）。
-pub fn language_of(path: &Path) -> SharedString {
-    let ext = path
-        .extension()
-        .map(|ext| ext.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
-    let name = match ext.as_str() {
-        "java" => "java",
-        "kt" | "kts" => "kotlin",
-        "rs" => "rust",
-        "xml" | "pom" => "xml",
-        "toml" => "toml",
-        "json" => "json",
-        "md" => "markdown",
-        "gradle" => "groovy",
-        "properties" => "properties",
-        "yaml" | "yml" => "yaml",
-        "ts" => "typescript",
-        "tsx" => "tsx",
-        "js" => "javascript",
-        "css" => "css",
-        "html" => "html",
-        "sh" => "shell",
-        "sql" => "sql",
-        _ => "text",
-    };
-    name.into()
-}
-
-/// 状态栏显示的语言大写名。
-pub fn language_label(path: &Path) -> String {
-    let ext = path
-        .extension()
-        .map(|ext| ext.to_string_lossy().to_ascii_uppercase())
-        .unwrap_or_default();
-    if ext.is_empty() {
-        "Plain Text".to_owned()
-    } else {
-        ext
-    }
 }

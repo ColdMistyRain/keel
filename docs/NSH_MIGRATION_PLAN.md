@@ -217,9 +217,30 @@ macOS/Linux 放到后续阶段。
 6. Windows 上窗口尺寸默认值要小于屏幕可用高度（本机 1280×720），否则窗口按钮
    会被挤出屏幕。
 
-下一步（P1）：把 `src/workspace.rs` 抽成 `keel-workspace`，把 IDEA 令牌到
-`theme.json` 的映射抽成 `keel-theme`，让 GPUI 版本和 nsh 版本共用；
-之后再按 P2 用 `dock_area` 替换自研分栏。
+下一步（P1）已开始，见 §4.2。
+
+### 4.2 P1 进展（2026-11-12）
+
+已抽出两个不依赖 UI 框架的 crate：
+
+| crate | 内容 | 当前消费者 |
+| --- | --- | --- |
+| [`crates/keel-theme`](../crates/keel-theme/src/lib.rs) | `ThemeKind`、`Tokens`、`LIGHT`/`DARK`（IDEA Islands 数值） | GPUI 的 `src/idea_theme.rs`（只做 `u32 → Hsla` 与组件库写入） |
+| [`crates/keel-workspace`](../crates/keel-workspace/src/lib.rs) | `ProjectNode`、`scan_project`、`flatten`、`language_name`/`language_label` | nsh spike 的 `src/workspace.rs`（只加信号与文档状态） |
+
+验证：
+
+- `cargo test -p keel-theme`：3 通过（浅/深差异、选中色、枚举取值）；
+- `cargo test -p keel-workspace`：3 通过（语言识别、忽略规则、临时目录扫描 + 摊平）；
+- 根 GPUI 版本 `cargo check` / `cargo test`：通过（14 个测试）；
+- spike `nsh test`：1 通过；项目树截图与 P0 一致。
+
+还没做的 P1 部分：
+
+- `src/project_tree.rs`、`src/model.rs` 尚未改用 `keel-workspace`（GPUI 侧仍是自己的树模型）；
+- `spike/.../theme.json` 仍是手写映射，尚未由 `keel-theme` 生成；
+- `keel-core` / `keel-vfs` / `keel-i18n` 未开始；
+- GPUI 与 nsh 的文档状态（打开的文件、光标、保存）还没有共享的 `keel-workspace` 会话模型。
 
 ### P1：抽 `keel-core`
 
