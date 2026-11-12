@@ -15,7 +15,8 @@ impl KeelApp {
                     .px_3()
                     .flex()
                     .items_center()
-                    .text_xs()
+                    // 工具窗口标题字号跟随 `ToolWindow.Header.font.size.offset=0`（13px）。
+                    .text_size(px(13.))
                     .cursor_pointer()
                     .when(is_active, |tab| {
                         tab.text_color(chrome.fg)
@@ -110,7 +111,10 @@ impl KeelApp {
                     .when(ix == selected, |item| {
                         item.bg(chrome.selection).text_color(chrome.selection_fg)
                     })
-                    .hover(|style| style.bg(chrome.panel))
+                    // 选中项悬停时保留选中底色。
+                    .when(ix != selected, |item| {
+                        item.hover(|style| style.bg(chrome.hover_bg))
+                    })
                     .child(div().child(command.label()))
                     .child(
                         div()

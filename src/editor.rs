@@ -355,8 +355,9 @@ impl KeelApp {
                         .border_color(chrome.tab_underline)
                 })
                 .when(!is_active, |tab| {
+                    // 悬停时按 IDEA 的 `paintDimmed()` 恢复满对比度。
                     tab.text_color(chrome.tab_fg_unselected)
-                        .hover(|style| style.bg(chrome.control_hover))
+                        .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
                 .child(

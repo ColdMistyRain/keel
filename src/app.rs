@@ -94,8 +94,10 @@ impl Chrome {
             tab_bg: crate::idea_theme::color(tokens.tab_background),
             tab_selected_bg: crate::idea_theme::color(tokens.tab_selected_background),
             tab_fg_unselected: {
+                // `EditorTabs.unselectedBlend = 0.9`：未选中的标签文字只是向背景
+                // 混入 10%，等价于 90% 不透明的前景色。
                 let mut color = theme.foreground;
-                color.alpha = 0.75;
+                color.alpha = 0.9;
                 color
             },
             status_bg: crate::idea_theme::color(tokens.status_bar),

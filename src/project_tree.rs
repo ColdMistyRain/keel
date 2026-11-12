@@ -196,7 +196,10 @@ impl KeelApp {
             .when(is_selected, |row| {
                 row.bg(chrome.selection).text_color(chrome.selection_fg)
             })
-            .hover(|style| style.bg(chrome.hover_bg))
+            // 选中行悬停时保持选中底色（和 IDEA 的树一致）。
+            .when(!is_selected, |row| {
+                row.hover(|style| style.bg(chrome.hover_bg))
+            })
             .child(
                 div()
                     .w(px(16.))
