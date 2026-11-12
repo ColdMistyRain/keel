@@ -352,6 +352,48 @@ keel-core
 已知视觉差异：菜单没有助记符下划线与图标；工具窗口头没有齿轮菜单；没有
 “最近项目”欢迎页；文件图标仍是字母徽标。这些不影响最小可用流程。
 
+### 4.5 架构审计：平台层与 IDEA 社区版对照（2026-11-12）
+
+**结论：外壳已经像 IDEA，平台层还没有接线。** 当前主工程是“单窗口 UI 应用 +
+若干独立 crate”；`keel-core` 的服务容器、`ProjectModel`、`Disposable` 等机制
+已经实现并有测试，但默认启动路径没有使用它们。
+
+| IDEA 机制 | 现状 | 结论 |
+| --- | --- | --- |
+| Application / Project Service Container | `keel-core::ServiceContainer` 已实现；主工程 `Shell` 直接持有状态，从未创建 `AppServices` / `ProjectServices` | 未接线 |
+| Disposable 树 / 项目关闭 | `Disposer` 已实现；没有项目打开 / 关闭生命周期 | 未接线 |
+| MessageBus / Topic | `ProjectModel` 内部使用；主工程直接 `scan_snapshot` + 自己的 `Signal<Arc<ProjectSnapshot>>` | 模型被绕过 |
+| Workspace Model（不可变快照） | 快照类型存在，但 `src/workspace.rs` 同时承担项目模型、编辑器标签和 UI 状态 | 部分 |
+| VFS（`VirtualFile`） | `src/workspace.rs` 直接 `std::fs::read_to_string` / `fs::write` | 缺失（P3） |
+| Document / PSI / Index | 文本直接存进 nsh 编辑器，没有 Document / PSI 层 | 缺失（P3） |
+| ActionManager / DataContext | 注册表、`DataContext`、菜单和快捷键已统一；动作闭包仍直接捕获 `Shell` | 基本对齐，耦合待解 |
+| FileEditorManager / EditorsSplitters | 打开 / 预览 / 固定 / 关闭 / 脏状态都在 `src/workspace.rs`；只有一个编辑器组 | 单组、无服务 |
+| ToolWindowManager / Factory | `Tool` / `Bottom` 是硬编码枚举与 `match`，没有注册表 / 工厂 | 缺失扩展点 |
+| IdeRootPane / MainToolbar / StatusBar | 结构、菜单、快捷图标、工具窗口条纹、状态栏都已落地 | 对齐（见 §4.4） |
+| PersistentStateComponent / Configurable | 无设置、最近项目、会话持久化 | 缺失（P4） |
+| 后台任务 / 读写锁 | 目录扫描和保存都在 UI 线程同步执行 | 缺失，项目大时会卡 UI |
+| i18n | 文案硬编码在组件里 | 缺失 |
+
+**主要风险**
+
+1. 项目模型有两个来源：`keel-workspace::ProjectModel` 与 `src/workspace.rs` 的
+   快照信号；打开 / 刷新项目绕过 `ProjectModel` 和 `MessageBus`。
+2. 没有服务容器接线，后续 LSP、索引、设置等服务没有统一的生命周期与释放位置。
+3. `src/workspace.rs` 正在变成“项目模型 + 编辑器管理器 + 文件 IO + UI 状态”的
+   上帝对象，P3/P4 继续加功能会失控。
+4. 动作定义直接捕获 `Shell`，命令面板、插件和工具栏难以复用同一批动作。
+
+**建议的最小重构顺序**
+
+1. **接线 `keel-core`**：`Shell::new` 创建 `AppServices`；项目打开时创建
+   `ProjectServices`，关闭时 `dispose()`；`ProjectService` 持有 `ProjectModel`，
+   UI 只订阅快照（用一层 nsh `Signal` 适配）。
+2. **抽 `FileEditorService`**：把打开 / 预览 / 固定 / 关闭 / 脏状态从
+   `src/workspace.rs` 移到独立服务，UI 只保留选中索引与渲染。
+3. **最小 `keel-vfs`**：文件读写走 VFS 抽象，装配本地实现，替换 `std::fs`。
+4. **ToolWindow 描述表**：把硬编码枚举换成描述符注册表，先不实现浮动 / 拖放。
+5. **设置与持久化**：最近项目、会话、主题选择（P4）。
+
 
 ### P1：抽 `keel-core`
 
