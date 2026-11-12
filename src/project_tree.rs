@@ -19,7 +19,11 @@ impl KeelApp {
 
         let header = div()
             .h(px(41.))
-            .px_2()
+            // 标题与右侧工具栏的左右内边距取自
+            // `ToolWindow.Header.labelLeftRightInsets`（0,12,0,16）与
+            // `toolbarLeftRightInsets`（0,12,0,8）。
+            .pl(px(12.))
+            .pr(px(8.))
             .flex()
             .items_center()
             .gap_1()

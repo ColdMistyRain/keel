@@ -2779,15 +2779,14 @@ pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, colo
 }
 
 /// 状态栏右端的一个部件，悬停时前景变正文色并给出轻微底色。
-/// 内边距取自 `StatusBar.Widget.hoverInsets`（3,4,1,4）。
+/// 内边距取自 `StatusBar.Widget.border`（6,8）。
 fn status_widget(text: impl Into<SharedString>, chrome: &Chrome) -> AnyElement {
     div()
         .h_full()
         .flex()
         .items_center()
-        .px(px(4.))
-        .pt(px(3.))
-        .pb(px(1.))
+        .px(px(8.))
+        .py(px(6.))
         .text_color(chrome.muted_fg)
         .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
         .child(text.into())
