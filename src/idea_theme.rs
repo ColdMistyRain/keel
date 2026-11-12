@@ -126,7 +126,7 @@ pub const LIGHT: Tokens = Tokens {
     feedback_border: 0xd1d3d9,           // feedback-border = layer-0-border(gray-130)
     scrollbar_thumb: 0x73737333,         // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0x73737347,   // ScrollBar.Transparent.hoverThumbColor
-    island_arc: 16.,                     // Island.compactArc（COMPACT 密度）
+    island_arc: 20.,                     // Island.arc（默认密度）
     dark_icons: false,
 };
 
@@ -163,7 +163,7 @@ pub const DARK: Tokens = Tokens {
     feedback_border: 0x33353b,           // feedback-border = layer-2-bg，与底色相同
     scrollbar_thumb: 0xa6a6a647,         // ScrollBar.Transparent.thumbColor
     scrollbar_thumb_hover: 0xa6a6a659,   // ScrollBar.Transparent.hoverThumbColor
-    island_arc: 16.,                     // Island.compactArc（COMPACT 密度）
+    island_arc: 20.,                     // Island.arc（默认密度）
     dark_icons: true,
 };
 

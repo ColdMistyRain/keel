@@ -73,7 +73,7 @@ impl KeelApp {
             .text_color(chrome.panel_fg)
             .rounded(chrome.island_arc)
             .overflow_hidden()
-            .mt(px(4.))
+            .mt(px(6.))
             .child(
                 div()
                     // 工具窗口标题栏（这里承载标签）的高度是 `ToolWindow.Header.height`
