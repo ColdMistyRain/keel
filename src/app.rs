@@ -50,6 +50,8 @@ pub struct Chrome {
     pub control_hover: Hsla,
     /// 侧边条分组、工具栏分隔线（`toolbar-border`）。
     pub separator: Hsla,
+    /// 菜单等弹层里的单线分隔条（`Separator.separatorColor`）。
+    pub separator_line: Hsla,
     /// 通知气泡底色（`feedback-bg`）。
     pub feedback: Hsla,
     /// 通知气泡的 1px 描边（`Notification.borderColor`）。
@@ -97,6 +99,7 @@ impl Chrome {
             hover_bg: crate::idea_theme::color_rgba(tokens.hover),
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
             separator: crate::idea_theme::color_rgba(tokens.separator),
+            separator_line: crate::idea_theme::color(tokens.separator_line),
             feedback: crate::idea_theme::color(tokens.feedback),
             feedback_border: crate::idea_theme::color(tokens.feedback_border),
             selection: crate::idea_theme::color(tokens.selection),
@@ -1864,6 +1867,7 @@ impl KeelApp {
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "Keel".to_string());
         let badge_color = crate::idea_theme::project_badge(self.theme_kind, &seed);
+        let menu_separator = chrome.separator_line;
 
         let menu = crate::tooltip::with_tooltip(
             "tip-main-menu",
@@ -1886,7 +1890,7 @@ impl KeelApp {
                             .size(px(20.))
                             .text_color(chrome.muted_fg),
                     ),
-                build_main_menu,
+                move |menu, window, cx| build_main_menu(menu, window, cx, menu_separator),
             ),
             cx,
         );
@@ -3038,41 +3042,46 @@ pub fn empty_editor_state(chrome: &Chrome) -> AnyElement {
 }
 
 /// 顶部工具栏和系统菜单共用的主菜单结构。
-fn build_main_menu(menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>) -> PopupMenu {
-    menu.submenu("文件", window, cx, |menu, _, _| {
+fn build_main_menu(
+    menu: PopupMenu,
+    window: &mut Window,
+    cx: &mut Context<PopupMenu>,
+    separator: Hsla,
+) -> PopupMenu {
+    menu.submenu("文件", window, cx, move |menu, _, _| {
         menu.menu("打开项目目录…", Box::new(OpenProject))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("保存", Box::new(SaveFile))
             .menu("关闭编辑器", Box::new(CloseEditor))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("设置…", Box::new(ShowSettings))
     })
-    .submenu("编辑", window, cx, |menu, _, _| {
+    .submenu("编辑", window, cx, move |menu, _, _| {
         menu.menu("撤销", Box::new(Undo))
             .menu("重做", Box::new(Redo))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("剪切", Box::new(Cut))
             .menu("复制", Box::new(Copy))
             .menu("粘贴", Box::new(Paste))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("全选", Box::new(SelectAll))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("查找…", Box::new(FindInFile))
             .menu("替换…", Box::new(ReplaceInFile))
     })
-    .submenu("视图", window, cx, |menu, _, _| {
+    .submenu("视图", window, cx, move |menu, _, _| {
         menu.menu("显示或隐藏项目面板", Box::new(ToggleProjectPanel))
             .menu("显示或隐藏底部面板", Box::new(ToggleBottomPanel))
             .menu("显示或隐藏导航栏面包屑", Box::new(ToggleBreadcrumbs))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("切换深色 / 浅色主题", Box::new(ToggleTheme))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("命令面板…", Box::new(ShowCommandPalette))
     })
-    .submenu("导航", window, cx, |menu, _, _| {
+    .submenu("导航", window, cx, move |menu, _, _| {
         menu.menu("上一个标签", Box::new(PreviousTab))
             .menu("下一个标签", Box::new(NextTab))
-            .separator()
+            .item(crate::menu::separator(separator))
             .menu("在项目中定位", Box::new(LocateInProject))
     })
     .submenu("工具", window, cx, |menu, _, _| {

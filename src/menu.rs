@@ -9,7 +9,7 @@
 use std::rc::Rc;
 
 use gpui::{prelude::*, *};
-use gpui_component::menu::PopupMenu;
+use gpui_component::menu::{PopupMenu, PopupMenuItem};
 use gpui_component::popover::Popover;
 use gpui_component::{ActiveTheme as _, Selectable};
 
@@ -51,6 +51,28 @@ pub fn bordered_surface(
                 .border_color(border),
         )
         .into_any_element()
+}
+
+/// IDEA 风格的菜单分隔线。
+///
+/// 组件库的 `PopupMenu::separator()` 画 2px 的 `theme.border`（编辑器缩进线色
+/// `#EBECF0`），上下还带 2px 间隙；IDEA 的 `DarculaSeparatorUI` 是 3px 高的
+/// 分隔块里一条 1px 线（`Separator.separatorColor`：浅色回退 `#CDCDCD`，
+/// 深色 `popup-border`）。这里用禁用的 `ElementItem` 承载这条线——禁用项
+/// 不会响应悬停，因此不会出现选中块。
+pub fn separator(color: Hsla) -> PopupMenuItem {
+    PopupMenuItem::element(move |_, _| {
+        div()
+            .h(px(1.))
+            // 抵消菜单容器的 2px 行间距，让分隔块总高回到 IDEA 的 3px。
+            .my(px(-1.))
+            // 抵消菜单项左右各 8px 的内边距，分隔线接近通栏（距弹层边缘 4px）。
+            .mx(px(-8.))
+            .w_full()
+            .bg(color)
+            .into_any_element()
+    })
+    .disabled(true)
 }
 
 /// 缓存的菜单实体，避免每次重绘都重建菜单项。

@@ -15,6 +15,7 @@ impl KeelApp {
     pub fn render_project_panel(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let root = self.project.root.clone();
         let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
+        let separator = chrome.separator_line;
 
         let header = div()
             .h(px(41.))
@@ -49,9 +50,9 @@ impl KeelApp {
                             .size(px(14.))
                             .text_color(chrome.muted_fg),
                     ),
-                |menu, _, _| {
+                move |menu, _, _| {
                     menu.menu("在项目中定位", Box::new(LocateInProject))
-                        .separator()
+                        .item(crate::menu::separator(separator))
                         .menu("折叠全部", Box::new(CollapseProjectTree))
                         .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
                 },
@@ -125,10 +126,10 @@ impl KeelApp {
                 "project-options",
                 chrome.popup_border,
                 crate::app::icon_button("project-options", icon("more"), chrome.muted_fg),
-                |menu, _, _| {
+                move |menu, _, _| {
                     menu.menu("从磁盘重新加载", Box::new(RefreshProjectTree))
                         .menu("折叠全部", Box::new(CollapseProjectTree))
-                        .separator()
+                        .item(crate::menu::separator(separator))
                         .menu("隐藏工具窗口", Box::new(ToggleProjectPanel))
                 },
             ))
@@ -198,6 +199,7 @@ impl KeelApp {
         let left_path = row_path.clone();
         let right_path = row_path.clone();
         let is_dir = row.is_dir;
+        let menu_separator = chrome.separator_line;
         // 根行在项目名后附带完整路径，和 IDEA 的项目树一致。
         let is_root = row.depth == 0;
         let root_path = is_root.then(|| row.path.display().to_string());
@@ -294,7 +296,7 @@ impl KeelApp {
                     let menu_path = right_path.clone();
                     let menu_is_dir = is_dir;
                     this.open_context_menu(event.position, window, cx, move |menu, _, _| {
-                        build_row_menu(menu, menu_app, menu_path, menu_is_dir)
+                        build_row_menu(menu, menu_app, menu_path, menu_is_dir, menu_separator)
                     });
                 }),
             )
@@ -308,6 +310,7 @@ fn build_row_menu(
     menu_app: WeakEntity<KeelApp>,
     path: PathBuf,
     menu_is_dir: bool,
+    separator: Hsla,
 ) -> PopupMenu {
     // 文件的新建位置取所在目录，目录则取自身。
     let dir = if menu_is_dir {
@@ -343,7 +346,7 @@ fn build_row_menu(
         }),
     );
 
-    menu = menu.separator();
+    menu = menu.item(crate::menu::separator(separator));
 
     let rename_app = menu_app.clone();
     let rename_path = path.clone();
@@ -367,7 +370,7 @@ fn build_row_menu(
             .ok();
     }));
 
-    menu = menu.separator();
+    menu = menu.item(crate::menu::separator(separator));
 
     let copy_app = menu_app.clone();
     let copy_path = path.clone();
@@ -384,7 +387,7 @@ fn build_row_menu(
     if !menu_is_dir {
         let open_app = menu_app.clone();
         let open_path = path;
-        menu = menu.separator();
+        menu = menu.item(crate::menu::separator(separator));
         menu = menu.item(
             PopupMenuItem::new("在编辑器中打开").on_click(move |_, window, cx| {
                 open_app

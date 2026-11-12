@@ -472,6 +472,7 @@ impl KeelApp {
             // IDEA 的标签右键菜单：关闭 / 关闭其他 / 关闭全部 / 在项目中定位。
             // 菜单在点击处弹出，表面与下拉菜单一样带 1px 描边。
             let menu_path = path.clone();
+            let menu_separator = chrome.separator_line;
             let tab = tab.on_mouse_down(
                 MouseButton::Right,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
@@ -503,7 +504,7 @@ impl KeelApp {
                                 .update(cx, |this, cx| this.close_all_documents(cx))
                                 .ok();
                         }))
-                        .separator()
+                        .item(crate::menu::separator(menu_separator))
                         .item(PopupMenuItem::new("复制路径").on_click(move |_, _, cx| {
                             cx.write_to_clipboard(ClipboardItem::new_string(
                                 copy_path.display().to_string(),

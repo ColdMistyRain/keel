@@ -78,6 +78,8 @@ pub struct Tokens {
     pub popup_border: u32,
     /// `toolbar-border`：侧边条分组、工具栏分隔线
     pub separator: u32,
+    /// `Separator.separatorColor`：菜单/设置页里的单线分隔条。
+    pub separator_line: u32,
     /// `feedback-bg`：通知气泡、工具提示的底色（layer-2-bg）
     pub feedback: u32,
     /// `Notification.borderColor` → `feedback-border`（浅色 layer-0-border，深色与底色相同）
@@ -126,6 +128,7 @@ pub const LIGHT: Tokens = Tokens {
     popover: 0xffffff,                   // popup-bg = layer-2-bg
     popup_border: 0xd1d3d9,              // popup-border-windows = gray-130
     separator: 0x00000020,               // toolbar-border = transparent-black-30
+    separator_line: 0xcdcdcd,            // Separator.separatorColor 未覆盖时回退 Gray.xCD
     feedback: 0xffffff,                  // feedback-bg = layer-2-bg
     feedback_border: 0xd1d3d9,           // feedback-border = layer-0-border(gray-130)
     scrollbar_thumb: 0x73737333,         // ScrollBar.Transparent.thumbColor
@@ -165,6 +168,7 @@ pub const DARK: Tokens = Tokens {
     popover: 0x26282c,                   // popup-bg = layer-1-bg
     popup_border: 0x33353b,              // popup-border = layer-1-border(gray-40)
     separator: 0xffffff21,               // toolbar-border = transparent-white-30
+    separator_line: 0x33353b,            // Separator.separatorColor = popup-border（gray-40）
     feedback: 0x33353b,                  // feedback-bg = layer-2-bg(gray-40)
     feedback_border: 0x33353b,           // feedback-border = layer-2-bg，与底色相同
     scrollbar_thumb: 0xa6a6a647,         // ScrollBar.Transparent.thumbColor
