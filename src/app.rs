@@ -2409,7 +2409,9 @@ impl KeelApp {
                             .text_color(chrome.muted_fg)
                             .child(format!("位置：{}", dialog.base_dir.display())),
                     )
-                    .child(Input::new(&dialog.input))
+                    // 输入框圆角跟随 `Component.arc.compact`（6px），
+                    // 与 8px 的按钮/弹层区分开。
+                    .child(Input::new(&dialog.input).rounded(px(6.)))
                     .child(
                         div()
                             .flex()

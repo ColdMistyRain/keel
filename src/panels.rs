@@ -168,7 +168,8 @@ impl KeelApp {
                             .py_2()
                             .border_b_1()
                             .border_color(chrome.border)
-                            .child(Input::new(&palette.query)),
+                            // 输入框圆角跟随 `Component.arc.compact`（6px）。
+                            .child(Input::new(&palette.query).rounded(px(6.))),
                     )
                     .child(
                         div()

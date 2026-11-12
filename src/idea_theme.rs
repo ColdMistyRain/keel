@@ -223,9 +223,10 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.font_size = px(13.);
         theme.mono_font_family = "JetBrains Mono".into();
         theme.mono_font_size = px(15.);
-        // COMPACT 密度下组件圆角是 6px（`Component.arc.compact`），
-        // 弹层沿用 `PopupMenu` 的 8px。
-        theme.radius = px(6.);
+        // 按钮与弹层的圆角是 8px（`Button.arc`、`PopupMenu.borderCornerRadius`）。
+        // 输入框在 COMPACT 密度下是 6px（`Component.arc.compact`），
+        // 组件库共用同一个 `radius`，输入框在使用处单独覆盖。
+        theme.radius = px(8.);
         theme.radius_lg = px(8.);
 
         theme.background = color(tokens.canvas);
