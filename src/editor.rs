@@ -280,12 +280,8 @@ impl KeelApp {
                     .cursor_pointer()
                     .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
                     .hover(|style| style.bg(chrome.control_hover))
-                    .child(
-                        svg()
-                            .path(icon_path)
-                            .size(px(16.))
-                            .text_color(chrome.muted_fg),
-                    )
+                    // 面包屑里的文件类型图标同样是多色的 expUI 图标。
+                    .child(img(icon_path).size(px(16.)))
                     .child(div().whitespace_nowrap().child(label))
                     .on_click(cx.listener(move |this, _event, _window, cx| {
                         this.locate_in_project(segment_path.clone(), cx);
@@ -336,21 +332,25 @@ impl KeelApp {
 
             let mut tab = div()
                 .id(("editor-tab", ix))
-                .h(px(28.))
+                // COMPACT 密度下标签卡片高 24（`IslandsTabPainter` 的 `fullHeight`），
+                // 在 28 高的标签行里上下各留 2px。
+                .h(px(24.))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
                 .gap_1()
+                // 卡片左右各留 2px（`IslandsTabPainter.getHOffsetUnscaled`）。
+                .mx(px(2.))
                 // `EditorTabs.tabInsets.compact` 是 "-2,6,-2,4"。
                 .pl(px(6.))
                 .pr(px(4.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
-                    // IDEA Islands 的选中标签是一张带 1px 蓝边的圆角卡片，
-                    // 圆角取 `EditorTabs.underlineArc`（4px）。
+                    // 选中标签是一张带 1px 蓝边（`EditorTabs.underlinedBorderColor`）的
+                    // 浅蓝卡片，圆角取 `MainToolbar.Button.arc.compact`（8px）。
                     tab.bg(chrome.tab_selected_bg)
                         .text_color(chrome.fg)
-                        .rounded(px(4.))
+                        .rounded(px(8.))
                         .border_1()
                         .border_color(chrome.tab_underline)
                 })
@@ -360,12 +360,8 @@ impl KeelApp {
                         .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg))
                 })
                 .when(is_drop_target, |tab| tab.bg(chrome.hover_bg))
-                .child(
-                    svg()
-                        .path(icon_path)
-                        .size(px(16.))
-                        .text_color(chrome.muted_fg),
-                )
+                // 标签上的文件类型图标保留 expUI 的多色配色。
+                .child(img(icon_path).size(px(16.)))
                 .child(div().whitespace_nowrap().child(title))
                 .on_mouse_down(
                     MouseButton::Left,
@@ -546,8 +542,8 @@ impl KeelApp {
             .relative()
             .flex()
             .items_center()
-            // COMPACT 密度下标签行 32px（`SingleHeightTabs.UNSCALED_PREF_HEIGHT` 28 减去负内边距）。
-            .h(px(32.))
+            // 标签行高 = `SingleHeightTabs.UNSCALED_PREF_HEIGHT`（28）。
+            .h(px(28.))
             .flex_shrink_0()
             .bg(chrome.tab_bg)
             .border_b_1()
@@ -561,6 +557,8 @@ impl KeelApp {
                     .h_full()
                     .flex()
                     .items_center()
+                    // 第一个标签距标签行左边缘 3px（`IslandsTabPainter.firstTabOffset`）。
+                    .pl(px(3.))
                     .overflow_x_scroll()
                     .track_scroll(&tab_scroll)
                     .children(children),

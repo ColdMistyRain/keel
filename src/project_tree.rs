@@ -221,12 +221,9 @@ impl KeelApp {
                     .text_color(chrome.muted_fg)
                     .children(chevron),
             )
-            .child(
-                svg()
-                    .path(icon_path)
-                    .size(px(16.))
-                    .text_color(chrome.muted_fg),
-            )
+            // 文件类型图标是 expUI 的多色图标，`svg()` 会把它压成单色蒙版，
+            // 这里用 `img()` 保留原始配色（IDEA 的项目树图标是彩色的）。
+            .child(img(icon_path).size(px(16.)))
             .child(
                 div()
                     .min_w_0()
