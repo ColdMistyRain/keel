@@ -14,6 +14,7 @@ use gpui_component::popover::Popover;
 use gpui_component::{ActiveTheme as _, Selectable};
 
 /// 菜单表面的圆角上限，与组件库 `PopupMenu` 内部一致（`radius.min(8)`）。
+/// 菜单项的选中块用主题半径 4，对应 IDEA 的 `PopupMenu.Selection.arc`(8) / 2。
 const MENU_RADIUS: Pixels = px(8.);
 
 /// 菜单表面的圆角（下拉菜单与右键菜单共用）。

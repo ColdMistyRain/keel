@@ -2454,6 +2454,11 @@ impl KeelApp {
                                     Button::new("settings-close")
                                         .label("关闭")
                                         .primary()
+                                        // 与 IDEA 设置对话框的默认按钮一致：72×28、粗体。
+                                        .h(px(28.))
+                                        .min_w(px(72.))
+                                        .px(px(14.))
+                                        .font_weight(FontWeight::BOLD)
                                         .on_click(cx.listener(|this, _event, _window, cx| {
                                             this.close_settings(cx);
                                         })),
@@ -2474,6 +2479,13 @@ impl KeelApp {
         let save_and_close = Button::new("confirm-save")
             .label("保存并关闭")
             .primary()
+            // IDEA 的对话框按钮：`Button.minimumSize` = 72×28、
+            // `HORIZONTAL_PADDING` = 14；默认按钮（这里是主按钮）用粗体
+            // （`DarculaButtonUI.setupDefaultButton`）。
+            .h(px(28.))
+            .min_w(px(72.))
+            .px(px(14.))
+            .font_weight(FontWeight::BOLD)
             .on_click(cx.listener(move |this, _event, _window, cx| {
                 this.save_and_close(save_path.clone(), cx);
             }));
@@ -2482,6 +2494,9 @@ impl KeelApp {
         let discard = Button::new("confirm-discard")
             .label("直接关闭")
             .ghost()
+            .h(px(28.))
+            .min_w(px(72.))
+            .px(px(14.))
             .on_click(cx.listener(move |this, _event, _window, cx| {
                 this.discard_and_close(discard_path.clone(), cx);
             }));
@@ -2528,6 +2543,9 @@ impl KeelApp {
                                 Button::new("confirm-cancel")
                                     .label("取消")
                                     .ghost()
+                                    .h(px(28.))
+                                    .min_w(px(72.))
+                                    .px(px(14.))
                                     .on_click(cx.listener(|this, _event, _window, cx| {
                                         this.pending_close = None;
                                         cx.notify();
@@ -2576,9 +2594,9 @@ impl KeelApp {
                             .text_color(chrome.muted_fg)
                             .child(format!("位置：{}", dialog.base_dir.display())),
                     )
-                    // 输入框圆角跟随 `Component.arc.compact`（6px），
-                    // 与 8px 的按钮/弹层区分开。
-                    .child(Input::new(&dialog.input).rounded(px(6.)))
+                    // 输入框圆角 = `Component.arc`(8) / 2 = 4，
+                    // 比弹层表面的 8 更小（`Component.arc` 是弧直径）。
+                    .child(Input::new(&dialog.input))
                     .child(
                         div()
                             .flex()
@@ -2588,6 +2606,11 @@ impl KeelApp {
                                 Button::new("file-op-cancel")
                                     .label("取消")
                                     .ghost()
+                                    // 对话框按钮度量：`Button.minimumSize` 72×28、
+                                    // 水平内边距 14。
+                                    .h(px(28.))
+                                    .min_w(px(72.))
+                                    .px(px(14.))
                                     .on_click(cx.listener(|this, _event, _window, cx| {
                                         this.cancel_file_op(cx);
                                     })),
@@ -2596,6 +2619,10 @@ impl KeelApp {
                                 Button::new("file-op-confirm")
                                     .label("确定")
                                     .primary()
+                                    .h(px(28.))
+                                    .min_w(px(72.))
+                                    .px(px(14.))
+                                    .font_weight(FontWeight::BOLD)
                                     .on_click(cx.listener(|this, _event, _window, cx| {
                                         this.confirm_file_op(cx);
                                     })),
@@ -2650,15 +2677,25 @@ impl KeelApp {
                             .flex()
                             .justify_end()
                             .gap_2()
-                            .child(Button::new("delete-cancel").label("取消").ghost().on_click(
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.cancel_delete(cx);
-                                }),
-                            ))
+                            .child(
+                                Button::new("delete-cancel")
+                                    .label("取消")
+                                    .ghost()
+                                    .h(px(28.))
+                                    .min_w(px(72.))
+                                    .px(px(14.))
+                                    .on_click(cx.listener(|this, _event, _window, cx| {
+                                        this.cancel_delete(cx);
+                                    })),
+                            )
                             .child(
                                 Button::new("delete-confirm")
                                     .label("删除")
                                     .danger()
+                                    .h(px(28.))
+                                    .min_w(px(72.))
+                                    .px(px(14.))
+                                    .font_weight(FontWeight::BOLD)
                                     .on_click(cx.listener(|this, _event, _window, cx| {
                                         this.confirm_delete(cx);
                                     })),

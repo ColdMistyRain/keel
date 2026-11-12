@@ -20,7 +20,8 @@ impl KeelApp {
                     .cursor_pointer()
                     .when(is_active, |tab| {
                         // 选中标签的 3px 下划线：`ToolWindow.HeaderTab.underlineHeight`
-                        // 默认取 `DefaultTabs.underlineHeight`=3，圆角 `underlineArc`=4。
+                        // 默认取 `DefaultTabs.underlineHeight`=3；圆角半径 =
+                        // `underlineArc`(4) / 2 = 2（`fill2DRoundRect` 的弧参数是直径）。
                         tab.text_color(chrome.fg).child(
                             div()
                                 .absolute()
@@ -28,7 +29,7 @@ impl KeelApp {
                                 .left_0()
                                 .right_0()
                                 .h(px(3.))
-                                .rounded(px(4.))
+                                .rounded(px(2.))
                                 .bg(chrome.tool_window_tab_underline),
                         )
                     })
@@ -183,8 +184,9 @@ impl KeelApp {
                             .py_2()
                             .border_b_1()
                             .border_color(chrome.border)
-                            // 输入框圆角跟随 `Component.arc.compact`（6px）。
-                            .child(Input::new(&palette.query).rounded(px(6.))),
+                            // 输入框圆角 = `Component.arc`(8) / 2 = 4，
+                            // 直接用组件库的主题半径。
+                            .child(Input::new(&palette.query)),
                     )
                     .child(
                         div()
