@@ -333,7 +333,7 @@ impl KeelApp {
 
             let mut tab = div()
                 .id(("editor-tab", ix))
-                .h(px(28.))
+                .h(px(24.))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
@@ -341,11 +341,11 @@ impl KeelApp {
                 .px(px(8.))
                 .cursor_pointer()
                 .when(is_active, |tab| {
-                    // IDEA 的选中标签是浅蓝底 + 4px 浅蓝上边线。
+                    // IDEA Islands 的选中标签是一张带 1px 蓝边的圆角卡片。
                     tab.bg(chrome.tab_selected_bg)
                         .text_color(chrome.fg)
                         .rounded_sm()
-                        .border_t_4()
+                        .border_1()
                         .border_color(chrome.tab_underline)
                 })
                 .when(!is_active, |tab| {
@@ -565,8 +565,8 @@ impl KeelApp {
                     .h(relative(1.))
                     .font_family(chrome.mono_font.clone())
                     .text_size(chrome.mono_size)
-                    // IDEA 编辑器行高固定为字号的 1.2 倍。
-                    .line_height(relative(1.2)),
+                    // IDEA 编辑器行高约为字号的 1.44 倍（字体 15px → 21.6px）。
+                    .line_height(relative(1.44)),
             )
             .into_any_element()
     }

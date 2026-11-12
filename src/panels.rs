@@ -63,7 +63,7 @@ impl KeelApp {
             .text_color(chrome.panel_fg)
             .rounded(chrome.island_arc)
             .overflow_hidden()
-            .mt(px(6.))
+            .mt(px(4.))
             .child(
                 div()
                     .h(px(28.))

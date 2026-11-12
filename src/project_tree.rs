@@ -15,11 +15,6 @@ use crate::model::VisibleRow;
 impl KeelApp {
     pub fn render_project_panel(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let root = self.project.root.clone();
-        let name = root
-            .as_deref()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy().to_string())
-            .unwrap_or_else(|| "项目".to_string());
         let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
 
         let header = div()
@@ -31,34 +26,59 @@ impl KeelApp {
             .flex_shrink_0()
             .bg(chrome.header)
             .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .overflow_hidden()
-                    .child(div().whitespace_nowrap().child(name)),
+                Button::new("project-title")
+                    .ghost()
+                    .small()
+                    .h(px(24.))
+                    .pl_0()
+                    .label("项目")
+                    .icon(IconName::ChevronDown)
+                    .dropdown_menu(|menu, _, _| {
+                        menu.menu("在项目中定位", Box::new(LocateInProject))
+                            .separator()
+                            .menu("折叠全部", Box::new(CollapseProjectTree))
+                            .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
+                    }),
             )
+            .child(div().flex_1())
+            .child({
+                let new_app = cx.entity().downgrade();
+                let file_dir = root.clone().unwrap_or_default();
+                let folder_dir = file_dir.clone();
+                crate::app::icon_button("project-new", icon("plus"), chrome.muted_fg)
+                    .tooltip("新建")
+                    .dropdown_menu(move |menu, _, _| {
+                        let file_app = new_app.clone();
+                        let file_dir = file_dir.clone();
+                        let folder_app = new_app.clone();
+                        let folder_dir = folder_dir.clone();
+                        menu.item(
+                            PopupMenuItem::new("新建文件…").on_click(move |_, window, cx| {
+                                file_app
+                                    .update(cx, |this, cx| {
+                                        this.open_new_file_dialog(file_dir.clone(), window, cx)
+                                    })
+                                    .ok();
+                            }),
+                        )
+                        .item(
+                            PopupMenuItem::new("新建文件夹…").on_click(move |_, window, cx| {
+                                folder_app
+                                    .update(cx, |this, cx| {
+                                        this.open_new_folder_dialog(folder_dir.clone(), window, cx)
+                                    })
+                                    .ok();
+                            }),
+                        )
+                    })
+            })
+            .child(div().w(px(1.)).h(px(16.)).mx_1().bg(chrome.border))
             .child(
                 crate::app::icon_button("project-collapse-all", icon("collapse"), chrome.muted_fg)
                     .tooltip("折叠全部")
                     .on_click(
                         cx.listener(|this, _event, _window, cx| this.collapse_all_project_tree(cx)),
                     ),
-            )
-            .child(
-                Button::new("project-locate")
-                    .small()
-                    .ghost()
-                    .w(px(24.))
-                    .h(px(24.))
-                    .p_0()
-                    .icon(IconName::LocateFixed)
-                    .tooltip("在项目中定位")
-                    .on_click(cx.listener(|_this, _event, window, cx| {
-                        window.dispatch_action(Box::new(LocateInProject), cx);
-                    })),
             )
             .child(
                 crate::app::icon_button("project-refresh", icon("refresh"), chrome.muted_fg)
@@ -140,8 +160,10 @@ impl KeelApp {
         let left_path = row_path.clone();
         let right_path = row_path.clone();
         let is_dir = row.is_dir;
-        // IDEA 树每级缩进 16px，最左侧留 4px。
-        let indent = px(4.0 + row.depth as f32 * 16.0);
+        // 根行在项目名后附带完整路径，和 IDEA 的项目树一致。
+        let root_path = (row.depth == 0).then(|| row.path.display().to_string());
+        // IDEA 树左右各留 12px，每级缩进 20px。
+        let indent = px(8.0 + row.depth as f32 * 20.0);
         let (icon, icon_color) = if is_dir {
             let folder = if row.expanded {
                 IconName::FolderOpen
@@ -195,6 +217,16 @@ impl KeelApp {
                     .whitespace_nowrap()
                     .child(row.name.clone()),
             )
+            .children(root_path.map(|path| {
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .text_xs()
+                    .text_color(chrome.muted_fg)
+                    .child(path)
+            }))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {

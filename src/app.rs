@@ -10,7 +10,7 @@ use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{
     Copy, Cut, EditorState, Input, InputEvent, InputState, Paste, Redo, SelectAll, TabSize, Undo,
 };
-use gpui_component::menu::DropdownMenu as _;
+use gpui_component::menu::{DropdownMenu as _, PopupMenu};
 use gpui_component_assets::IconName;
 
 use crate::actions::{
@@ -517,8 +517,8 @@ impl KeelApp {
                         node.loaded = true;
                         app.project.root = Some(root.clone());
                         app.project.tree = Some(node);
-                        app.project.expanded.insert(root);
-                        app.project.selected = None;
+                        app.project.expanded.insert(root.clone());
+                        app.project.selected = Some(root);
                         app.refresh_rows();
                     }
                     Err(err) => {
@@ -1742,55 +1742,28 @@ impl KeelApp {
             .p_0()
             .icon(IconName::Menu)
             .tooltip("主菜单")
-            .dropdown_menu(|menu, window, cx| {
-                menu.submenu("文件", window, cx, |menu, _, _| {
-                    menu.menu("打开项目目录…", Box::new(OpenProject))
-                        .separator()
-                        .menu("保存", Box::new(SaveFile))
-                        .menu("关闭编辑器", Box::new(CloseEditor))
-                        .separator()
-                        .menu("设置…", Box::new(ShowSettings))
-                })
-                .submenu("编辑", window, cx, |menu, _, _| {
-                    menu.menu("撤销", Box::new(Undo))
-                        .menu("重做", Box::new(Redo))
-                        .separator()
-                        .menu("剪切", Box::new(Cut))
-                        .menu("复制", Box::new(Copy))
-                        .menu("粘贴", Box::new(Paste))
-                        .separator()
-                        .menu("全选", Box::new(SelectAll))
-                        .separator()
-                        .menu("查找…", Box::new(FindInFile))
-                        .menu("替换…", Box::new(ReplaceInFile))
-                })
-                .submenu("视图", window, cx, |menu, _, _| {
-                    menu.menu("显示或隐藏项目面板", Box::new(ToggleProjectPanel))
-                        .menu("显示或隐藏底部面板", Box::new(ToggleBottomPanel))
-                        .menu("显示或隐藏导航栏面包屑", Box::new(ToggleBreadcrumbs))
-                        .separator()
-                        .menu("切换深色 / 浅色主题", Box::new(ToggleTheme))
-                        .separator()
-                        .menu("命令面板…", Box::new(ShowCommandPalette))
-                })
-                .submenu("导航", window, cx, |menu, _, _| {
-                    menu.menu("上一个标签", Box::new(PreviousTab))
-                        .menu("下一个标签", Box::new(NextTab))
-                        .separator()
-                        .menu("在项目中定位", Box::new(LocateInProject))
-                })
-                .submenu("工具", window, cx, |menu, _, _| {
-                    menu.menu("从磁盘重新加载项目", Box::new(RefreshProjectTree))
-                        .menu("折叠全部目录", Box::new(CollapseProjectTree))
-                })
-                .submenu("窗口", window, cx, |menu, _, _| {
-                    menu.menu("关闭其他标签", Box::new(CloseOtherTabs))
-                        .menu("关闭全部标签", Box::new(CloseAllTabs))
-                })
-                .submenu("帮助", window, cx, |menu, _, _| {
-                    menu.menu("关于 Keel…", Box::new(ShowAbout))
-                })
-            });
+            .dropdown_menu(build_main_menu);
+
+        let app_logo = Button::new("app-logo")
+            .ghost()
+            .small()
+            .w(px(28.))
+            .h(px(28.))
+            .p_0()
+            .tooltip("主菜单")
+            .child(
+                div()
+                    .size(px(20.))
+                    .rounded(px(4.))
+                    .bg(chrome.accent)
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_color(chrome.accent_fg)
+                    .text_xs()
+                    .child("K"),
+            )
+            .dropdown_menu(build_main_menu);
 
         let project_widget = div()
             .id("title-project")
@@ -1843,6 +1816,40 @@ impl KeelApp {
                 .child(div().whitespace_nowrap().child(branch))
         });
 
+        let external = Button::new("title-external")
+            .small()
+            .ghost()
+            .w(px(24.))
+            .h(px(24.))
+            .p_0()
+            .icon(IconName::ExternalLink)
+            .tooltip("在文件管理器中打开项目")
+            .on_click(cx.listener(|this, _event, _window, _cx| {
+                this.open_project_in_file_manager();
+            }));
+
+        // IDEA 顶部工具栏左侧有一块项目色渐变（600×300 的渐变区域）。
+        let seed = self
+            .project
+            .root
+            .as_deref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "Keel".to_string());
+        let tint = crate::idea_theme::project_gradient(self.theme_kind, &seed);
+        let mut fade = tint;
+        fade.alpha = 0.;
+        let gradient = div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .w(px(600.))
+            .h(px(300.))
+            .bg(linear_gradient(
+                120.,
+                linear_color_stop(tint, 0.),
+                linear_color_stop(fade, 1.),
+            ));
+
         let control = |id: &'static str, area: WindowControlArea, glyph: &'static str| {
             div()
                 .id(id)
@@ -1859,6 +1866,8 @@ impl KeelApp {
         };
 
         div()
+            .relative()
+            .overflow_hidden()
             .h(px(40.))
             .w_full()
             .flex_shrink_0()
@@ -1868,9 +1877,12 @@ impl KeelApp {
             .pl(px(6.))
             .bg(chrome.canvas)
             .window_control_area(WindowControlArea::Drag)
+            .child(gradient)
+            .child(app_logo)
             .child(menu)
             .child(project_widget)
             .children(branch_widget)
+            .child(external)
             .child(div().flex_1())
             .child(
                 icon_button("title-search", icon("search"), chrome.muted_fg)
@@ -1892,6 +1904,14 @@ impl KeelApp {
             .into_any_element()
     }
 
+    /// 在系统文件管理器中打开项目根目录。
+    fn open_project_in_file_manager(&mut self) {
+        let Some(root) = self.project.root.clone() else {
+            return;
+        };
+        let _ = std::process::Command::new("explorer").arg(root).spawn();
+    }
+
     /// 项目根上的 git 分支名，读取 `.git/HEAD`；不是 git 仓库时返回 `None`。
     fn git_branch(&self) -> Option<String> {
         let root = self.project.root.as_deref()?;
@@ -1908,8 +1928,30 @@ impl KeelApp {
             chrome.muted_fg
         };
 
-        // 左侧只显示临时消息与后台任务进度，分支等信息在顶部工具栏。
+        // 左侧：项目选择器 + 临时消息与后台任务进度，分支等信息在顶部工具栏。
         let mut left = div().min_w_0().flex().items_center().h_full();
+        if let Some(root) = self.project.root.clone() {
+            let name = root
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default();
+            left = left.child(
+                div()
+                    .id("status-project")
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .h_full()
+                    .px_2()
+                    .cursor_pointer()
+                    .hover(|style| style.bg(chrome.control_hover))
+                    .child(div().size(px(12.)).rounded(px(3.)).bg(chrome.accent))
+                    .child(div().whitespace_nowrap().child(name))
+                    .on_click(cx.listener(|this, _event, _window, cx| {
+                        this.run_command(CommandId::ToggleProjectPanel, cx);
+                    })),
+            );
+        }
         if !self.status.text.is_empty() {
             left = left.child(
                 div()
@@ -2445,8 +2487,8 @@ impl Render for KeelApp {
             .min_h_0()
             .flex()
             .flex_row()
-            .px(px(6.))
-            .pb(px(6.))
+            .px(px(4.))
+            .pb(px(4.))
             .child(stripe)
             .child(workspace);
 
@@ -2621,4 +2663,55 @@ pub fn empty_editor_state(chrome: &Chrome, root: Option<&Path>) -> AnyElement {
         .child(div().text_lg().child("没有打开的文件"))
         .child(div().child(hint))
         .into_any_element()
+}
+
+/// 顶部工具栏和系统菜单共用的主菜单结构。
+fn build_main_menu(menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>) -> PopupMenu {
+    menu.submenu("文件", window, cx, |menu, _, _| {
+        menu.menu("打开项目目录…", Box::new(OpenProject))
+            .separator()
+            .menu("保存", Box::new(SaveFile))
+            .menu("关闭编辑器", Box::new(CloseEditor))
+            .separator()
+            .menu("设置…", Box::new(ShowSettings))
+    })
+    .submenu("编辑", window, cx, |menu, _, _| {
+        menu.menu("撤销", Box::new(Undo))
+            .menu("重做", Box::new(Redo))
+            .separator()
+            .menu("剪切", Box::new(Cut))
+            .menu("复制", Box::new(Copy))
+            .menu("粘贴", Box::new(Paste))
+            .separator()
+            .menu("全选", Box::new(SelectAll))
+            .separator()
+            .menu("查找…", Box::new(FindInFile))
+            .menu("替换…", Box::new(ReplaceInFile))
+    })
+    .submenu("视图", window, cx, |menu, _, _| {
+        menu.menu("显示或隐藏项目面板", Box::new(ToggleProjectPanel))
+            .menu("显示或隐藏底部面板", Box::new(ToggleBottomPanel))
+            .menu("显示或隐藏导航栏面包屑", Box::new(ToggleBreadcrumbs))
+            .separator()
+            .menu("切换深色 / 浅色主题", Box::new(ToggleTheme))
+            .separator()
+            .menu("命令面板…", Box::new(ShowCommandPalette))
+    })
+    .submenu("导航", window, cx, |menu, _, _| {
+        menu.menu("上一个标签", Box::new(PreviousTab))
+            .menu("下一个标签", Box::new(NextTab))
+            .separator()
+            .menu("在项目中定位", Box::new(LocateInProject))
+    })
+    .submenu("工具", window, cx, |menu, _, _| {
+        menu.menu("从磁盘重新加载项目", Box::new(RefreshProjectTree))
+            .menu("折叠全部目录", Box::new(CollapseProjectTree))
+    })
+    .submenu("窗口", window, cx, |menu, _, _| {
+        menu.menu("关闭其他标签", Box::new(CloseOtherTabs))
+            .menu("关闭全部标签", Box::new(CloseAllTabs))
+    })
+    .submenu("帮助", window, cx, |menu, _, _| {
+        menu.menu("关于 Keel…", Box::new(ShowAbout))
+    })
 }

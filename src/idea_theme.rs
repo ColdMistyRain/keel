@@ -89,7 +89,7 @@ pub const LIGHT: Tokens = Tokens {
     tab_selected_background: 0xe3ebfe, // blue-150
     status_bar: 0xe9eaee,              // main-window-bg
     brand: 0x3871e1,                   // blue-80
-    island_arc: 20.,
+    island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: false,
 };
 
@@ -113,7 +113,7 @@ pub const DARK: Tokens = Tokens {
     tab_selected_background: 0x233558, // blue-40
     status_bar: 0x26282c,              // main-window-bg(layer-1)
     brand: 0x3871e1,                   // blue-80
-    island_arc: 20.,
+    island_arc: 16.,                   // Island.compactArc（COMPACT 密度）
     dark_icons: true,
 };
 
@@ -184,7 +184,7 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         theme.font_family = ui_font_family().into();
         theme.font_size = px(13.);
         theme.mono_font_family = "JetBrains Mono".into();
-        theme.mono_font_size = px(13.);
+        theme.mono_font_size = px(15.);
         // IDEA 新 UI 的圆角基准值是 4px。
         theme.radius = px(4.);
         theme.radius_lg = px(6.);
@@ -210,6 +210,22 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
 fn ui_font_family() -> &'static str {
     // 随程序打包的 Inter，与 IDEA 新 UI 一致。
     "Inter"
+}
+
+/// IDEA 顶部工具栏的项目色渐变，来自 `RecentProject.ColorN.MainToolbarGradientStart`。
+pub fn project_gradient(kind: ThemeKind, seed: &str) -> Hsla {
+    const LIGHT: [u32; 9] = [
+        0xf7d7cb, 0xf5e6b8, 0xe2f2c9, 0xcbe4f7, 0xd4d2fc, 0xecd3f5, 0xe4d3f5, 0xcef0e9, 0xceedd4,
+    ];
+    const DARK: [u32; 9] = [
+        0x664832, 0x5e4724, 0x45522f, 0x335661, 0x394773, 0x613861, 0x503d70, 0x325959, 0x365439,
+    ];
+    let palette = if kind.is_dark() { &DARK } else { &LIGHT };
+    let index = seed.bytes().fold(0u32, |acc, byte| {
+        acc.wrapping_mul(31).wrapping_add(byte as u32)
+    }) as usize
+        % palette.len();
+    color(palette[index])
 }
 
 /// 编辑器配色，取自 IDEA 的 `expUI_lightScheme.xml`。

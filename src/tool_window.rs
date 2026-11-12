@@ -4,7 +4,7 @@ use gpui_component_assets::IconName;
 use crate::app::{BottomTab, Chrome, CommandId, KeelApp, StatusMessage};
 
 /// 左侧工具窗口侧边条的宽度，项目面板的拖拽计算也依赖它。
-pub const STRIPE_WIDTH: f32 = 40.;
+pub const STRIPE_WIDTH: f32 = 44.;
 
 impl KeelApp {
     /// IDEA 风格的左侧工具窗口侧边条：图标来自 expUI 图标集。
@@ -53,19 +53,26 @@ impl KeelApp {
             cx,
             |this, window, cx| this.open_palette(window, cx),
         );
-        let vcs = self.stripe_item("stripe-vcs", "vcs", false, chrome, cx, |this, _, cx| {
-            this.report_not_available("Git 集成尚未接入", cx)
-        });
-        let services = self.stripe_item(
-            "stripe-services",
-            "services",
-            false,
-            chrome,
-            cx,
-            |this, _, cx| this.report_not_available("服务工具窗口尚未接入", cx),
-        );
 
         // IDEA 把底部工具窗口的入口放在左侧条的最下方。
+        let profiler = self.bottom_icon_item(
+            "stripe-profiler",
+            IconName::Gauge,
+            chrome,
+            cx,
+            |this, _, cx| this.report_not_available("性能分析尚未接入", cx),
+        );
+        let services =
+            self.bottom_svg_item("stripe-services", "services", chrome, cx, |this, _, cx| {
+                this.report_not_available("服务工具窗口尚未接入", cx)
+            });
+        let terminal = self.bottom_item(
+            "stripe-terminal",
+            BottomTab::Terminal,
+            IconName::SquareTerminal,
+            chrome,
+            cx,
+        );
         let problems = self.bottom_item(
             "stripe-problems",
             BottomTab::Problems,
@@ -73,13 +80,12 @@ impl KeelApp {
             chrome,
             cx,
         );
-        let run = self.bottom_item("stripe-run", BottomTab::Run, IconName::Play, chrome, cx);
-        let terminal = self.bottom_item(
-            "stripe-terminal",
-            BottomTab::Terminal,
-            IconName::SquareTerminal,
+        let git = self.bottom_icon_item(
+            "stripe-git",
+            IconName::GitBranch,
             chrome,
             cx,
+            |this, _, cx| this.report_not_available("Git 工具窗口尚未接入", cx),
         );
 
         div()
@@ -96,12 +102,12 @@ impl KeelApp {
             .child(bookmarks)
             .child(structure)
             .child(search)
-            .child(vcs)
-            .child(services)
             .child(div().flex_1())
-            .child(problems)
-            .child(run)
+            .child(profiler)
+            .child(services)
             .child(terminal)
+            .child(problems)
+            .child(git)
             .into_any_element()
     }
 
@@ -199,6 +205,68 @@ impl KeelApp {
                 this.persist();
                 cx.notify();
             }))
+            .into_any_element()
+    }
+
+    fn bottom_icon_item(
+        &self,
+        id: &'static str,
+        icon: IconName,
+        chrome: &Chrome,
+        cx: &mut Context<Self>,
+        handler: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) -> AnyElement {
+        self.stripe_placeholder(id, chrome, cx, handler, move |_| icon.into_any_element())
+    }
+
+    fn bottom_svg_item(
+        &self,
+        id: &'static str,
+        icon: &'static str,
+        chrome: &Chrome,
+        cx: &mut Context<Self>,
+        handler: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) -> AnyElement {
+        let path = SharedString::from(format!("icons/{icon}{}.svg", chrome.icon_suffix));
+        self.stripe_placeholder(id, chrome, cx, handler, move |color| {
+            svg()
+                .path(path.clone())
+                .size(px(20.))
+                .text_color(color)
+                .into_any_element()
+        })
+    }
+
+    /// 还没有真实工具窗口的占位按钮：点击后只在状态栏给出说明。
+    fn stripe_placeholder(
+        &self,
+        id: &'static str,
+        chrome: &Chrome,
+        cx: &mut Context<Self>,
+        handler: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+        render_icon: impl Fn(Hsla) -> AnyElement + 'static,
+    ) -> AnyElement {
+        let icon_color = chrome.muted_fg;
+        div()
+            .id(id)
+            .w(px(STRIPE_WIDTH))
+            .h(px(40.))
+            .flex()
+            .items_center()
+            .justify_center()
+            .cursor_pointer()
+            .child(
+                div()
+                    .size(px(34.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(8.))
+                    .hover(|style| style.bg(chrome.control_hover))
+                    .text_color(icon_color)
+                    .child(render_icon(icon_color)),
+            )
+            .on_click(cx.listener(move |this, _event, window, cx| handler(this, window, cx)))
             .into_any_element()
     }
 

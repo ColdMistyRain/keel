@@ -48,6 +48,8 @@ icon_assets! {
     "icons/chevron_left_dark.svg" => "../assets/icons/chevron_left_dark.svg",
     "icons/close.svg" => "../assets/icons/close.svg",
     "icons/close_dark.svg" => "../assets/icons/close_dark.svg",
+    "icons/plus.svg" => "../assets/icons/plus.svg",
+    "icons/plus_dark.svg" => "../assets/icons/plus_dark.svg",
 }
 
 impl AssetSource for KeelAssets {
