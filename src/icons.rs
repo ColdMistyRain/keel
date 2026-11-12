@@ -1,11 +1,12 @@
 //! 菜单与命令面板的图标、助记符。
 //!
 //! 图标是 16×16 的 SVG，`currentColor` 跟随主题；路径相对 `assets/`。
-//! `java*.svg` / `xml*.svg` / `run.svg` / `debug.svg` 取自 IntelliJ 社区版
-//! `platform/icons/src/expui`（Apache 2.0，文件内保留版权头）。
+//! `menu.svg` / `java*.svg` / `xml*.svg` / `run.svg` / `debug.svg` 取自 IntelliJ
+//! 社区版 `platform/icons/src/expui`（Apache 2.0，文件内保留版权头）。
 
 use nsh_core::prelude::*;
 
+pub const MENU: ImageAsset = asset!("icons/menu.svg");
 pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
 pub const FILE: ImageAsset = asset!("icons/file.svg");
 pub const JAVA: ImageAsset = asset!("icons/java.svg");

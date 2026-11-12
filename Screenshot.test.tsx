@@ -30,6 +30,7 @@ test("captures the File menu", async () => {
     }
     throw error;
   }
+  await app.press("label:主菜单");
   await app.press("text:文件");
   await app.waitFor("text:关闭所有标签页");
   await app.screenshot("docs/screenshots/nsh-p2-menu.png");

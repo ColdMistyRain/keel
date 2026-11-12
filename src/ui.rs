@@ -78,15 +78,27 @@ pub fn icon_slot(icon: Option<ImageAsset>) -> View {
     slot
 }
 
-/// 菜单栏的触发器。IDEA 主菜单的选中块高 30、圆角 6，横向铺满菜单项。
-pub fn menu_trigger(label: impl Into<SharedString>, mnemonic: Option<char>) -> View {
+/// 主工具栏左上角的汉堡按钮。
+///
+/// IDEA 新 UI 默认把主菜单收进这个按钮（`MainMenuButton`），图标
+/// `AllIcons.General.WindowsMenu_20x20` 为 20×20，按钮悬停用
+/// `toolbar-bg-hovered`。
+pub fn burger_button() -> View {
     view()
-        .h(px(30.0))
-        .px(px(4.0))
+        .w(px(24.0))
+        .h(px(24.0))
         .items_center()
-        .rounded(px(6.0))
+        .justify_center()
+        .rounded(px(4.0))
+        .role(AccessibilityRole::Button)
+        .label("主菜单")
         .hover(|s| s.bg(move || color_of("hover-overlay")))
-        .child(mnemonic_label(label, mnemonic))
+        .child(
+            svg(crate::icons::MENU)
+                .w(px(20.0))
+                .h(px(20.0))
+                .text_color(move || color_of("muted-fg")),
+        )
 }
 
 /// 子菜单的触发器：左标签、右箭头。

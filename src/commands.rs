@@ -12,7 +12,8 @@ use nsh_core::prelude::*;
 use crate::icons;
 use crate::shell::{Bottom, Shell, Tool, UiState, appearance_id};
 use crate::ui::{
-    color_of, icon_slot, menu_separator, menu_trigger, mnemonic_label, popup_style, submenu_trigger,
+    burger_button, color_of, icon_slot, menu_separator, mnemonic_label, popup_style,
+    submenu_trigger,
 };
 
 /// 注册全部动作与菜单分组。
@@ -189,17 +190,25 @@ fn state(context: &keel_commands::DataContext) -> Option<&UiState> {
     context.get::<UiState>()
 }
 
-/// 把动作组渲染成标题栏菜单。
-pub fn app_menu(shell: Shell, group: &ActionGroup) -> impl IntoElement {
+/// 把动作组渲染成左上角的汉堡菜单。
+///
+/// IDEA 新 UI 默认隐藏菜单栏，`MainMenuButton` 的弹出层是主菜单组的垂直列表
+/// （最小宽度 180），悬停展开子菜单；组本身没有图标，只有文字和箭头。
+pub fn main_menu(shell: Shell) -> impl IntoElement {
+    let registry = shell.registry();
     let mut element = menu()
         .offset(px(4.0))
-        .popup_style(popup_style)
-        .trigger(menu_trigger(
+        .popup_style(|style| popup_style(style).min_w(px(180.0)))
+        .trigger(burger_button());
+    for group in registry.groups() {
+        let mut submenu_element = submenu().offset(px(4.0)).trigger(submenu_trigger(
             group.text(),
             icons::group_mnemonic(group.id()),
         ));
-    for node in shell.registry().menu(group.id(), &shell.context()) {
-        element = element.child(menu_node(shell, node));
+        for node in registry.menu(group.id(), &shell.context()) {
+            submenu_element = submenu_element.child(menu_node(shell, node));
+        }
+        element = element.child(submenu_element);
     }
     element
 }

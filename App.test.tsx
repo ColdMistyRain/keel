@@ -5,16 +5,15 @@ test("renders the Keel workbench shell", async () => {
   const app = await open(".");
   const texts = app.texts();
   expect(texts).toContain("Keel");
-  expect(texts).toContain("文件");
-  expect(texts).toContain("视图");
-  expect(texts).toContain("导航");
-  expect(texts).toContain("帮助");
   expect(texts).toContain("项目");
   expect(texts).toContain("UTF-8");
+  // 菜单栏默认收进左上角的汉堡按钮。
+  expect(app.count("label:主菜单")).toBe(1);
 });
 
 test("opens the View menu from the action registry", async () => {
   const app = await open(".");
+  await app.press("label:主菜单");
   await app.press("text:视图");
   await app.waitFor("text:工具窗口");
   const texts = app.texts();

@@ -66,15 +66,10 @@ pub fn App() -> impl IntoElement {
         ))
 }
 
-/// 自绘标题栏：40 点高，右侧留给系统窗口按钮；菜单来自动作注册表。
+/// 自绘标题栏：40 点高，右侧留给系统窗口按钮。
+///
+/// 菜单不常驻，收进左上角的汉堡按钮（IDEA 新 UI 的 `MainMenuButton`）。
 fn title_bar_row(shell: Shell) -> impl IntoElement {
-    let registry = shell.registry();
-    let menus = registry
-        .groups()
-        .into_iter()
-        .map(|group| commands::app_menu(shell, group).into_element())
-        .collect::<Vec<_>>();
-
     view()
         .window_drag(true)
         .h(move || {
@@ -86,13 +81,13 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
         .flex_row()
         .items_center()
         .gap(px(4.0))
+        .child(commands::main_menu(shell))
         .child(
             text("Keel")
                 .text_size(px(13.0))
                 .font_weight(FontWeight::SEMIBOLD)
                 .pr(px(8.0)),
         )
-        .children(menus)
         .child(
             text(move || shell.ws.root_name())
                 .text_size(px(13.0))
