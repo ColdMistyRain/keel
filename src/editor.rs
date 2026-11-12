@@ -263,25 +263,34 @@ impl KeelApp {
                 );
             }
             let is_last = ix == last;
-            let is_dir = segment_path.is_dir();
-            let icon_path = if is_dir {
-                crate::file_icons::folder_icon(chrome.icon_suffix)
-            } else {
-                crate::file_icons::file_icon(&segment_path, chrome.icon_suffix)
-            };
+            let mut segment = div()
+                .id(("breadcrumb", ix))
+                .flex()
+                .items_center()
+                .gap_1()
+                .px_1()
+                // 面包屑高亮块 = 内容 + `StatusBar.Breadcrumbs.itemBackgroundInsets`(2,4)，
+                // 圆角取 `AbstractNavBarUI.paintHighlight` 的 arc 4（半径 2）。
+                .h(px(17.))
+                .rounded(px(2.))
+                .cursor_pointer()
+                // `NavBarItemComponent.update()`：新 UI 下所有段都是
+                // `Breadcrumbs.FOREGROUND`，悬停才换成 `HOVER_FOREGROUND`。
+                .text_color(chrome.muted_fg)
+                .hover(|style| style.bg(chrome.control_hover).text_color(chrome.fg));
+            // `effectiveIcon`：只有最后一段（或包含文件的段）才画图标，
+            // 中间的目录段是纯文字。
+            if is_last {
+                let icon_path = if segment_path.is_dir() {
+                    crate::file_icons::folder_icon(chrome.icon_suffix)
+                } else {
+                    crate::file_icons::file_icon(&segment_path, chrome.icon_suffix)
+                };
+                // 面包屑里的文件类型图标同样是多色的 expUI 图标。
+                segment = segment.child(img(icon_path).size(px(16.)));
+            }
             children.push(
-                div()
-                    .id(("breadcrumb", ix))
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .px_1()
-                    .rounded_sm()
-                    .cursor_pointer()
-                    .text_color(if is_last { chrome.fg } else { chrome.muted_fg })
-                    .hover(|style| style.bg(chrome.control_hover))
-                    // 面包屑里的文件类型图标同样是多色的 expUI 图标。
-                    .child(img(icon_path).size(px(16.)))
+                segment
                     .child(div().whitespace_nowrap().child(label))
                     .on_click(cx.listener(move |this, _event, _window, cx| {
                         this.locate_in_project(segment_path.clone(), cx);
@@ -293,8 +302,9 @@ impl KeelApp {
         div()
             .flex()
             .items_center()
-            .gap_1()
-            .h_full()
+            // `StatusBar.Breadcrumbs.navBarInsets` = "3,0,4,4"：面包屑条高 21，
+            // 分隔箭头与相邻段紧贴，不再额外留 4px 间距。
+            .h(px(21.))
             .min_w_0()
             .overflow_hidden()
             .children(children)
