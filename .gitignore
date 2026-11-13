@@ -1,6 +1,6 @@
 # 构建产物
 /target
-legacy/gpui/target/
+legacy/nsh/target/
 **/*.rs.bk
 
 # nsh 生成物

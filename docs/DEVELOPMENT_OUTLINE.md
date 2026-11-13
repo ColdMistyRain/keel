@@ -1,8 +1,8 @@
 # Keel 开发大纲
 
-> **2026-11-12 起 nsh 是主线。** 默认构建、`nsh run`、测试与截图都在仓库根目录的
-> nsh 工作台；本文中的 GPUI 模块路径属于归档的 `legacy/gpui/`，仅作历史参考。
-> 当前结构见 [README.md](../README.md)，迁移细节见 [NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)。
+> **2026-11-13 起 GPUI（gpui-ce）重新成为主线。** 默认构建、测试与截图都在仓库根目录；
+> nsh 版本归档在 `legacy/nsh/`，仅作历史参考。当前结构见 [README.md](../README.md)，
+> 迁移与回退记录见 [NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)。
 
 > 目标：用 **Rust + GPUI** 复刻一个 IntelliJ IDEA 风格的桌面 IDE，**优先支持 Java**。
 > 本文档用于指导后续 AI 按阶段、按任务卡推进实现，避免一次性铺开大架构或反复推翻已有工作。
@@ -11,7 +11,7 @@
 > - IDEA 源码：`D:\Programming\Workspace\intellij-community`
 > - IDEA 架构参考文档：[INTELLIJ_ARCHITECTURE_REFERENCE.md](./INTELLIJ_ARCHITECTURE_REFERENCE.md)
 > - 复刻项目架构对照：[REPLICA_ARCHITECTURE_COMPARISON.md](./REPLICA_ARCHITECTURE_COMPARISON.md)
-> - nsh 迁移：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（nsh 已是主线，仓库根目录即工作台；GPUI 归档在 `legacy/gpui/`）
+> - nsh 迁移与回退：[NSH_MIGRATION_PLAN.md](./NSH_MIGRATION_PLAN.md)（nsh 已归档到 `legacy/nsh/`，仓库根目录是 GPUI 主线）
 > - 另一个 IDEA 复刻品：`D:\Programming\Workspace\Lithe-IDEA`
 > - Rust 复刻参考：`D:\Programming\Workspace\openidea`
 >
@@ -144,11 +144,11 @@ serde_json = "1"
 
 保持**单 crate**，按职责拆模块；只有当某块需要独立测试或被外部进程复用时才拆 crate。
 
-已经抽出的独立 crate（按 IDEA 平台分层，GPUI 与 nsh 共用）：
+已经抽出的独立 crate（按 IDEA 平台分层）：
 
 - `crates/keel-core`：Service Container（应用/项目）、Disposable、MessageBus / Topic；
 - `crates/keel-workspace`：`ProjectModel` + 不可变 `ProjectSnapshot` + 变更事件、树摊平、语言识别；
-- `crates/keel-theme`：读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），生成 GPUI 用的令牌与 nsh 的 `cssVars`。
+- `crates/keel-theme`：读取 `themes/idea-*.json`（颜色、圆角、语法配色、调色板），生成 GPUI 令牌与 nsh 的 `cssVars`（供归档版本使用）。
 
 ```
 src/
@@ -397,6 +397,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-44：未选中标签的变淡规则——`EditorTabbedContainer` 用两套参数处理未选中标签：(1) 文字按 `editLabelForeground()` 的 `ColorUtil.blendColorsInRgb(底色, 前景色, EditorTabs.unselectedBlend)`，浅色混 10%（0.9）、深色混 30%（0.7），此前两套主题都写死 0.9，深色下未选中标签过于明亮；(2) 图标按 `getIconAlpha()` 取 `EditorTabs.unselectedAlpha`(0.75)，此前图标始终满不透明；(3) 两者的判断条件都是 `paintDimmed()`：非选中且未悬停——悬停即恢复满对比度。令牌 `unselected_blend` / `unselected_alpha` 分别写入 `Tokens`
 - [x] Phase 1 · UI-45：弹层表面圆角与设置页控件——(1) 菜单/弹层表面圆角恢复 8：`bordered_surface` 改用 `theme.radius_lg`（`PopupMenu.borderCornerRadius`），并在外层铺 `popover` 底色补齐 8px 与组件库内部 4px 圆角之间的空隙；此前 UI-40 把 `theme.radius` 改成 4 后菜单表面跟着变成了 4；(2) 补齐 `theme.tokens.primary` / `tokens.accent` / `tokens.accent_foreground`：组件库菜单项与列表项读的是 tokens 而不是 `theme.accent`，不覆盖时菜单悬停会落回组件库自带的灰色，而不是 IDEA 的 `selection-bg-active` 蓝色；(3) 设置页的主题与文本渲染由「主按钮 + 幽灵按钮」改为 IDEA `ComboBox` 风格的下拉框：触发器 28px 高、1px `Popup.borderColor` 描边、圆角 4、当前值左对齐 + `chevronDown`；下拉项与触发器同宽（180）、当前值带勾选标记
 - [x] Phase 1 · UI-46：菜单分隔线——(1) 组件库 `PopupMenu::separator()` 画的是 2px `theme.border`（`#EBECF0`）且上下各带 2px 间隙，与 IDEA 的 `DarculaSeparatorUI` 不符；新增 `Tokens.separator_line`（浅色 `#CDCDCD`、深色 `popup-border` `#33353B`）与 `Chrome.separator_line`；(2) `menu::separator(color)` 用禁用的 `ElementItem` 画 1px 线，负外边距抵消菜单项 8px 内边距与 2px 行间距，分隔块总高回到 IDEA 的 3px、接近通栏；(3) 主菜单、项目面板标题/更多、项目树右键、编辑器标签右键共 14 处 `.separator()` 全部替换。子菜单表面仍由组件库内部直接渲染（4px 圆角、无描边），需要改写依赖或自绘子菜单后才能对齐 8px + `Popup.borderColor`
+- [x] 2026-11-13：平台回退——nsh 0.5.0 的成熟度不足，GPUI（gpui-ce 0.3.0 + gpui-component）恢复为仓库根目录主线；nsh 工作台（src、assets、nsh.json、测试）整体归档到 `legacy/nsh/`，构建缓存与 Cargo.lock 同步交换；README 与本文档改回 GPUI 口径
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

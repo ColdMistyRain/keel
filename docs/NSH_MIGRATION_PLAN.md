@@ -1,12 +1,13 @@
 # Keel 迁移到 Native Shell（nsh）方案
 
 > 目标：把 Keel 的 UI 框架从 GPUI 切换到 [Native Shell（nsh）](https://nsh.dev/zh-CN/)。
-> 结论：**已切换**；nsh 版本是主线，GPUI 归档在 `legacy/gpui/`。
+> 结论：**已回退。** 2026-11-13 起 GPUI（gpui-ce）重新成为主线，nsh 版本归档在
+> `legacy/nsh/`，本文保留迁移评估与 P0–P2 记录，仅作历史参考。
 > 参考版本：nsh `v0.5.0`，Apache-2.0，官方文档 `https://nsh.dev/zh-CN/`。
 >
-> **当前状态（2026-11-12）：nsh 已提升为主线。** 工作台位于仓库根目录
-> （Rust-only UI，Windows 优先，`nsh run .`）；原 P0 spike 已整体迁移到根目录，
-> GPUI 基线归档到 `legacy/gpui/`，不再参与默认构建。P0–P2 记录见 §4.1–§4.4。
+> **当前状态（2026-11-13）：nsh 0.5.0 的成熟度不足，主线回退到 GPUI。**
+> 仓库根目录恢复为 GPUI 工作台（`cargo run`）；nsh 版本的 `src/`、`assets/`、
+> `nsh.json`、测试与构建缓存整体移动到 `legacy/nsh/`。
 
 ---
 

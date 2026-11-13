@@ -1,0 +1,28 @@
+[package]
+name = "nsh-app-keel"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# 独立 workspace：归档的 nsh 版本，不参与根目录 GPUI 主线的默认构建。
+[workspace]
+
+[dependencies]
+nsh-core = "0.5.0"
+nsh-base = "0.5.0"
+# 工作区模型（目录扫描、树摊平、语言识别、项目根识别）。
+keel-workspace = { path = "../../crates/keel-workspace" }
+# 动作注册表：菜单、快捷键共用一份定义。
+keel-commands = { path = "../../crates/keel-commands" }
+# 主题配置文件（themes/idea-*.json）的加载与 nsh cssVars 生成。
+keel-theme = { path = "../../crates/keel-theme" }
+env_logger = "0.11"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nsh-platform-linux = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+nsh-platform-macos = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+nsh-platform-windows = { version = "0.5.0", default-features = false, features = ["shader", "editor", "emoji-picker", "highlight", "math", "plot", "rich-editor", "term"] }

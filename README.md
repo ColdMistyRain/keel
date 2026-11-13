@@ -1,129 +1,82 @@
 # Keel
 
 借鉴 IntelliJ IDEA 交互范式的 Rust 原生 IDE，UI 使用
-[Native Shell（nsh）](https://nsh.dev/zh-CN/)，**纯 Rust、无 WebView**。
+[GPUI](https://github.com/gpui-ce/gpui)（`gpui-ce 0.3.0` + `gpui-component`），
+Windows 优先，优先支持 Java。
 
-原 GPUI 版本已归档到 [`legacy/gpui/`](legacy/gpui/)，不再参与默认构建；
-迁移过程见 [`docs/NSH_MIGRATION_PLAN.md`](docs/NSH_MIGRATION_PLAN.md)。
+nsh 版本已归档到 [`legacy/nsh/`](legacy/nsh/)，不再参与默认构建；
+迁移与回退记录见 [`docs/NSH_MIGRATION_PLAN.md`](docs/NSH_MIGRATION_PLAN.md)。
 
 ## 运行
 
 ```powershell
-# 安装 nsh（仅首次）
-irm https://nsh.dev/install.ps1 | iex
-
-# 启动工作台
-nsh run .
-
-# 启动时打开一个文件夹或文件（开发环境；打包产物直接用第一个路径参数）
-$env:KEEL_OPEN = "d:\path\to\project"; nsh run .
-
-# 自动打开内置示例项目（截图/验收用）
-$env:KEEL_DEMO = "1"; nsh run .
-
-# 无头测试
-nsh test
-
-# 真实 Windows 窗口测试，并刷新 docs/screenshots 下的截图
-$env:KEEL_DEMO = "1"; nsh test --target windows
-
-# 打包 Windows 产物（release 构建约 2 分半；安装包需要本机装 Inno Setup 6）
-nsh package --target windows
+$env:CARGO_HOME="C:\Users\lzx\.cargo"
+cargo run
 ```
 
-`nsh run` 会监听 Rust 源码：改动后自动重新编译并重启（本机约 5 秒编译 + 7 秒重建 runner）。
+验证：
+
+```powershell
+cargo fmt --check
+cargo test
+cargo clippy --no-deps --all-targets
+```
+
+窗口尺寸、主题、面板宽度、最近打开的项目等写入 `%APPDATA%\Keel\state.json`；
+配色、圆角、编辑器语法色全部来自 [`themes/idea-light.json`](themes/idea-light.json)
+与 [`themes/idea-dark.json`](themes/idea-dark.json)，由 `keel-theme` 在启动时载入。
 
 ## 界面结构
 
 | 区域 | 实现 |
 | --- | --- |
-| 标题栏 | 自绘 40px 标题栏，`.window_drag(true)` 拖动窗口，右侧给系统窗口按钮留白（`title_bar().right`）；应用图标 → 左组（主菜单 / 项目色头像 / 项目名 / 分支）→ 右组（run widget（配置选择 / 运行 / 调试）、搜索按钮、设置按钮）；帧背景带项目色径向渐变（左上角 600×300，跟随项目与深浅色） |
-| 应用菜单 | 文件 / 视图 / 导航 / 帮助，全部来自 `keel-commands` 的动作注册表；菜单项带 16×16 SVG 图标与助记符下划线（`文件(F)`、`打开项目(P)…`）；快捷键也从注册表绑定 |
-| 工具窗口条 | 左侧 40px 竖条：上半区项目、搜索、版本控制、结构；下半区服务、运行、终端、问题 |
-| 项目面板 | `resizable_panel` 宽度 180–460、可折叠；标题栏右侧固定「更多 / 隐藏」，工具窗口聚焦时再显示刷新 / 收起全部；树用自绘 `scroll` 列表，顶部项目根节点带灰色绝对路径，含 `.idea`、Maven 图标、外部库与临时文件占位节点，右键菜单（打开 / 预览 / 复制路径 / 在项目中定位） |
-| 编辑器区 | IDEA Islands 胶囊标签（条高 41、标签高 28；聚焦时蓝底 + 1px 边框，失焦时灰底 + 灰边框，未选中无底色）、标签溢出时右侧滚动箭头、预览标签（单击斜体、双击固定）、未保存圆点、关闭、右键菜单；`nsh_base::editor` |
-| 运行 | `Shift+F10` 运行、`Ctrl+F2` 停止；run widget 显示绿色运行 / 红色停止按钮、运行配置选择器和调试按钮，运行中打开底部「运行」窗口 |
-| 命令面板 | `Ctrl+Shift+A` 按名称搜索动作注册表；↑↓ 选择、Enter 执行、Esc 关闭；背景用主题的 `overlay` 遮罩 |
-| 底部工具窗口 | 服务 / 运行 / 终端 / 问题胶囊标签（聚焦蓝底、失焦灰底，选中标签带关闭 X）；`v_resizable` 高度 90–360；右侧「更多 / 隐藏」；状态栏左侧有图标切换条 |
-| 状态栏 | 最左侧 VFS 同步按钮；面包屑（项目根 → 文件，带图标与箭头，可点击在项目树中定位；临时提示会短暂覆盖）；右侧位置、换行、编码、缩进 widget（hover 底色，点击弹出菜单） |
-
-配色、圆角、编辑器语法配色全部来自
-[`themes/idea-light.json`](themes/idea-light.json) 与
-[`themes/idea-dark.json`](themes/idea-dark.json)：启动时由 `keel-theme`
-转成 nsh 的 shadcn `cssVars`，再通过 `set_tokens` 注入，Rust 代码里没有色值常量。
-外观跟随系统，可在「视图 → 外观」里切换「跟随系统 / 浅色 / 深色」（带勾选）。
+| 主工具栏 | 自绘标题栏：汉堡菜单、项目/分支部件、搜索与设置；右侧系统窗口按钮 |
+| 应用菜单 | 文件 / 编辑 / 视图 / 导航 / 工具 / 窗口，只保留有真实动作的项；快捷键与命令面板共用动作注册表 |
+| 工具窗口条 | 左侧条纹（Project / Search / Git / Maven / 底部工具窗口 / 设置），选中为 IDEA 蓝色高亮块 |
+| 项目面板 | 目录展开/折叠、选中、双击打开、文件类型图标；标题栏动作、右键菜单、新建/重命名/删除/复制路径、拖拽调宽 |
+| 编辑器 | 标签页（溢出滚动、下拉列表、拖拽排序、右键菜单、未保存圆点、悬停关闭）、行号、缩进参考线、查找替换、4 空格缩进 |
+| 状态栏 | 左侧面包屑导航（可点击在项目树中定位），右侧行列号/换行/编码/缩进/语言 |
+| 底部面板 | Problems / Run / Terminal 三个占位页，可拖高、可隐藏 |
+| 命令面板 | `Ctrl+Shift+P` 按名称搜索动作，↑↓ 选择、Enter 执行、Esc 关闭 |
+| 设置/关于 | `Ctrl+Alt+S` 设置页与关于页，可切换浅色/Darcula 与文本渲染方式 |
+| 通知 | 右下角气泡提示保存、刷新、文件操作结果 |
 
 ## 代码结构
 
 ```
-src/lib.rs            IdeRootPane：标题栏、工具窗口条、分栏、状态栏
-src/shell.rs          外壳状态：工具窗口、底部窗口、外观、动作注册表、UiState
-src/commands.rs       动作注册与菜单渲染：菜单 / 快捷键 / 命令面板共用一份定义
-src/palette.rs        命令面板：搜索、排序、键盘选择与执行
-src/project_panel.rs  左侧工具窗口：条纹、标题栏、项目树与右键菜单
-src/editor_area.rs    编辑器区：标签页与右键菜单、面包屑、编辑器、欢迎页
-src/bottom_panel.rs   底部工具窗口：切换条、标题栏、占位内容
-src/ui.rs             共用小部件与主题取值（菜单项、助记符、图标按钮、条纹按钮）
-src/icons.rs          菜单与命令面板图标（IDEA expui 原资产）、动作 / 分组助记符
-src/fonts.rs          随应用发布的界面 Inter / 编辑器 JetBrains Mono
-src/workspace.rs      nsh 侧状态：把 keel-workspace 的模型包成信号，管理文档与保存
-crates/keel-core      服务容器、Disposable、MessageBus / Topic
-crates/keel-workspace 项目快照、目录扫描、树摊平、语言识别、项目根识别
-crates/keel-commands  Action / ActionGroup / DataContext / 注册表
-crates/keel-theme     读取 themes/idea-*.json，生成 GPUI 令牌与 nsh cssVars
-samples/demo/         Java 示例项目（pom.xml + Main.java + Greeter.java）
-assets/icons/expui/   IDEA 社区版 expui 图标（Apache 2.0，单色图标改为 currentColor）
-assets/fonts/         Inter / JetBrains Mono（SIL OFL）
-legacy/gpui/          归档的 GPUI 基线（独立 workspace，不参与默认构建）
-nsh.json              应用配置：窗口尺寸、隐藏标题栏（主题不在这里）
+src/main.rs            入口、窗口、字体、快捷键、主题初始化
+src/app.rs             根视图：工具栏、菜单、状态栏、对话框、命令面板、通知
+src/editor.rs          编辑器标签、文档生命周期、查找替换
+src/project_tree.rs    项目树渲染与交互
+src/project.rs         pom.xml / settings.gradle 探测（尚未接入 UI）
+src/model.rs           目录树、过滤、排序、语言识别、state.json
+src/idea_theme.rs      IDEA 令牌 → GPUI 颜色与语法主题
+src/file_icons.rs      文件类型图标与语言着色
+src/tool_window.rs     左侧工具窗口条
+src/panels.rs          底部面板
+src/menu.rs            菜单弹层表面（1px 描边）
+src/tooltip.rs         自绘工具提示
+crates/keel-theme      读取 themes/idea-*.json（颜色、圆角、语法配色、调色板）
+samples/demo/          Java 示例项目（pom.xml + Main.java + Greeter.java）
+assets/                IDEA expui SVG 图标与 Inter / JetBrains Mono 字体
+themes/                IDEA Light / Darcula 令牌配置
+legacy/nsh/            归档的 nsh 版本（独立 workspace，不参与默认构建）
 ```
 
-`workspace.rs` 只持有 nsh 信号；项目结构来自 `keel-workspace` 的不可变
-`ProjectSnapshot`（IDEA Workspace Model 式快照），目录扫描、树摊平、语言识别
-都在 [`keel-workspace`](crates/keel-workspace/src/lib.rs)。动作、菜单分组、
-`DataContext` 与注册表在 [`keel-commands`](crates/keel-commands/src/lib.rs)。
+分层规则：UI 模块只读写应用状态；外部 IO（文件、进程、网络、LSP）
+一律放到后台任务，结果通过 `cx.update` 回到 UI。
 
-## 验收记录
+## 参考
 
-P0 / P1 / P2 的完整记录见
-[`docs/NSH_MIGRATION_PLAN.md`](docs/NSH_MIGRATION_PLAN.md)。要点：
-
-- nsh 0.5.0 在 Windows 上可构建、可运行，`nsh run` 热重载可用；
-- 编辑器、标签页、面包屑、状态栏、自绘标题栏、菜单、浅色/深色主题可正常渲染；
-- 编辑、`Ctrl+S` 保存、中文插入（`SendKeys` 注入）已实测；
-- `nsh_base::Tree` 在 Windows 窗口里不绘制行（父视口虚拟列表不绘制），
-  项目树改用 `scroll` + `dynamic` 自绘列表；
-- 文件选择用 `pick_paths`（原生打开对话框，返回真实路径），配合 `std::fs` 读写。
-
-P2 外壳（2026-11-12）：
-
-| 项 | 结果 |
-| --- | --- |
-| `cargo clippy --all-targets -- -D warnings` | 通过 |
-| `nsh test`（无头） | 9 通过：外壳文本、视图菜单、命令面板、项目树菜单，截图测试自动跳过 |
-| `nsh test --target windows` | 9 通过：真实窗口中的菜单、命令面板、预览标签、右键菜单与截图 |
-| 左侧工具窗口 | 可拖宽、可折叠；刷新 / 收起全部 / 隐藏可用 |
-| 标签页 | 溢出横向滚动、预览标签（单击）、双击固定、未保存圆点、关闭、右键菜单 |
-| 命令面板 | `Ctrl+Shift+A` 打开，按名称过滤，↑↓ / Enter / Esc 可用 |
-| 项目树 | 单击预览、双击固定；右键打开 / 预览 / 复制路径 / 在项目中定位 |
-| 底部工具窗口 | 问题 / 运行 / 终端切换与拖高可用；左侧条纹下半区的图标按钮同步 |
-| 动作状态 | 无文档时保存 / 关闭变灰；工具窗口与外观菜单显示勾选 |
-| 打开项目 | 菜单 / 欢迎页对话框、`KEEL_OPEN`、打包产物路径参数；文件向上识别项目根 |
-
-截图：[浅色](docs/screenshots/nsh-p2-light.png) ·
-[深色](docs/screenshots/nsh-p2-dark.png) ·
-[文件菜单](docs/screenshots/nsh-p2-menu.png) ·
-[预览标签](docs/screenshots/nsh-p2-preview.png) ·
-[命令面板](docs/screenshots/nsh-p2-palette.png) ·
-[运行中的 run widget](docs/screenshots/nsh-p2-running.png) ·
-[项目树右键菜单](docs/screenshots/nsh-p2-tree-menu.png)。
+- [开发大纲与任务卡](docs/DEVELOPMENT_OUTLINE.md)
+- [IDEA 社区版架构参考](docs/INTELLIJ_ARCHITECTURE_REFERENCE.md)
+- [复刻项目架构对照](docs/REPLICA_ARCHITECTURE_COMPARISON.md)
+- [nsh 迁移与回退记录](docs/NSH_MIGRATION_PLAN.md)
 
 ## 已知缺口
 
-- 只有 Java / XML 使用 expui 彩色图标，其他语言仍是通用 `file.svg`；
-- 搜索 / 版本控制工具窗口、问题 / 运行 / 终端面板仍是占位（运行只驱动 UI，不执行真实程序）；
-- 编辑器只有一个编辑器组，没有分栏、拖拽标签与标签重排；
-- 查找替换、设置页未迁移；命令面板目前只搜动作，不搜文件和类；
-- 每次按键都会把整段文本写回信号（`editor` 的受控用法），大文件应改用
-  `default_value` + 保存时读取（P3 处理）；
-- 中文 IME 组合（拼音候选）仍需人工在窗口里验证；`SendKeys` 注入中文已验证。
+- 搜索 / 版本控制 / 问题 / 运行 / 终端面板仍是占位，运行不执行真实程序；
+- Maven / Gradle 探测尚未接入 UI，语言智能（jdtls）、调试、Git 未开始；
+- 编辑器只有一个编辑器组，没有分栏与标签跨组拖动；
+- 预览标签（单击预览、双击固定）与顶部 run widget 是 nsh 分支期间新增的，
+  尚未回迁到 GPUI 主线。
