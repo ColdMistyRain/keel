@@ -738,6 +738,18 @@ impl KeelApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // 读取期间文件可能已被另一个打开请求插入（单击预览后紧跟双击固定），
+        // 此时只做激活；显式打开顺带取消预览态。
+        if let Some(idx) = self.index_of(&path) {
+            if !preview {
+                self.documents[idx].preview = false;
+            }
+            self.active = Some(idx);
+            self.tab_scroll.scroll_to_item(idx);
+            self.request_focus(FocusTarget::Document(path));
+            return;
+        }
+
         let language = model::language_for_path(&path);
         let state = cx.new(|cx| {
             let editor = EditorState::new(window, cx)
@@ -1006,6 +1018,11 @@ impl KeelApp {
             && target != drag.path
         {
             self.move_document(&drag.path, &target);
+            // IDEA 拖动标签时会把文件关闭后在新位置重新打开，预览态因此丢失；
+            // 这里把拖动过的预览标签直接固定为普通标签。
+            if let Some(idx) = self.index_of(&drag.path) {
+                self.documents[idx].preview = false;
+            }
         }
         cx.notify();
     }
