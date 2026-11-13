@@ -3,6 +3,7 @@ mod app;
 mod assets;
 mod comment;
 mod editor;
+mod external;
 mod file_icons;
 mod idea_theme;
 mod menu;

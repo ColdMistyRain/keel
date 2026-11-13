@@ -19,6 +19,8 @@ pub struct Document {
     pub preview: bool,
     /// 只读文件：状态栏显示「只读」，保存时给出明确提示而不是系统错误。
     pub readonly: bool,
+    /// 打开/保存时记录的磁盘标识，用来发现外部修改（ED-06）。
+    pub disk: Option<crate::external::DiskStamp>,
     pub eol: &'static str,
     pub _changes: Subscription,
     /// 编辑器每次重绘（含光标移动）都会触发，用来刷新状态栏的行列号。
@@ -39,6 +41,7 @@ impl Document {
             dirty: false,
             preview: false,
             readonly: false,
+            disk: None,
             eol,
             _changes: changes,
             _observe: observe,

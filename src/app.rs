@@ -16,11 +16,12 @@ use gpui_component_assets::IconName;
 use crate::actions::{
     CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, Debug,
     FindInFile, LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown,
-    PaletteUp, PreviousTab, RefreshProjectTree, ReplaceInFile, Run, SaveFile, ShowAbout,
-    ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs, ToggleComment,
-    ToggleProjectPanel, ToggleTheme,
+    PaletteUp, PreviousTab, RefreshProjectTree, ReloadFromDisk, ReplaceInFile, Run, SaveFile,
+    ShowAbout, ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs,
+    ToggleComment, ToggleProjectPanel, ToggleTheme,
 };
 use crate::editor::Document;
+use crate::external::ExternalConflict;
 use crate::idea_theme::ThemeKind;
 use crate::model::{self, PersistedState, TreeNode, VisibleRow};
 use crate::project::{self, ProjectModel};
@@ -388,6 +389,8 @@ pub struct KeelApp {
     pub subpixel_text: bool,
     pub palette: Option<PaletteState>,
     pub pending_close: Option<PathBuf>,
+    /// 外部修改与本地未保存修改冲突时，等待用户选择（ED-06）。
+    pub external_conflict: Option<ExternalConflict>,
     pub file_op: Option<FileOpDialog>,
     pub delete_confirm: Option<DeleteConfirm>,
     /// 右键菜单（项目树、编辑器标签）。
@@ -443,6 +446,7 @@ impl KeelApp {
             subpixel_text: persisted.subpixel_text.unwrap_or(false),
             palette: None,
             pending_close: None,
+            external_conflict: None,
             file_op: None,
             delete_confirm: None,
             context_menu: None,
@@ -465,6 +469,8 @@ impl KeelApp {
         }
 
         this.focus_handle.focus(window, cx);
+        // 启动外部修改轮询（ED-06）：定时比对角磁盘上的文件标识。
+        this.watch_external_changes(window, cx);
         this
     }
 
@@ -801,6 +807,7 @@ impl KeelApp {
         let mut doc = Document::new(path.clone(), state, eol, subscription, observe);
         doc.preview = preview;
         doc.readonly = is_readonly_file(&path);
+        doc.disk = crate::external::disk_stamp(&path);
         if doc.readonly {
             // IDEA 的做法：编辑器仍可输入，但保存时明确拒绝并提示只读。
             self.status = StatusMessage::info(format!("以只读方式打开 {}", short_name(&path)));
@@ -1084,6 +1091,8 @@ impl KeelApp {
                     Ok(()) => {
                         if let Some(idx) = app.index_of(&path) {
                             app.documents[idx].dirty = false;
+                            // 保存后刷新磁盘标识，否则下一轮轮询会把自己写的内容当成外部修改。
+                            app.documents[idx].disk = crate::external::disk_stamp(&path);
                         }
                         let message = format!("已保存 {}", short_name(&path));
                         app.status = StatusMessage::info(message.clone());
@@ -2907,6 +2916,7 @@ impl Render for KeelApp {
             .on_action(cx.listener(Self::on_find_in_file))
             .on_action(cx.listener(Self::on_replace_in_file))
             .on_action(cx.listener(Self::on_toggle_comment))
+            .on_action(cx.listener(Self::on_reload_from_disk))
             .on_action(cx.listener(Self::on_run))
             .on_action(cx.listener(Self::on_stop))
             .on_action(cx.listener(Self::on_debug))
@@ -2939,6 +2949,10 @@ impl Render for KeelApp {
 
         if self.delete_confirm.is_some() {
             root = root.child(self.render_delete_confirm(&chrome, cx));
+        }
+
+        if self.external_conflict.is_some() {
+            root = root.child(self.render_external_conflict(&chrome, cx));
         }
 
         if self.settings.is_some() {
@@ -2978,7 +2992,7 @@ fn is_readonly_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn short_name(path: &Path) -> String {
+pub(crate) fn short_name(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| path.display().to_string())
@@ -3150,6 +3164,7 @@ fn build_main_menu(
         menu.menu("打开项目目录…", Box::new(OpenProject))
             .item(crate::menu::separator(separator))
             .menu("保存", Box::new(SaveFile))
+            .menu("从磁盘重新加载", Box::new(ReloadFromDisk))
             .menu("关闭编辑器", Box::new(CloseEditor))
             .item(crate::menu::separator(separator))
             .menu("设置…", Box::new(ShowSettings))

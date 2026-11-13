@@ -28,6 +28,7 @@ actions!(
         FindInFile,
         ReplaceInFile,
         ToggleComment,
+        ReloadFromDisk,
         Run,
         Stop,
         Debug,

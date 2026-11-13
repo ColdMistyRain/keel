@@ -402,7 +402,8 @@ cargo clippy --no-deps
 - [x] 2026-11-13：平台回退——nsh 0.5.0 的成熟度不足，GPUI（gpui-ce 0.3.0 + gpui-component）恢复为仓库根目录主线；nsh 工作台（src、assets、nsh.json、测试）整体归档到 `legacy/nsh/`，构建缓存与 Cargo.lock 同步交换；README 与本文档改回 GPUI 口径
 - [x] Phase 1 · UI-47：主工具栏 run widget 与底部工具窗口动作——(1) 标题栏右侧按 IDEA `RedesignedRunWidget` 补运行配置选择器（当前文件名，缺省 `main`）、绿色运行按钮（运行中变红色停止）、调试按钮与竖排「更多」菜单，布局在搜索/设置/窗口按钮之前；(2) `Shift+F10` 运行、`Ctrl+F2` 停止、`Shift+F9` 调试，运行/停止同步打开「运行」工具窗口并写入状态栏提示，主菜单补「运行」子菜单；(3) 底部工具窗口标题栏按工具窗口规范补右侧「更多 / 隐藏」动作，隐藏图标用 IDEA 的横线 `hide.svg`；(4) 新增 expUI `run/stop/debug/moreVertical` 图标并登记到 `assets.rs`，截图见 `docs/screenshots/ui-run-widget.png` 与 `ui-run-widget-running.png`
 - [x] Phase 1 · UI-48：预览标签——(1) `Document` 增加 `preview` 字段，项目树单击文件以预览标签打开（斜体、替换上一个预览标签、不新增标签位），双击固定为普通标签，与 IDEA 的 preview tab 一致；(2) 编辑预览标签内容后自动固定（`InputEvent::Change` 时清除 `preview`），标签栏双击预览标签也可固定；(3) `open_file` 与 `preview_file` 共用 `open_document(path, preview)`，已打开的文件直接激活，显式打开时顺带取消预览态；(4) 标签文字按 `preview` 加斜体；(5) 拖动重排标签时把预览标签固定（IDEA 拖拽会关闭后重新打开标签，预览态随之丢失）；(6) `insert_document` 在读取完成后复查文件是否已被打开，避免「单击预览 + 双击固定」两次异步读取插入重复标签；(7) 新标签（含预览之外的固定标签）插在当前激活标签之后（`active + 1`），对齐 `EditorWindow.addComposite` + `getPreferredInsertionIndex`（`UISettings.openTabsAtTheEnd` 默认 false），预览标签仍优先替换已有预览位。截图见 `docs/screenshots/ui-preview-tab.png`（main.rs 普通、README.md 斜体）与 `ui-tab-insert-position.png`（激活 README.md 后打开 app.rs，顺序为 README.md、app.rs、main.rs、Cargo.toml）
-- [ ] Phase 2：ED-02 ~ ED-06
+- [x] Phase 2 · ED-06：外部修改检测与重载——(1) 没有 VFS 事件，改为 2 秒轮询比对角「文件长度 + 修改时间」（`external::DiskStamp`），stat 与读取都在后台执行；(2) 文档在打开与保存成功后记录磁盘标识，保存后立即刷新，避免把自己的写入当成外部修改；(3) 无本地未保存修改时静默从磁盘重载并提示「已从磁盘重新加载 xxx」；(4) 有未保存修改时弹出冲突对话框，可选「从磁盘重新加载」（丢弃本地修改、清空撤销历史）或「保留当前内容」（把当前磁盘版本记为基线，保存时覆盖）；(5) 「文件 → 从磁盘重新加载」菜单项可手动重载当前文件。截图见 `docs/screenshots/ui-external-reload.png`
+- [ ] Phase 2：ED-02 ~ ED-04（剩余：代码折叠）
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven
 - [ ] Phase 5：Gradle
