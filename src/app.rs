@@ -800,7 +800,7 @@ impl KeelApp {
 
         let mut doc = Document::new(path.clone(), state, eol, subscription, observe);
         doc.preview = preview;
-        // 预览标签替换已有的预览标签，不额外占用标签位。
+        // 预览标签替换已有的预览标签，不额外占用标签位（`EditorWindow.addComposite`）。
         let preview_slot = if preview {
             self.documents.iter().position(|doc| doc.preview)
         } else {
@@ -812,8 +812,14 @@ impl KeelApp {
                 ix
             }
             None => {
-                self.documents.push(doc);
-                self.documents.len() - 1
+                // 新建标签插在当前标签之后；`UISettings.openTabsAtTheEnd` 默认关闭，
+                // IDEA 的 `getPreferredInsertionIndex` 此时返回 `selectedIndex + 1`。
+                let index = self
+                    .active
+                    .map(|active| (active + 1).min(self.documents.len()))
+                    .unwrap_or(self.documents.len());
+                self.documents.insert(index, doc);
+                index
             }
         };
         self.active = Some(index);
