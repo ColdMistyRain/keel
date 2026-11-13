@@ -145,12 +145,14 @@ impl Workspace {
             return;
         }
         let snapshot = scan_snapshot(&dir);
-        let expanded = snapshot
+        let mut expanded: Vec<SharedString> = snapshot
             .nodes
             .iter()
-            .filter(|node| node.is_dir && !node.children.is_empty())
+            .filter(|node| node.is_dir && !node.children.is_empty() && node.name != ".idea")
             .map(|node| SharedString::from(node.path.display().to_string()))
             .collect();
+        // 项目根节点始终展开；`.idea` 保持收起，和 IDEA 的默认项目视图一致。
+        expanded.push(SharedString::from(dir.display().to_string()));
         self.tree.set(Arc::new(snapshot));
         self.expanded.set(expanded);
         self.selected.set(None);
@@ -444,17 +446,63 @@ impl Workspace {
     }
 
     /// 展开状态下的可见行（spike 不做虚拟化，项目规模足够小）。
+    ///
+    /// 顶部合成项目根节点（带灰色绝对路径）；根展开时在真实子节点后
+    /// 追加 IDEA 的「外部库 / 临时文件和控制台」占位节点。
     pub fn visible_rows(&self) -> Vec<TreeRow> {
+        let Some(root) = self.root.get() else {
+            return Vec::new();
+        };
         let expanded: Vec<String> = self
             .expanded
             .get()
             .iter()
             .map(|id| id.to_string())
             .collect();
-        flatten(&self.tree.get(), &expanded, 0)
-            .into_iter()
-            .map(TreeRow::from)
-            .collect()
+        let root_id = root.display().to_string();
+        let root_open = expanded.contains(&root_id);
+        let detail = root
+            .canonicalize()
+            .unwrap_or_else(|_| root.clone())
+            .display()
+            .to_string();
+        // Windows canonicalize 会带 `\\?\` 前缀，项目视图里不显示它。
+        let detail = detail.strip_prefix(r"\\?\").unwrap_or(&detail).to_string();
+        let mut rows = vec![TreeRow {
+            id: root_id.into(),
+            label: self.root_name(),
+            depth: 0,
+            folder: true,
+            open: root_open,
+            detail: Some(detail.into()),
+            root: true,
+        }];
+        if root_open {
+            rows.extend(
+                flatten(&self.tree.get(), &expanded, 1)
+                    .into_iter()
+                    .map(TreeRow::from),
+            );
+            rows.push(TreeRow {
+                id: "__external_libraries__".into(),
+                label: "外部库".into(),
+                depth: 1,
+                folder: true,
+                open: false,
+                detail: None,
+                root: false,
+            });
+            rows.push(TreeRow {
+                id: "__scratch__".into(),
+                label: "临时文件和控制台".into(),
+                depth: 1,
+                folder: true,
+                open: false,
+                detail: None,
+                root: false,
+            });
+        }
+        rows
     }
 
     /// 当前文档相对项目根的路径片段，用于面包屑（读取信号，供 `dynamic` 跟随）。
@@ -497,6 +545,10 @@ pub struct TreeRow {
     /// 有子项：可以展开 / 收起。
     pub folder: bool,
     pub open: bool,
+    /// 根节点名称后的灰色绝对路径。
+    pub detail: Option<SharedString>,
+    /// 是否是项目根节点。
+    pub root: bool,
 }
 
 impl From<FlatRow> for TreeRow {
@@ -507,6 +559,8 @@ impl From<FlatRow> for TreeRow {
             depth: row.depth,
             folder: row.folder,
             open: row.open,
+            detail: row.detail.map(Into::into),
+            root: row.root,
         }
     }
 }

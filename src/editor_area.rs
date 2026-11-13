@@ -450,7 +450,7 @@ fn code_editor(shell: Shell) -> impl IntoElement {
 /// 编辑器各部分套上 IDEA 的岛屿配色。
 fn idea_editor_classes() -> EditorClasses {
     let mut classes = EditorClasses::default();
-    classes.gutter = Some("bg-editor-bg".into());
+    classes.gutter = Some("bg-editor-bg border-r border-indent-guide".into());
     classes.content = Some("bg-editor-bg text-editor-fg".into());
     classes.line_number = Some("text-line-number".into());
     classes.active_line_number = Some("text-active-line-number".into());

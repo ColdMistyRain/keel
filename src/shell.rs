@@ -19,16 +19,18 @@ pub enum Tool {
     Project,
     Search,
     Version,
+    Structure,
 }
 
 impl Tool {
-    pub const ALL: [Tool; 3] = [Tool::Project, Tool::Search, Tool::Version];
+    pub const ALL: [Tool; 4] = [Tool::Project, Tool::Search, Tool::Version, Tool::Structure];
 
     pub fn id(self) -> &'static str {
         match self {
             Tool::Project => "project",
             Tool::Search => "search",
             Tool::Version => "version",
+            Tool::Structure => "structure",
         }
     }
 
@@ -37,6 +39,7 @@ impl Tool {
             Tool::Project => "view.tool_window.project",
             Tool::Search => "view.tool_window.search",
             Tool::Version => "view.tool_window.version",
+            Tool::Structure => "view.tool_window.structure",
         }
     }
 
@@ -45,6 +48,7 @@ impl Tool {
             Tool::Project => "项目",
             Tool::Search => "搜索",
             Tool::Version => "版本控制",
+            Tool::Structure => "结构",
         }
     }
 }
@@ -52,16 +56,23 @@ impl Tool {
 /// 底部工具窗口。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Bottom {
-    Problems,
+    Services,
     Run,
     Terminal,
+    Problems,
 }
 
 impl Bottom {
-    pub const ALL: [Bottom; 3] = [Bottom::Problems, Bottom::Run, Bottom::Terminal];
+    pub const ALL: [Bottom; 4] = [
+        Bottom::Services,
+        Bottom::Run,
+        Bottom::Terminal,
+        Bottom::Problems,
+    ];
 
     pub fn id(self) -> &'static str {
         match self {
+            Bottom::Services => "services",
             Bottom::Problems => "problems",
             Bottom::Run => "run",
             Bottom::Terminal => "terminal",
@@ -70,6 +81,7 @@ impl Bottom {
 
     pub fn action_id(self) -> ActionId {
         match self {
+            Bottom::Services => "view.bottom.services",
             Bottom::Problems => "view.bottom.problems",
             Bottom::Run => "view.bottom.run",
             Bottom::Terminal => "view.bottom.terminal",
@@ -78,6 +90,7 @@ impl Bottom {
 
     pub fn label(self) -> &'static str {
         match self {
+            Bottom::Services => "服务",
             Bottom::Problems => "问题",
             Bottom::Run => "运行",
             Bottom::Terminal => "终端",

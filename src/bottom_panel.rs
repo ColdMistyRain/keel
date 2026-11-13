@@ -80,12 +80,14 @@ fn tab_button(shell: Shell, bottom: Bottom) -> View {
     let active = move || shell.bottom.get() == Some(bottom);
     let active_focused = move || shell.bottom.get() == Some(bottom) && shell.bottom_focused.get();
     let active_inactive = move || shell.bottom.get() == Some(bottom) && !shell.bottom_focused.get();
+    let active_close = move || shell.bottom.get() == Some(bottom);
     view()
         .h(px(28.0))
         .px(px(10.0))
         .flex_row()
         .items_center()
         .justify_center()
+        .gap(px(4.0))
         .rounded(px(6.0))
         .role(AccessibilityRole::Button)
         .label(bottom.label())
@@ -115,6 +117,24 @@ fn tab_button(shell: Shell, bottom: Bottom) -> View {
                     }
                 }),
         )
+        .child(when(active_close, move || {
+            view()
+                .w(px(16.0))
+                .h(px(16.0))
+                .items_center()
+                .justify_center()
+                .rounded(px(3.0))
+                .role(AccessibilityRole::Button)
+                .label("关闭底部窗口")
+                .hover(|s| s.bg(move || color_of("control-hover")))
+                .on_press(move || shell.hide_bottom())
+                .child(
+                    svg(icons::CLOSE)
+                        .w(px(12.0))
+                        .h(px(12.0))
+                        .text_color(move || color_of("muted-fg")),
+                )
+        }))
 }
 
 fn panel_content(shell: Shell) -> impl IntoElement {
@@ -122,6 +142,7 @@ fn panel_content(shell: Shell) -> impl IntoElement {
         let bottom = shell.bottom.get().unwrap_or(Bottom::Problems);
         let running = shell.running.get();
         let (title, hint): (SharedString, &'static str) = match bottom {
+            Bottom::Services => ("没有正在运行的服务".into(), "服务工具窗口将在 P4 接入"),
             Bottom::Problems => (
                 "没有发现问题".into(),
                 "编译、检查与 LSP 诊断将在 P3/P4 接入",

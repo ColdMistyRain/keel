@@ -325,6 +325,7 @@ fn status_bar(shell: Shell) -> impl IntoElement {
         .gap(px(0.0))
         .bg(move || color_of("status-bar"))
         .text_color(move || color_of("muted-fg"))
+        .child(status_icon_button(shell))
         .child(
             view()
                 .flex_1()
@@ -354,6 +355,26 @@ fn status_bar(shell: Shell) -> impl IntoElement {
         .child(status_choice(shell, "LF", "换行符", LINE_ENDINGS))
         .child(status_choice(shell, "UTF-8", "文件编码", ENCODINGS))
         .child(status_choice(shell, "4 个空格", "缩进", INDENTS))
+}
+
+/// 状态栏最左侧的 VFS 同步按钮（IDEA `VfsRefresh`）。
+fn status_icon_button(shell: Shell) -> impl IntoElement {
+    view()
+        .w(px(22.0))
+        .h(px(22.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(2.0))
+        .role(AccessibilityRole::Button)
+        .label("同步")
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .on_press(move || shell.ws.refresh_project())
+        .child(
+            svg(icons::REFRESH)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("muted-fg")),
+        )
 }
 
 const LINE_ENDINGS: &[(&str, &str)] = &[

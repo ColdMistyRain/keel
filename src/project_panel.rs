@@ -241,6 +241,8 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
     let toggle_id = row.id.clone();
     let folder = row.folder;
     let open = row.open;
+    let root = row.root;
+    let detail = row.detail.clone();
     let dark = shell.appearance.get() == Appearance::Dark;
     let row_path = row.id.clone();
     let selected = move || ws.selected.get().as_ref() == Some(&selected_id);
@@ -249,7 +251,7 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         .flex_row()
         .items_center()
         .gap(px(6.0))
-        .pl(px(8.0 + row.depth as f32 * 18.0))
+        .pl(px(row.depth as f32 * 18.0))
         .pr(px(8.0))
         .rounded(px(4.0))
         .style_when(selected, |s| s.bg(move || theme().accent))
@@ -296,17 +298,36 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
                 }),
         )
         .child(
-            svg(icons::for_file(&row_path, folder, dark))
-                .w(px(16.0))
-                .h(px(16.0))
-                .text_color(move || color_of("secondary-fg")),
+            svg({
+                if root {
+                    icons::PROJECT
+                } else if row_path.as_ref() == "__external_libraries__" {
+                    icons::LIBRARY
+                } else if row_path.as_ref() == "__scratch__" {
+                    icons::TERMINAL
+                } else {
+                    icons::for_file(&row_path, folder, dark)
+                }
+            })
+            .w(px(16.0))
+            .h(px(16.0))
+            .text_color(move || color_of("secondary-fg")),
         )
         .child(
             text(row.label)
                 .text_size(px(13.0))
                 .text_color(move || theme().foreground)
+                .style_when(move || root, |s| s.font_weight(FontWeight::SEMIBOLD))
                 .number_of_lines(1),
-        );
+        )
+        .children(detail.map(|detail| {
+            text(detail)
+                .text_size(px(12.0))
+                .text_color(move || color_of("muted-fg"))
+                .flex_1()
+                .min_w(px(0.0))
+                .truncate()
+        }));
 
     let path = PathBuf::from(menu_id.as_ref());
     let mut menu = context_menu()

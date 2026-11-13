@@ -37,6 +37,8 @@ test("opens the command palette and filters actions", async () => {
 
 test("opens the command palette from the toolbar search field", async () => {
   const app = await open(".");
+  // 默认无头视口较窄，标题栏右侧按钮会被裁掉；用真实窗口尺寸测试。
+  await app.setViewport(1180, 680);
   await app.press("label:搜索操作");
   await app.waitFor("text:关闭标签页");
   await app.keyboard.press("escape");

@@ -193,9 +193,13 @@ fn scan_dir(dir: &Path, depth: usize) -> Vec<ProjectNode> {
 
 /// 构建产物和隐藏目录不出现在项目树里。
 pub fn skip(name: &str) -> bool {
+    // `.idea` 是 IDEA 项目树里可见的节点，其余隐藏目录和构建产物不显示。
+    if name == ".idea" {
+        return false;
+    }
     matches!(
         name,
-        ".git" | ".idea" | ".nsh" | "target" | "node_modules" | "build" | "out" | ".gradle"
+        ".git" | ".nsh" | "target" | "node_modules" | "build" | "out" | ".gradle"
     ) || name.starts_with('.')
 }
 
@@ -207,6 +211,10 @@ pub struct FlatRow {
     pub depth: u32,
     pub folder: bool,
     pub open: bool,
+    /// 根节点在名称后显示的灰色绝对路径。
+    pub detail: Option<String>,
+    /// 是否是项目根节点（用项目图标、加粗名称）。
+    pub root: bool,
 }
 
 /// 把快照按展开状态摊平成可见行。
@@ -226,6 +234,8 @@ fn flatten_nodes(nodes: &[ProjectNode], expanded: &[String], depth: u32) -> Vec<
             depth,
             folder,
             open,
+            detail: None,
+            root: false,
         });
         if open {
             rows.extend(flatten_nodes(&node.children, expanded, depth + 1));

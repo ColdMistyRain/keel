@@ -11,6 +11,11 @@ pub const MENU: ImageAsset = asset!("icons/menu.svg");
 pub const MORE: ImageAsset = asset!("icons/more.svg");
 pub const HIDE: ImageAsset = asset!("icons/hide.svg");
 pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
+pub const PROJECT: ImageAsset = asset!("icons/project.svg");
+pub const MAVEN: ImageAsset = asset!("icons/maven.svg");
+pub const LIBRARY: ImageAsset = asset!("icons/library.svg");
+pub const STRUCTURE: ImageAsset = asset!("icons/structure.svg");
+pub const SERVICES: ImageAsset = asset!("icons/services.svg");
 pub const FILE: ImageAsset = asset!("icons/file.svg");
 pub const JAVA: ImageAsset = asset!("icons/java.svg");
 pub const JAVA_DARK: ImageAsset = asset!("icons/java_dark.svg");
@@ -43,6 +48,12 @@ pub fn for_file(path: &str, folder: bool, dark: bool) -> ImageAsset {
     if folder {
         return FOLDER;
     }
+    if std::path::Path::new(path)
+        .file_name()
+        .is_some_and(|name| name.eq_ignore_ascii_case("pom.xml"))
+    {
+        return MAVEN;
+    }
     let extension = std::path::Path::new(path)
         .extension()
         .and_then(|extension| extension.to_str())
@@ -73,9 +84,11 @@ pub fn for_action(id: &str) -> Option<ImageAsset> {
         "file.open" => FILE,
         "file.save" => SAVE,
         "file.close" | "file.close_others" | "file.close_all" => CLOSE,
-        "view.tool_window.project" => FOLDER,
+        "view.tool_window.project" => PROJECT,
         "view.tool_window.search" => SEARCH,
         "view.tool_window.version" => BRANCH,
+        "view.tool_window.structure" => STRUCTURE,
+        "view.bottom.services" => SERVICES,
         "view.bottom.problems" => WARNING,
         "view.bottom.run" => PLAY,
         "view.bottom.terminal" => TERMINAL,

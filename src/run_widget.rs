@@ -24,6 +24,43 @@ pub fn run_widget(shell: Shell) -> impl IntoElement {
         .child(config_selector(shell))
         .child(run_button(shell))
         .child(debug_button(shell))
+        .child(more_button(shell))
+}
+
+fn more_button(shell: Shell) -> impl IntoElement {
+    let trigger = view()
+        .w(px(BUTTON))
+        .h(px(BUTTON))
+        .items_center()
+        .justify_center()
+        .rounded(px(6.0))
+        .role(AccessibilityRole::Button)
+        .label("更多运行操作")
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .child(
+            svg(icons::MORE)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("muted-fg")),
+        );
+    menu()
+        .offset(px(4.0))
+        .popup_style(popup_style)
+        .trigger(trigger)
+        .child(menu_action(
+            Some(icons::SETTINGS),
+            "编辑配置…",
+            Some('E'),
+            None,
+            move || shell.ws.say("运行配置编辑将在 P4 迁移"),
+        ))
+        .child(menu_action(
+            Some(icons::DEBUG),
+            "运行覆盖率",
+            Some('C'),
+            None,
+            move || shell.ws.say("覆盖率将在 P4 接入"),
+        ))
 }
 
 fn run_button(shell: Shell) -> impl IntoElement {

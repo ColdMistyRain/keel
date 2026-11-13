@@ -69,6 +69,7 @@ pub fn build(shell: Shell) -> ActionRegistry {
         });
         let action = match tool {
             Tool::Project => action.shortcut("alt+1"),
+            Tool::Structure => action.shortcut("alt+7"),
             Tool::Search | Tool::Version => action,
         };
         registry.register(action);
@@ -85,7 +86,7 @@ pub fn build(shell: Shell) -> ActionRegistry {
         let action = match bottom {
             Bottom::Problems => action.shortcut("alt+6"),
             Bottom::Terminal => action.shortcut("alt+f12"),
-            Bottom::Run => action,
+            Bottom::Run | Bottom::Services => action,
         };
         registry.register(action);
     }
@@ -145,11 +146,13 @@ pub fn build(shell: Shell) -> ActionRegistry {
     let tool_windows = ActionGroup::new("menu.view.tool_windows", "工具窗口")
         .add_action(Tool::Project.action_id())
         .add_action(Tool::Search.action_id())
-        .add_action(Tool::Version.action_id());
+        .add_action(Tool::Version.action_id())
+        .add_action(Tool::Structure.action_id());
     let bottom_windows = ActionGroup::new("menu.view.bottom", "底部工具窗口")
-        .add_action(Bottom::Problems.action_id())
+        .add_action(Bottom::Services.action_id())
         .add_action(Bottom::Run.action_id())
-        .add_action(Bottom::Terminal.action_id());
+        .add_action(Bottom::Terminal.action_id())
+        .add_action(Bottom::Problems.action_id());
     let appearance = ActionGroup::new("menu.view.appearance", "外观")
         .add_action("view.appearance.system")
         .add_action("view.appearance.light")
