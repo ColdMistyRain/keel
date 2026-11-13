@@ -11,53 +11,23 @@ use crate::actions::{
 use crate::app::{Chrome, CommandId, KeelApp};
 use crate::model::VisibleRow;
 
+/// 项目面板的悬停分组名：标题栏动作只在这个分组被悬停时显示。
+const PROJECT_PANEL_GROUP: &str = "project-panel";
+
 impl KeelApp {
     pub fn render_project_panel(&mut self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let root = self.project.root.clone();
         let icon = |name: &str| format!("icons/{name}{}.svg", chrome.icon_suffix);
         let separator = chrome.separator_line;
 
-        let header = div()
-            .h(px(41.))
-            // 标题的左边距属于标题自身（`ContentComboLabel` 的 border insets），
-            // 右侧工具栏取 `toolbarLeftRightInsets`（0,12,0,8）的右边距。
-            .pr(px(8.))
+        // 标题栏右侧的动作组和 IDEA 一样：面板未悬停时不可见，鼠标进入面板
+        // 才淡入（`ToolWindowHeader` 的 `headerActions`）。标题下拉保持常显。
+        let actions = div()
             .flex()
             .items_center()
             .gap_1()
-            .flex_shrink_0()
-            .bg(chrome.header)
-            .child(crate::menu::dropdown_menu(
-                "project-title",
-                chrome.popup_border,
-                Button::new("project-title")
-                    .ghost()
-                    .small()
-                    .h(px(24.))
-                    // `headerLabelLeftRightInsets` 的左 12；箭头紧跟文字，
-                    // 因此右侧不留内边距（`ContentComboLabel` 的 3px 偏移
-                    // 由组件库 small 按钮的 4px 间距近似）。
-                    .pl(px(12.))
-                    .pr_0()
-                    // 标题字号跟随 `ToolWindow.Header.font.size.offset=0`，即 13px。
-                    .text_size(px(13.))
-                    .label("项目")
-                    // IDEA 的标题下拉箭头在文字右侧（`ContentComboLabel` 把
-                    // `LinkDropTriangle` 画在文字宽度之后），不是左侧。
-                    .child(
-                        svg()
-                            .path(SharedString::from(icon("link_drop_triangle")))
-                            .size(px(14.))
-                            .text_color(chrome.muted_fg),
-                    ),
-                move |menu, _, _| {
-                    menu.menu("在项目中定位", Box::new(LocateInProject))
-                        .item(crate::menu::separator(separator))
-                        .menu("折叠全部", Box::new(CollapseProjectTree))
-                        .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
-                },
-            ))
-            .child(div().flex_1())
+            .opacity(0.)
+            .group_hover(PROJECT_PANEL_GROUP, |style| style.opacity(1.))
             .child({
                 let new_app = cx.entity().downgrade();
                 let file_dir = root.clone().unwrap_or_default();
@@ -143,6 +113,49 @@ impl KeelApp {
                 cx,
             ));
 
+        let header = div()
+            .h(px(41.))
+            // 标题的左边距属于标题自身（`ContentComboLabel` 的 border insets），
+            // 右侧工具栏取 `toolbarLeftRightInsets`（0,12,0,8）的右边距。
+            .pr(px(8.))
+            .flex()
+            .items_center()
+            .gap_1()
+            .flex_shrink_0()
+            .bg(chrome.header)
+            .child(crate::menu::dropdown_menu(
+                "project-title",
+                chrome.popup_border,
+                Button::new("project-title")
+                    .ghost()
+                    .small()
+                    .h(px(24.))
+                    // `headerLabelLeftRightInsets` 的左 12；箭头紧跟文字，
+                    // 因此右侧不留内边距（`ContentComboLabel` 的 3px 偏移
+                    // 由组件库 small 按钮的 4px 间距近似）。
+                    .pl(px(12.))
+                    .pr_0()
+                    // 标题字号跟随 `ToolWindow.Header.font.size.offset=0`，即 13px。
+                    .text_size(px(13.))
+                    .label("项目")
+                    // IDEA 的标题下拉箭头在文字右侧（`ContentComboLabel` 把
+                    // `LinkDropTriangle` 画在文字宽度之后），不是左侧。
+                    .child(
+                        svg()
+                            .path(SharedString::from(icon("link_drop_triangle")))
+                            .size(px(14.))
+                            .text_color(chrome.muted_fg),
+                    ),
+                move |menu, _, _| {
+                    menu.menu("在项目中定位", Box::new(LocateInProject))
+                        .item(crate::menu::separator(separator))
+                        .menu("折叠全部", Box::new(CollapseProjectTree))
+                        .menu("从磁盘重新加载", Box::new(RefreshProjectTree))
+                },
+            ))
+            .child(div().flex_1())
+            .child(actions);
+
         let body = if self.project.rows.is_empty() {
             let message = match &self.project.root {
                 Some(_) => "当前目录没有可显示的内容",
@@ -174,6 +187,7 @@ impl KeelApp {
         };
 
         div()
+            .group(PROJECT_PANEL_GROUP)
             .w_full()
             .min_w_0()
             .h_full()

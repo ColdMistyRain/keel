@@ -3110,12 +3110,13 @@ fn settings_combo_trigger(id: &'static str, value: &'static str, chrome: &Chrome
 }
 
 /// IDEA 风格的图标按钮：图标来自随程序打包的 expUI SVG，悬停时铺浅色底。
+/// 工具窗口标题栏的动作按钮是 20×20（`IconButton size="small"`、图标 16）。
 pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, color: Hsla) -> Button {
     Button::new(id)
         .small()
         .ghost()
-        .w(px(24.))
-        .h(px(24.))
+        .w(px(20.))
+        .h(px(20.))
         .p_0()
         .child(svg().path(icon.into()).size(px(16.)).text_color(color))
 }

@@ -4,6 +4,9 @@ use gpui_component::input::Input;
 use crate::actions::ToggleBottomPanel;
 use crate::app::{BottomTab, Chrome, CommandId, KeelApp, filtered_commands};
 
+/// 底部工具窗口的悬停分组名：标题栏动作只在这个分组被悬停时显示。
+const BOTTOM_PANEL_GROUP: &str = "bottom-panel";
+
 impl KeelApp {
     pub fn render_bottom_panel(&self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
         let mut tabs = Vec::new();
@@ -67,6 +70,7 @@ impl KeelApp {
         };
 
         div()
+            .group(BOTTOM_PANEL_GROUP)
             .h(px(180.))
             .flex_shrink_0()
             .flex()
@@ -95,6 +99,10 @@ impl KeelApp {
                             .flex()
                             .items_center()
                             .gap_1()
+                            // 与项目面板一致：底部工具窗口标题栏的动作只在
+                            // 面板被悬停时淡入（`ToolWindowHeader.headerActions`）。
+                            .opacity(0.)
+                            .group_hover(BOTTOM_PANEL_GROUP, |style| style.opacity(1.))
                             .child(crate::menu::dropdown_menu(
                                 "bottom-options",
                                 chrome.popup_border,
