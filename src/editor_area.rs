@@ -432,6 +432,7 @@ fn code_editor(shell: Shell) -> impl IntoElement {
     editor()
         .value(move || text.get())
         .language(move || language.get())
+        .font_family(crate::fonts::MONO.family)
         .font_size(px(13.0))
         .line_height(px(20.0))
         .classes(idea_editor_classes())

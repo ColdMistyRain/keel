@@ -64,13 +64,16 @@ src/project_panel.rs  左侧工具窗口：条纹、标题栏、项目树与右�
 src/editor_area.rs    编辑器区：标签页与右键菜单、面包屑、编辑器、欢迎页
 src/bottom_panel.rs   底部工具窗口：切换条、标题栏、占位内容
 src/ui.rs             共用小部件与主题取值（菜单项、助记符、图标按钮、条纹按钮）
-src/icons.rs          菜单与命令面板的 16×16 SVG 图标、动作 / 分组助记符
+src/icons.rs          菜单与命令面板图标（IDEA expui 原资产）、动作 / 分组助记符
+src/fonts.rs          随应用发布的界面 Inter / 编辑器 JetBrains Mono
 src/workspace.rs      nsh 侧状态：把 keel-workspace 的模型包成信号，管理文档与保存
 crates/keel-core      服务容器、Disposable、MessageBus / Topic
 crates/keel-workspace 项目快照、目录扫描、树摊平、语言识别、项目根识别
 crates/keel-commands  Action / ActionGroup / DataContext / 注册表
 crates/keel-theme     读取 themes/idea-*.json，生成 GPUI 令牌与 nsh cssVars
 samples/demo/         Java 示例项目（pom.xml + Main.java + Greeter.java）
+assets/icons/expui/   IDEA 社区版 expui 图标（Apache 2.0，单色图标改为 currentColor）
+assets/fonts/         Inter / JetBrains Mono（SIL OFL）
 legacy/gpui/          归档的 GPUI 基线（独立 workspace，不参与默认构建）
 nsh.json              应用配置：窗口尺寸、隐藏标题栏（主题不在这里）
 ```

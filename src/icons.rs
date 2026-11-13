@@ -1,47 +1,60 @@
-//! 菜单与命令面板的图标、助记符。
+//! 菜单与工具窗口图标、助记符。
 //!
-//! 图标是 16×16 的 SVG，`currentColor` 跟随主题；路径相对 `assets/`。
-//! `menu.svg` / `java*.svg` / `xml*.svg` / `run.svg` / `debug.svg` 取自 IntelliJ
-//! 社区版 `platform/icons/src/expui`（Apache 2.0，文件内保留版权头）。
+//! 除应用图标和调色板图标外，全部使用 IntelliJ 社区版 expui 原图标
+//! （Apache 2.0，SVG 内保留 JetBrains 版权头），单色图标已改为
+//! `currentColor` 以跟随深浅主题。
 
 use nsh_core::prelude::*;
 
 pub const APP: ImageAsset = asset!("icons/app.svg");
-pub const MENU: ImageAsset = asset!("icons/menu.svg");
-pub const MORE: ImageAsset = asset!("icons/more.svg");
-pub const HIDE: ImageAsset = asset!("icons/hide.svg");
-pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
-pub const PROJECT: ImageAsset = asset!("icons/project.svg");
-pub const MAVEN: ImageAsset = asset!("icons/maven.svg");
-pub const LIBRARY: ImageAsset = asset!("icons/library.svg");
-pub const STRUCTURE: ImageAsset = asset!("icons/structure.svg");
-pub const SERVICES: ImageAsset = asset!("icons/services.svg");
-pub const FILE: ImageAsset = asset!("icons/file.svg");
-pub const JAVA: ImageAsset = asset!("icons/java.svg");
-pub const JAVA_DARK: ImageAsset = asset!("icons/java_dark.svg");
-pub const XML: ImageAsset = asset!("icons/xml.svg");
-pub const XML_DARK: ImageAsset = asset!("icons/xml_dark.svg");
-pub const SAVE: ImageAsset = asset!("icons/save.svg");
-pub const CLOSE: ImageAsset = asset!("icons/close.svg");
-pub const SEARCH: ImageAsset = asset!("icons/search.svg");
-pub const BRANCH: ImageAsset = asset!("icons/branch.svg");
-pub const WARNING: ImageAsset = asset!("icons/warning.svg");
-pub const PLAY: ImageAsset = asset!("icons/play.svg");
-pub const TERMINAL: ImageAsset = asset!("icons/terminal.svg");
+pub const MENU: ImageAsset = asset!("icons/expui/menu.svg");
+pub const MORE: ImageAsset = asset!("icons/expui/more.svg");
+pub const HIDE: ImageAsset = asset!("icons/expui/hide.svg");
+pub const FOLDER: ImageAsset = asset!("icons/expui/folder.svg");
+pub const PROJECT: ImageAsset = asset!("icons/expui/project.svg");
+pub const PROJECT_DARK: ImageAsset = asset!("icons/expui/project_dark.svg");
+pub const PROJECT_TOOLWINDOW: ImageAsset = asset!("icons/expui/toolwindow_project.svg");
+pub const PROJECT_TOOLWINDOW_20: ImageAsset = asset!("icons/expui/toolwindow_project_20.svg");
+pub const MAVEN: ImageAsset = asset!("icons/expui/maven.svg");
+pub const LIBRARY: ImageAsset = asset!("icons/expui/library.svg");
+pub const STRUCTURE: ImageAsset = asset!("icons/expui/toolwindow_structure.svg");
+pub const STRUCTURE_20: ImageAsset = asset!("icons/expui/toolwindow_structure_20.svg");
+pub const SERVICES: ImageAsset = asset!("icons/expui/toolwindow_services.svg");
+pub const SERVICES_20: ImageAsset = asset!("icons/expui/toolwindow_services_20.svg");
+pub const FILE: ImageAsset = asset!("icons/expui/file.svg");
+pub const JAVA: ImageAsset = asset!("icons/expui/java.svg");
+pub const JAVA_DARK: ImageAsset = asset!("icons/expui/java_dark.svg");
+pub const XML: ImageAsset = asset!("icons/expui/xml.svg");
+pub const XML_DARK: ImageAsset = asset!("icons/expui/xml_dark.svg");
+pub const SAVE: ImageAsset = asset!("icons/expui/save.svg");
+pub const CLOSE: ImageAsset = asset!("icons/expui/close.svg");
+pub const SEARCH: ImageAsset = asset!("icons/expui/search.svg");
+pub const SEARCH_20: ImageAsset = asset!("icons/expui/search_20.svg");
+pub const BRANCH: ImageAsset = asset!("icons/expui/branch.svg");
+pub const WARNING: ImageAsset = asset!("icons/expui/toolwindow_problems.svg");
+pub const PROBLEMS_20: ImageAsset = asset!("icons/expui/toolwindow_problems_20.svg");
+pub const PLAY: ImageAsset = asset!("icons/expui/play.svg");
+pub const TERMINAL: ImageAsset = asset!("icons/expui/terminal.svg");
 pub const PALETTE: ImageAsset = asset!("icons/palette.svg");
-pub const SETTINGS: ImageAsset = asset!("icons/settings.svg");
-pub const LOCATE: ImageAsset = asset!("icons/locate.svg");
-pub const INFO: ImageAsset = asset!("icons/info.svg");
-pub const EYE: ImageAsset = asset!("icons/eye.svg");
-pub const COPY: ImageAsset = asset!("icons/copy.svg");
-pub const REFRESH: ImageAsset = asset!("icons/refresh.svg");
-pub const COLLAPSE_ALL: ImageAsset = asset!("icons/collapse_all.svg");
-pub const CHEVRON_RIGHT: ImageAsset = asset!("icons/chevron_right.svg");
-pub const CHEVRON_LEFT: ImageAsset = asset!("icons/chevron_left.svg");
-pub const CHEVRON_DOWN: ImageAsset = asset!("icons/chevron_down.svg");
-pub const RUN: ImageAsset = asset!("icons/run.svg");
-pub const DEBUG: ImageAsset = asset!("icons/debug.svg");
-pub const STOP: ImageAsset = asset!("icons/stop.svg");
+pub const SETTINGS: ImageAsset = asset!("icons/expui/settings.svg");
+pub const SETTINGS_20: ImageAsset = asset!("icons/expui/settings_20.svg");
+pub const LOCATE: ImageAsset = asset!("icons/expui/locate.svg");
+pub const INFO: ImageAsset = asset!("icons/expui/info.svg");
+pub const EYE: ImageAsset = asset!("icons/expui/preview.svg");
+pub const COPY: ImageAsset = asset!("icons/expui/copy.svg");
+pub const REFRESH: ImageAsset = asset!("icons/expui/refresh.svg");
+pub const COLLAPSE_ALL: ImageAsset = asset!("icons/expui/collapse_all.svg");
+pub const CHEVRON_RIGHT: ImageAsset = asset!("icons/expui/chevron_right.svg");
+pub const CHEVRON_LEFT: ImageAsset = asset!("icons/expui/chevron_left.svg");
+pub const CHEVRON_DOWN: ImageAsset = asset!("icons/expui/chevron_down.svg");
+pub const RUN: ImageAsset = asset!("icons/expui/toolwindow_run.svg");
+pub const RUN_20: ImageAsset = asset!("icons/expui/toolwindow_run_20.svg");
+pub const COMMIT: ImageAsset = asset!("icons/expui/toolwindow_commit.svg");
+pub const COMMIT_20: ImageAsset = asset!("icons/expui/toolwindow_commit_20.svg");
+pub const FIND: ImageAsset = asset!("icons/expui/toolwindow_find.svg");
+pub const FIND_20: ImageAsset = asset!("icons/expui/toolwindow_find_20.svg");
+pub const DEBUG: ImageAsset = asset!("icons/expui/debug.svg");
+pub const STOP: ImageAsset = asset!("icons/expui/stop.svg");
 
 /// 树 / 标签页用的文件类型图标：Java、XML 用 expui 彩色图标，其余用通用文件图标。
 pub fn for_file(path: &str, folder: bool, dark: bool) -> ImageAsset {
@@ -84,13 +97,13 @@ pub fn for_action(id: &str) -> Option<ImageAsset> {
         "file.open" => FILE,
         "file.save" => SAVE,
         "file.close" | "file.close_others" | "file.close_all" => CLOSE,
-        "view.tool_window.project" => PROJECT,
-        "view.tool_window.search" => SEARCH,
-        "view.tool_window.version" => BRANCH,
+        "view.tool_window.project" => PROJECT_TOOLWINDOW,
+        "view.tool_window.search" => FIND,
+        "view.tool_window.version" => COMMIT,
         "view.tool_window.structure" => STRUCTURE,
         "view.bottom.services" => SERVICES,
         "view.bottom.problems" => WARNING,
-        "view.bottom.run" => PLAY,
+        "view.bottom.run" => RUN,
         "view.bottom.terminal" => TERMINAL,
         "run.start" => PLAY,
         "run.stop" => STOP,
@@ -101,6 +114,20 @@ pub fn for_action(id: &str) -> Option<ImageAsset> {
         "help.about" => INFO,
         _ => return None,
     })
+}
+
+/// 条纹按钮使用 expui 的 20×20 变体；其余工具窗口图标保持 16×16。
+pub fn for_stripe_action(id: &str) -> ImageAsset {
+    match id {
+        "view.tool_window.project" => PROJECT_TOOLWINDOW_20,
+        "view.tool_window.search" => FIND_20,
+        "view.tool_window.version" => COMMIT_20,
+        "view.tool_window.structure" => STRUCTURE_20,
+        "view.bottom.services" => SERVICES_20,
+        "view.bottom.run" => RUN_20,
+        "view.bottom.problems" => PROBLEMS_20,
+        _ => for_action(id).unwrap_or(FILE),
+    }
 }
 
 /// 动作在菜单 / 命令面板里的助记符。

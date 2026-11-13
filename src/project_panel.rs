@@ -31,7 +31,7 @@ pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
         .py(px(6.0))
         .children(Tool::ALL.into_iter().map(move |tool| {
             stripe_button(
-                icons::for_action(tool.action_id()).unwrap_or(icons::FILE),
+                icons::for_stripe_action(tool.action_id()),
                 tool.label(),
                 move || shell.tools.get() && shell.tool.get() == tool,
                 move || shell.tool_focused.get(),
@@ -41,7 +41,7 @@ pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
         .child(view().flex_1())
         .children(Bottom::ALL.into_iter().map(move |bottom| {
             stripe_button(
-                icons::for_action(bottom.action_id()).unwrap_or(icons::FILE),
+                icons::for_stripe_action(bottom.action_id()),
                 bottom.label(),
                 move || shell.bottom.get() == Some(bottom),
                 move || shell.bottom_focused.get(),
@@ -300,7 +300,11 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         .child(
             svg({
                 if root {
-                    icons::PROJECT
+                    if dark {
+                        icons::PROJECT_DARK
+                    } else {
+                        icons::PROJECT
+                    }
                 } else if row_path.as_ref() == "__external_libraries__" {
                     icons::LIBRARY
                 } else if row_path.as_ref() == "__scratch__" {

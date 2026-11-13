@@ -7,6 +7,7 @@
 mod bottom_panel;
 mod commands;
 mod editor_area;
+mod fonts;
 mod icons;
 mod palette;
 mod project_panel;
@@ -57,6 +58,7 @@ pub fn App() -> impl IntoElement {
 
     view()
         .flex_1()
+        .font_family(fonts::INTER.family)
         .bg(move || color_of("canvas"))
         .text_color(move || theme().foreground)
         .child(project_gradient(shell))
@@ -110,10 +112,12 @@ fn right_tools(shell: Shell) -> impl IntoElement {
         .items_center()
         .gap(px(4.0))
         .child(run_widget::run_widget(shell))
-        .child(toolbar_button(icons::SEARCH, "搜索操作", move || {
-            shell.open_palette()
-        }))
-        .child(toolbar_button(icons::SETTINGS, "设置", move || {
+        .child(toolbar_button(
+            icons::SEARCH_20,
+            "搜索操作",
+            move || shell.open_palette(),
+        ))
+        .child(toolbar_button(icons::SETTINGS_20, "设置", move || {
             shell.ws.say("设置页将在 P4 迁移")
         }))
 }
