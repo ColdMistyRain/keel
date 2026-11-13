@@ -2184,23 +2184,34 @@ impl KeelApp {
                     .h_full()
                     .window_control_area(WindowControlArea::Drag),
             )
-            .child(self.render_run_widget(chrome, cx))
-            .child(crate::tooltip::with_tooltip(
-                "tip-title-search",
-                "搜索文件与命令",
-                toolbar_button("title-search", icon("search_20")).on_click(
-                    cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
-                ),
-                cx,
-            ))
-            .child(crate::tooltip::with_tooltip(
-                "tip-title-settings",
-                "设置",
-                toolbar_button("title-settings", icon("settings_20")).on_click(cx.listener(
-                    |this, _event, _window, cx| this.open_settings(SettingsPane::Appearance, cx),
-                )),
-                cx,
-            ))
+            // 右侧工具组：run widget 与搜索/设置按 openidea `.tools`
+            // 的 `gap: 4px; margin-left: 12px` 排列。
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(4.))
+                    .ml(px(12.))
+                    .child(self.render_run_widget(chrome, cx))
+                    .child(crate::tooltip::with_tooltip(
+                        "tip-title-search",
+                        "搜索文件与命令",
+                        toolbar_button("title-search", icon("search_20")).on_click(
+                            cx.listener(|this, _event, window, cx| this.open_palette(window, cx)),
+                        ),
+                        cx,
+                    ))
+                    .child(crate::tooltip::with_tooltip(
+                        "tip-title-settings",
+                        "设置",
+                        toolbar_button("title-settings", icon("settings_20")).on_click(
+                            cx.listener(|this, _event, _window, cx| {
+                                this.open_settings(SettingsPane::Appearance, cx)
+                            }),
+                        ),
+                        cx,
+                    )),
+            )
             .child(control(
                 "window-min",
                 WindowControlArea::Min,
