@@ -14,10 +14,11 @@ use gpui_component::menu::{PopupMenu, PopupMenuItem};
 use gpui_component_assets::IconName;
 
 use crate::actions::{
-    CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, FindInFile,
-    LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown, PaletteUp,
-    PreviousTab, RefreshProjectTree, ReplaceInFile, SaveFile, ShowAbout, ShowCommandPalette,
-    ShowSettings, ToggleBottomPanel, ToggleBreadcrumbs, ToggleProjectPanel, ToggleTheme,
+    CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, Debug,
+    FindInFile, LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown,
+    PaletteUp, PreviousTab, RefreshProjectTree, ReplaceInFile, Run, SaveFile, ShowAbout,
+    ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs,
+    ToggleProjectPanel, ToggleTheme,
 };
 use crate::editor::Document;
 use crate::idea_theme::ThemeKind;
@@ -373,6 +374,8 @@ pub struct KeelApp {
     pub project_panel_width: f32,
     pub resizing_project_panel: bool,
     pub bottom_tab: BottomTab,
+    /// run widget 是否处于运行状态（目前只驱动运行窗口与按钮外观）。
+    pub running: bool,
     pub status: StatusMessage,
     /// 右下角通知气泡，最新的排在最后。
     pub toasts: Vec<Toast>,
@@ -431,6 +434,7 @@ impl KeelApp {
                 .as_deref()
                 .map(BottomTab::from_key)
                 .unwrap_or_default(),
+            running: false,
             status: StatusMessage::info(""),
             toasts: Vec::new(),
             next_toast_id: 0,
@@ -2047,6 +2051,7 @@ impl KeelApp {
             .children(branch_widget)
             .child(external)
             .child(div().flex_1())
+            .child(self.render_run_widget(chrome, cx))
             .child(crate::tooltip::with_tooltip(
                 "tip-title-search",
                 "搜索文件与命令",
@@ -2819,6 +2824,9 @@ impl Render for KeelApp {
             .on_action(cx.listener(Self::on_close_settings))
             .on_action(cx.listener(Self::on_find_in_file))
             .on_action(cx.listener(Self::on_replace_in_file))
+            .on_action(cx.listener(Self::on_run))
+            .on_action(cx.listener(Self::on_stop))
+            .on_action(cx.listener(Self::on_debug))
             // 点击任意位置都收起工具提示。
             .on_mouse_down(
                 MouseButton::Left,
@@ -3083,6 +3091,11 @@ fn build_main_menu(
             .menu("下一个标签", Box::new(NextTab))
             .item(crate::menu::separator(separator))
             .menu("在项目中定位", Box::new(LocateInProject))
+    })
+    .submenu("运行", window, cx, |menu, _, _| {
+        menu.menu("运行", Box::new(Run))
+            .menu("停止", Box::new(Stop))
+            .menu("调试", Box::new(Debug))
     })
     .submenu("工具", window, cx, |menu, _, _| {
         menu.menu("从磁盘重新加载项目", Box::new(RefreshProjectTree))

@@ -1,7 +1,8 @@
 use gpui::{prelude::*, *};
 use gpui_component::input::Input;
 
-use crate::app::{BottomTab, Chrome, KeelApp, filtered_commands};
+use crate::actions::ToggleBottomPanel;
+use crate::app::{BottomTab, Chrome, CommandId, KeelApp, filtered_commands};
 
 impl KeelApp {
     pub fn render_bottom_panel(&self, chrome: &Chrome, cx: &mut Context<Self>) -> AnyElement {
@@ -82,10 +83,46 @@ impl KeelApp {
                     .h(px(41.))
                     .flex()
                     .items_center()
+                    .justify_between()
+                    // 右侧工具栏取 `toolbarLeftRightInsets`（0,12,0,8）的右边距。
+                    .pr(px(8.))
                     .flex_shrink_0()
                     .border_b_1()
                     .border_color(chrome.border)
-                    .children(tabs),
+                    .child(div().flex().items_center().h_full().children(tabs))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .child(crate::menu::dropdown_menu(
+                                "bottom-options",
+                                chrome.popup_border,
+                                crate::app::icon_button(
+                                    "bottom-options",
+                                    "icons/more.svg",
+                                    chrome.muted_fg,
+                                ),
+                                move |menu, _, _| {
+                                    menu.menu("隐藏工具窗口", Box::new(ToggleBottomPanel))
+                                },
+                            ))
+                            .child(crate::tooltip::with_tooltip(
+                                "tip-bottom-hide",
+                                "隐藏工具窗口",
+                                crate::app::icon_button(
+                                    "bottom-hide",
+                                    "icons/hide.svg",
+                                    chrome.muted_fg,
+                                )
+                                .on_click(cx.listener(
+                                    |this, _event, _window, cx| {
+                                        this.run_command(CommandId::ToggleBottomPanel, cx)
+                                    },
+                                )),
+                                cx,
+                            )),
+                    ),
             )
             .child(
                 div()

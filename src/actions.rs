@@ -27,5 +27,8 @@ actions!(
         CloseSettings,
         FindInFile,
         ReplaceInFile,
+        Run,
+        Stop,
+        Debug,
     ]
 );
