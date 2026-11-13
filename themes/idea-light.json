@@ -27,6 +27,7 @@
     "control_bg": "#FFFFFF",
     "control_border": "#D1D3D9",
     "status_bar": "#E9EAEE",
+    "list_hover": "#00000008",
     "brand": "#3871E1",
     "brand_hover": "#2F5EB9",
     "brand_active": "#2E4D89",

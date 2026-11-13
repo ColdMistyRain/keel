@@ -255,7 +255,7 @@ impl KeelApp {
             })
             // 选中行悬停时保持选中底色（和 IDEA 的树一致）。
             .when(!is_selected, |row| {
-                row.hover(|style| style.bg(chrome.hover_bg))
+                row.hover(|style| style.bg(chrome.list_hover))
             })
             .child(
                 div()

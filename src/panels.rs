@@ -175,7 +175,7 @@ impl KeelApp {
                     })
                     // 选中项悬停时保留选中底色。
                     .when(ix != selected, |item| {
-                        item.hover(|style| style.bg(chrome.hover_bg))
+                        item.hover(|style| style.bg(chrome.list_hover))
                     })
                     .child(div().child(command.label()))
                     .child(

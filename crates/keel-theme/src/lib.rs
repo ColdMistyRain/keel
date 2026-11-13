@@ -103,6 +103,8 @@ pub struct Tokens {
     pub control_bg: u32,
     pub control_border: u32,
     pub status_bar: u32,
+    /// 列表 / 树的悬停底色（`selection-bg-hovered`：`#00000008` / `#FFFFFF10`）。
+    pub list_hover: u32,
     pub brand: u32,
     pub brand_hover: u32,
     pub brand_active: u32,
@@ -218,6 +220,7 @@ fn parse(json: &str) -> Theme {
         control_bg: color("control_bg"),
         control_border: color("control_border"),
         status_bar: color("status_bar"),
+        list_hover: color("list_hover"),
         brand: color("brand"),
         brand_hover: color("brand_hover"),
         brand_active: color("brand_active"),

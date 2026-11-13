@@ -48,6 +48,8 @@ pub struct Chrome {
     pub accent_fg: Hsla,
     pub header: Hsla,
     pub hover_bg: Hsla,
+    /// 列表 / 树行的悬停底色（`selection-bg-hovered`，比控件悬停更淡）。
+    pub list_hover: Hsla,
     /// 控件的中性悬停底色。
     pub control_hover: Hsla,
     /// 控件的按下底色（`ActionButton.pressedBackground`）。
@@ -101,6 +103,7 @@ impl Chrome {
             accent_fg: theme.primary_foreground,
             header: crate::idea_theme::color(tokens.tool_window_header),
             hover_bg: crate::idea_theme::color_rgba(tokens.hover),
+            list_hover: crate::idea_theme::color_rgba(tokens.list_hover),
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
             control_pressed: crate::idea_theme::color_rgba(tokens.control_pressed),
             separator: crate::idea_theme::color_rgba(tokens.separator),
