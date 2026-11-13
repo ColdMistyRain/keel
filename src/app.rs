@@ -800,6 +800,11 @@ impl KeelApp {
 
         let mut doc = Document::new(path.clone(), state, eol, subscription, observe);
         doc.preview = preview;
+        doc.readonly = is_readonly_file(&path);
+        if doc.readonly {
+            // IDEA 的做法：编辑器仍可输入，但保存时明确拒绝并提示只读。
+            self.status = StatusMessage::info(format!("以只读方式打开 {}", short_name(&path)));
+        }
         // 预览标签替换已有的预览标签，不额外占用标签位（`EditorWindow.addComposite`）。
         let preview_slot = if preview {
             self.documents.iter().position(|doc| doc.preview)
@@ -1052,6 +1057,17 @@ impl KeelApp {
         let Some(idx) = self.index_of(&path) else {
             return;
         };
+        // 只读文件直接拒绝，避免把系统级的「拒绝访问」抛给用户。
+        // 每次都重新读一次属性，文件被外部改成可写后能正常保存。
+        let readonly = is_readonly_file(&path);
+        self.documents[idx].readonly = readonly;
+        if readonly {
+            let message = format!("无法保存：{} 是只读文件", short_name(&path));
+            self.status = StatusMessage::error(message.clone());
+            self.notify(message, true, cx);
+            cx.notify();
+            return;
+        }
         let text = self.documents[idx].state.read(cx).value().to_string();
         self.status = StatusMessage::info(format!("正在保存 {}", short_name(&path)));
         self.begin_background_task();
@@ -1074,7 +1090,11 @@ impl KeelApp {
                         app.notify(message, false, cx);
                     }
                     Err(err) => {
-                        let message = format!("保存失败：{err}");
+                        let message = if err.kind() == io::ErrorKind::PermissionDenied {
+                            format!("保存失败：{} 没有写入权限", short_name(&path))
+                        } else {
+                            format!("保存失败：{err}")
+                        };
                         app.status = StatusMessage::error(message.clone());
                         app.notify(message, true, cx);
                     }
@@ -2202,6 +2222,10 @@ impl KeelApp {
         // 右侧按 IDEA Islands 状态栏的顺序排：行列号、换行符、编码、缩进。
         let mut widgets: Vec<AnyElement> = Vec::new();
         if let Some(doc) = self.active_document() {
+            if doc.readonly {
+                // IDEA 在状态栏用锁图标提示只读；这里用同样位置的文字部件。
+                widgets.push(status_widget("status-readonly", "只读", chrome));
+            }
             let position = doc.state.read(cx).cursor_position();
             widgets.push(status_widget(
                 "status-position",
@@ -2945,6 +2969,13 @@ fn read_text_file(path: &Path) -> io::Result<String> {
     let bytes = std::fs::read(path)?;
     String::from_utf8(bytes)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "文件不是有效的 UTF-8 文本"))
+}
+
+/// 文件是否带只读属性（Windows 的只读位、Unix 的写权限）。
+fn is_readonly_file(path: &Path) -> bool {
+    std::fs::metadata(path)
+        .map(|metadata| metadata.permissions().readonly())
+        .unwrap_or(false)
 }
 
 fn short_name(path: &Path) -> String {

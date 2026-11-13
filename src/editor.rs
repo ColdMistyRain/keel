@@ -17,6 +17,8 @@ pub struct Document {
     pub dirty: bool,
     /// 预览标签（IDEA 的 preview tab）：斜体显示，下一次预览会替换它。
     pub preview: bool,
+    /// 只读文件：状态栏显示「只读」，保存时给出明确提示而不是系统错误。
+    pub readonly: bool,
     pub eol: &'static str,
     pub _changes: Subscription,
     /// 编辑器每次重绘（含光标移动）都会触发，用来刷新状态栏的行列号。
@@ -36,6 +38,7 @@ impl Document {
             state,
             dirty: false,
             preview: false,
+            readonly: false,
             eol,
             _changes: changes,
             _observe: observe,
