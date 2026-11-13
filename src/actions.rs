@@ -27,6 +27,7 @@ actions!(
         CloseSettings,
         FindInFile,
         ReplaceInFile,
+        ToggleComment,
         Run,
         Stop,
         Debug,

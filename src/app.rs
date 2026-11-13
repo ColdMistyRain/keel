@@ -17,7 +17,7 @@ use crate::actions::{
     CloseAllTabs, CloseEditor, CloseOtherTabs, CloseSettings, CollapseProjectTree, Debug,
     FindInFile, LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown,
     PaletteUp, PreviousTab, RefreshProjectTree, ReplaceInFile, Run, SaveFile, ShowAbout,
-    ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs,
+    ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs, ToggleComment,
     ToggleProjectPanel, ToggleTheme,
 };
 use crate::editor::Document;
@@ -2882,6 +2882,7 @@ impl Render for KeelApp {
             .on_action(cx.listener(Self::on_close_settings))
             .on_action(cx.listener(Self::on_find_in_file))
             .on_action(cx.listener(Self::on_replace_in_file))
+            .on_action(cx.listener(Self::on_toggle_comment))
             .on_action(cx.listener(Self::on_run))
             .on_action(cx.listener(Self::on_stop))
             .on_action(cx.listener(Self::on_debug))
@@ -3131,6 +3132,8 @@ fn build_main_menu(
             .menu("粘贴", Box::new(Paste))
             .item(crate::menu::separator(separator))
             .menu("全选", Box::new(SelectAll))
+            .item(crate::menu::separator(separator))
+            .menu("切换行注释", Box::new(ToggleComment))
             .item(crate::menu::separator(separator))
             .menu("查找…", Box::new(FindInFile))
             .menu("替换…", Box::new(ReplaceInFile))

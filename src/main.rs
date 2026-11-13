@@ -1,6 +1,7 @@
 mod actions;
 mod app;
 mod assets;
+mod comment;
 mod editor;
 mod file_icons;
 mod idea_theme;
@@ -18,7 +19,8 @@ use gpui::{prelude::*, *};
 use crate::actions::{
     CloseEditor, CloseSettings, Debug, FindInFile, LocateInProject, NextTab, OpenProject,
     PaletteCancel, PaletteConfirm, PaletteDown, PaletteUp, PreviousTab, ReplaceInFile, Run,
-    SaveFile, ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleProjectPanel,
+    SaveFile, ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleComment,
+    ToggleProjectPanel,
 };
 use crate::app::KeelApp;
 use crate::model::PersistedState;
@@ -99,6 +101,7 @@ fn register_key_bindings(cx: &mut App) {
         KeyBinding::new("shift-f9", Debug, Some("Keel")),
         KeyBinding::new("ctrl-f", FindInFile, Some("Keel")),
         KeyBinding::new("ctrl-r", ReplaceInFile, Some("Keel")),
+        KeyBinding::new("ctrl-/", ToggleComment, Some("Keel")),
         KeyBinding::new("escape", CloseSettings, Some("KeelSettings")),
         KeyBinding::new("ctrl-tab", NextTab, Some("Keel")),
         KeyBinding::new("ctrl-shift-tab", PreviousTab, Some("Keel")),
