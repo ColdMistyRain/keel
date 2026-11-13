@@ -259,7 +259,7 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
                 )
                 .group_hover_named("keel-tab", |s| s.opacity(1.0))
                 .child(
-                    svg(icons::CLOSE)
+                    svg(icons::CLOSE_SMALL)
                         .w(px(12.0))
                         .h(px(12.0))
                         .text_color(move || color_of("muted-fg")),

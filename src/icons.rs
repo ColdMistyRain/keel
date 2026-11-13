@@ -28,6 +28,7 @@ pub const XML: ImageAsset = asset!("icons/expui/xml.svg");
 pub const XML_DARK: ImageAsset = asset!("icons/expui/xml_dark.svg");
 pub const SAVE: ImageAsset = asset!("icons/expui/save.svg");
 pub const CLOSE: ImageAsset = asset!("icons/expui/close.svg");
+pub const CLOSE_SMALL: ImageAsset = asset!("icons/expui/close_small.svg");
 pub const SEARCH: ImageAsset = asset!("icons/expui/search.svg");
 pub const SEARCH_20: ImageAsset = asset!("icons/expui/search_20.svg");
 pub const BRANCH: ImageAsset = asset!("icons/expui/branch.svg");

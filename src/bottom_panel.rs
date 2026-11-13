@@ -129,7 +129,7 @@ fn tab_button(shell: Shell, bottom: Bottom) -> View {
                 .hover(|s| s.bg(move || color_of("control-hover")))
                 .on_press(move || shell.hide_bottom())
                 .child(
-                    svg(icons::CLOSE)
+                    svg(icons::CLOSE_SMALL)
                         .w(px(12.0))
                         .h(px(12.0))
                         .text_color(move || color_of("muted-fg")),
