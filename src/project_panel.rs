@@ -7,12 +7,15 @@
 
 use std::path::PathBuf;
 
-use nsh_base::{button, context_menu, theme};
+use nsh_base::{button, context_menu, menu, theme};
 use nsh_core::prelude::*;
 
 use crate::icons;
 use crate::shell::{Bottom, Shell, Tool};
-use crate::ui::{color_of, icon_button, menu_action, menu_separator, popup_style, stripe_button};
+use crate::ui::{
+    color_of, header_action, icon_button, island_radius, menu_action, menu_separator, popup_style,
+    stripe_button,
+};
 use crate::workspace::{TreeRow, Workspace};
 
 /// 左侧 40 点宽的工具窗口条。
@@ -31,6 +34,7 @@ pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
                 icons::for_action(tool.action_id()).unwrap_or(icons::FILE),
                 tool.label(),
                 move || shell.tools.get() && shell.tool.get() == tool,
+                move || shell.tool_focused.get(),
                 move || shell.toggle_tool(tool),
             )
         }))
@@ -40,6 +44,7 @@ pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
                 icons::for_action(bottom.action_id()).unwrap_or(icons::FILE),
                 bottom.label(),
                 move || shell.bottom.get() == Some(bottom),
+                move || shell.bottom_focused.get(),
                 move || shell.toggle_bottom(bottom),
             )
         }))
@@ -49,10 +54,9 @@ pub fn tool_window_bar(shell: Shell) -> impl IntoElement {
 pub fn side_panel(shell: Shell) -> View {
     view()
         .flex_1()
-        .rounded(px(8.0))
+        .rounded(px(island_radius()))
         .bg(move || color_of("island-bg"))
         .child(panel_header(shell))
-        .child(view().h(px(1.0)).bg(move || color_of("separator-line")))
         .child(
             project_panel(shell)
                 .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
@@ -63,9 +67,11 @@ pub fn side_panel(shell: Shell) -> View {
         )
 }
 
-/// 面板标题栏：标题 + 下拉箭头，右侧刷新 / 收起全部 / 隐藏。
+/// 面板标题栏：标题 + 下拉箭头；上下文动作只在工具窗口聚焦时出现，
+/// 右侧始终是「更多」和「隐藏」。
 ///
-/// IDEA `ToolWindow.Header`：高 41、标题左右内缩 12 / 16，标题后有展开箭头。
+/// IDEA `ToolWindow.Header`：高 41、标题左右内缩 12 / 16，右侧工具条
+/// 内缩 0,12,0,8；未聚焦时只保留 `⋮` 和 `—`。
 fn panel_header(shell: Shell) -> impl IntoElement {
     view()
         .h(px(41.0))
@@ -93,20 +99,72 @@ fn panel_header(shell: Shell) -> impl IntoElement {
                 ),
         )
         .child(
-            icon_button(icons::REFRESH, "刷新项目", move || {
-                shell.ws.refresh_project()
-            })
-            .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
+            view()
+                .flex_row()
+                .items_center()
+                .gap(px(2.0))
+                .style_when(
+                    move || !shell.tool_focused.get() || shell.tool.get() != Tool::Project,
+                    |s| s.hidden(),
+                )
+                .child(icon_button(icons::REFRESH, "刷新项目", move || {
+                    shell.ws.refresh_project()
+                }))
+                .child(icon_button(
+                    icons::COLLAPSE_ALL,
+                    "收起全部",
+                    move || shell.ws.expanded.set(Vec::new()),
+                ))
+                .child(
+                    view()
+                        .w(px(1.0))
+                        .h(px(16.0))
+                        .mx(px(2.0))
+                        .bg(move || color_of("separator-line")),
+                ),
         )
-        .child(
-            icon_button(icons::COLLAPSE_ALL, "收起全部", move || {
-                shell.ws.expanded.set(Vec::new())
-            })
-            .style_when(move || shell.tool.get() != Tool::Project, |s| s.hidden()),
-        )
-        .child(icon_button(icons::CLOSE, "隐藏工具窗口", move || {
-            shell.tools.set(false)
+        .child(tool_window_more(shell))
+        .child(icon_button(icons::HIDE, "隐藏工具窗口", move || {
+            shell.hide_tool()
         }))
+}
+
+/// 「更多」菜单：聚焦时的刷新 / 收起全部，以及始终可用的隐藏。
+fn tool_window_more(shell: Shell) -> impl IntoElement {
+    dynamic(move || {
+        let project = shell.tool.get() == Tool::Project;
+        let mut element = menu()
+            .offset(px(4.0))
+            .popup_style(popup_style)
+            .trigger(header_action(icons::MORE, "更多工具窗口操作"));
+        if project {
+            element = element
+                .child(menu_action(
+                    Some(icons::REFRESH),
+                    "刷新项目",
+                    Some('R'),
+                    None,
+                    move || shell.ws.refresh_project(),
+                ))
+                .child(menu_action(
+                    Some(icons::COLLAPSE_ALL),
+                    "收起全部",
+                    Some('L'),
+                    None,
+                    move || shell.ws.expanded.set(Vec::new()),
+                ))
+                .child(menu_separator());
+        }
+        element
+            .child(menu_action(
+                Some(icons::HIDE),
+                "隐藏工具窗口",
+                Some('H'),
+                None,
+                move || shell.hide_tool(),
+            ))
+            .into_element()
+    })
 }
 
 fn placeholder(shell: Shell) -> View {
@@ -199,6 +257,7 @@ fn tree_row(shell: Shell, row: TreeRow) -> AnyElement {
         .role(AccessibilityRole::Button)
         .label(row.label.clone())
         .on_press(move |event: &PressEvent| {
+            shell.focus_tool();
             ws.selected.set(Some(select_id.clone()));
             if folder {
                 toggle_expanded(ws, &select_id);

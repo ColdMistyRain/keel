@@ -83,6 +83,8 @@ pub struct Tokens {
     pub selection_fg: u32,
     pub hover: u32,
     pub control_hover: u32,
+    /// 按下态叠加色（条纹按钮的“激活但未聚焦”也用这个）。
+    pub control_pressed: u32,
     pub tool_window_header: u32,
     pub tab_underline: u32,
     pub tool_window_tab_underline: u32,
@@ -90,6 +92,9 @@ pub struct Tokens {
     pub tab_selected_background: u32,
     /// 选中编辑器标签的 1px 边框（IDEA `EditorTabs.underlinedBorderColor`）。
     pub tab_selected_border: u32,
+    /// 选中但编辑器没有焦点时的标签底色与边框。
+    pub tab_selected_background_inactive: u32,
+    pub tab_selected_border_inactive: u32,
     /// 标签条底部的 1px 分隔线（IDEA `EditorTabs.underTabsBorderColor`）。
     pub editor_border: u32,
     /// 弹出菜单分隔线（IDEA 菜单里的 `gray-150`）。
@@ -129,6 +134,8 @@ pub struct Tokens {
     pub radius: f32,
     /// 岛屿 / 弹层圆角。
     pub island_radius: f32,
+    /// 岛屿之间的帧背景间隙。
+    pub island_gap: f32,
     pub tab_height: f32,
     pub status_bar_height: f32,
     pub dark_icons: bool,
@@ -192,12 +199,15 @@ fn parse(json: &str) -> Theme {
         selection_fg: color("selection_fg"),
         hover: color("hover"),
         control_hover: color("control_hover"),
+        control_pressed: color("control_pressed"),
         tool_window_header: color("tool_window_header"),
         tab_underline: color("tab_underline"),
         tool_window_tab_underline: color("tool_window_tab_underline"),
         tab_background: color("tab_background"),
         tab_selected_background: color("tab_selected_background"),
         tab_selected_border: color("tab_selected_border"),
+        tab_selected_background_inactive: color("tab_selected_background_inactive"),
+        tab_selected_border_inactive: color("tab_selected_border_inactive"),
         editor_border: color("editor_border"),
         menu_separator: color("menu_separator"),
         control_bg: color("control_bg"),
@@ -229,6 +239,7 @@ fn parse(json: &str) -> Theme {
         island_arc: number("island_arc"),
         radius: number("radius"),
         island_radius: number("island_radius"),
+        island_gap: number("island_gap"),
         tab_height: number("tab_height"),
         status_bar_height: number("status_bar_height"),
         dark_icons: flag("dark_icons"),
@@ -264,9 +275,10 @@ pub fn nsh_theme_json() -> String {
     let dark = theme(ThemeKind::Dark);
     let metrics = light.tokens();
     format!(
-        r#"{{"cssVars":{{"theme":{{"radius":"{}px","font-sans":"Inter, Segoe UI, sans-serif","font-mono":"JetBrains Mono, Consolas, monospace","island-radius":"{}px","tab-height":"{}px","status-bar-height":"{}px"}},"light":{{{}}},"dark":{{{}}}}}}}"#,
+        r#"{{"cssVars":{{"theme":{{"radius":"{}px","font-sans":"Inter, Segoe UI, sans-serif","font-mono":"JetBrains Mono, Consolas, monospace","island-radius":"{}px","island-gap":"{}px","tab-height":"{}px","status-bar-height":"{}px"}},"light":{{{}}},"dark":{{{}}}}}}}"#,
         metrics.radius,
         metrics.island_radius,
+        metrics.island_gap,
         metrics.tab_height,
         metrics.status_bar_height,
         nsh_vars(light),
@@ -293,13 +305,15 @@ fn nsh_vars(t: &Theme) -> String {
             r##""canvas":"{canvas}","island-bg":"{tool_window_header}","##,
             r##""editor-bg":"{content}","editor-fg":"{foreground}","header-bg":"{tool_window_header}","##,
             r##""tab-bg":"{tab_background}","tab-selected-bg":"{tab_selected_background}","##,
-            r##""tab-selected-border":"{tab_selected_border}","editor-border":"{editor_border}","##,
+            r##""tab-selected-bg-inactive":"{tab_selected_background_inactive}","tab-selected-border":"{tab_selected_border}","##,
+            r##""tab-selected-border-inactive":"{tab_selected_border_inactive}","editor-border":"{editor_border}","##,
             r##""menu-separator":"{menu_separator}","##,
             r##""control-bg":"{control_bg}","control-border":"{control_border}","##,
             r##""tab-underline":"{tab_underline}","status-bar":"{status_bar}","##,
             r##""tool-window-tab-underline":"{tool_window_tab_underline}","##,
             r##""muted-fg":"{muted}","secondary-fg":"{secondary}","##,
             r##""hover-overlay":"{hover}","control-hover":"{control_hover}","##,
+            r##""control-pressed":"{control_pressed}","##,
             r##""popup-border":"{popup_border}","separator-line":"{separator_line}","overlay":"{overlay}","##,
             r##""feedback":"{feedback}","scrollbar-thumb":"{scrollbar_thumb}","##,
             r##""active-line":"{active_line}","line-number":"{line_number}","##,
@@ -328,7 +342,9 @@ fn nsh_vars(t: &Theme) -> String {
         editor_selection = t.css("editor_selection"),
         tab_background = t.css("tab_background"),
         tab_selected_background = t.css("tab_selected_background"),
+        tab_selected_background_inactive = t.css("tab_selected_background_inactive"),
         tab_selected_border = t.css("tab_selected_border"),
+        tab_selected_border_inactive = t.css("tab_selected_border_inactive"),
         editor_border = t.css("editor_border"),
         menu_separator = t.css("menu_separator"),
         control_bg = t.css("control_bg"),
@@ -339,6 +355,7 @@ fn nsh_vars(t: &Theme) -> String {
         secondary = t.css("secondary"),
         hover = t.css("hover"),
         control_hover = t.css("control_hover"),
+        control_pressed = t.css("control_pressed"),
         separator_line = t.css("separator_line"),
         overlay = t.css("overlay"),
         scrollbar_thumb = t.css("scrollbar_thumb"),
@@ -365,6 +382,10 @@ mod tests {
         assert_eq!(dark.tokens().canvas, 0x26282C);
         assert_eq!(light.tokens().brand, 0x3871E1);
         assert!(dark.tokens().dark_icons);
+        assert_eq!(light.tokens().island_radius, 10.0);
+        assert_eq!(light.tokens().island_gap, 6.0);
+        assert_eq!(light.tokens().tab_height, 41.0);
+        assert_eq!(light.tokens().tab_selected_background_inactive, 0xE9EAEE);
         assert_eq!(light.tokens().project_gradient.len(), 9);
         assert_eq!(dark.tokens().project_badge.len(), 9);
         assert!(light.syntax_json().contains("keyword"));
@@ -387,6 +408,8 @@ mod tests {
         assert!(json.contains("\"dark\""));
         assert!(json.contains("\"editor-bg\""));
         assert!(json.contains("\"active-line\""));
+        assert!(json.contains("\"island-gap\""));
+        assert!(json.contains("\"tab-selected-bg-inactive\""));
         assert!(json.contains("#3871E1"));
     }
 

@@ -54,6 +54,24 @@ test("opens the project widget menu", async () => {
   await app.keyboard.press("escape");
 });
 
+test("shows tool window context actions when the tree is focused", async () => {
+  const app = await open(".");
+  // 无头测试没有打开示例项目。
+  if (app.count("text:pom.xml") === 0) {
+    return;
+  }
+  expect(app.count("label:刷新项目")).toBe(0);
+  await app.press("text:pom.xml");
+  await app.waitFor("label:刷新项目");
+});
+
+test("opens the tool window more menu", async () => {
+  const app = await open(".");
+  await app.press("label:更多工具窗口操作");
+  await app.waitFor("text:隐藏工具窗口");
+  await app.keyboard.press("escape");
+});
+
 test("opens the encoding status menu", async () => {
   const app = await open(".");
   await app.press("label:文件编码");

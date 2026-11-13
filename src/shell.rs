@@ -112,6 +112,10 @@ pub struct Shell {
     pub tool: Signal<Tool>,
     /// 底部工具窗口；`None` 时收起。
     pub bottom: Signal<Option<Bottom>>,
+    /// 编辑器 / 左侧工具窗口 / 底部工具窗口的焦点归属，决定标签与条纹的激活样式。
+    pub editor_focused: Signal<bool>,
+    pub tool_focused: Signal<bool>,
+    pub bottom_focused: Signal<bool>,
     pub appearance: Signal<Appearance>,
     /// 动作注册表：菜单、快捷键、命令面板共用。
     pub registry: Stored<Arc<ActionRegistry>>,
@@ -141,6 +145,9 @@ impl Shell {
             tool: signal(Tool::Project),
             // 演示模式直接展开「问题」窗口，方便截图验收。
             bottom: signal(demo.then_some(Bottom::Problems)),
+            editor_focused: signal(true),
+            tool_focused: signal(false),
+            bottom_focused: signal(false),
             appearance: signal(Appearance::System),
             registry: stored(Arc::new(ActionRegistry::new())),
             palette: signal(false),
@@ -279,21 +286,60 @@ impl Shell {
         self.palette_selected.set(self.first_enabled_palette_item());
     }
 
+    /// 编辑器取得焦点：标签显示激活色，两个工具窗口条纹变灰。
+    pub fn focus_editor(&self) {
+        self.editor_focused.set(true);
+        self.tool_focused.set(false);
+        self.bottom_focused.set(false);
+    }
+
+    /// 左侧工具窗口取得焦点。
+    pub fn focus_tool(&self) {
+        self.editor_focused.set(false);
+        self.tool_focused.set(true);
+        self.bottom_focused.set(false);
+    }
+
+    /// 底部工具窗口取得焦点。
+    pub fn focus_bottom(&self) {
+        self.editor_focused.set(false);
+        self.tool_focused.set(false);
+        self.bottom_focused.set(true);
+    }
+
+    pub fn hide_tool(&self) {
+        self.tools.set(false);
+        self.tool_focused.set(false);
+        if !self.bottom_focused.get_untracked() {
+            self.editor_focused.set(true);
+        }
+    }
+
+    pub fn hide_bottom(&self) {
+        self.bottom.set(None);
+        self.bottom_focused.set(false);
+        if !self.tool_focused.get_untracked() {
+            self.editor_focused.set(true);
+        }
+    }
+
     /// 工具窗口条 / 视图菜单：同一个窗口再点一次收起，否则切换过去并展开。
     pub fn toggle_tool(&self, tool: Tool) {
         if self.tools.get_untracked() && self.tool.get_untracked() == tool {
-            self.tools.set(false);
+            self.hide_tool();
         } else {
             self.tool.set(tool);
             self.tools.set(true);
+            self.focus_tool();
         }
     }
 
     pub fn toggle_bottom(&self, bottom: Bottom) {
         if self.bottom.get_untracked() == Some(bottom) {
-            self.bottom.set(None);
+            self.hide_bottom();
         } else {
             self.bottom.set(Some(bottom));
+            self.focus_bottom();
         }
     }
 

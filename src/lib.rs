@@ -20,7 +20,9 @@ use nsh_core::keymap::When;
 use nsh_core::{element::desktop::title_bar, prelude::*};
 
 use crate::shell::Shell;
-use crate::ui::{color_of, menu_action, popup_style, project_badge_rgb, shade_rgb, toolbar_button};
+use crate::ui::{
+    color_of, island_gap, menu_action, popup_style, project_badge_rgb, shade_rgb, toolbar_button,
+};
 
 /// 注册给 TSX 入口的 Rust 组件集合与随包资源。
 #[native_module("keel/native")]
@@ -260,34 +262,43 @@ fn body(shell: Shell) -> impl IntoElement {
     view()
         .flex_1()
         .flex_row()
-        .gap(px(4.0))
-        .p(px(4.0))
         .child(project_panel::tool_window_bar(shell))
         .child(main_area(shell))
 }
 
 fn main_area(shell: Shell) -> impl IntoElement {
-    view().flex_1().h_full().child(
-        h_resizable()
-            .gap(px(4.0))
-            .handle_class("w-px bg-separator-line")
-            .child(
-                resizable_panel()
-                    .size(px(260.0))
-                    .size_range(px(180.0)..px(460.0))
-                    .visible(move || shell.tools.get())
-                    .child(project_panel::side_panel(shell)),
-            )
-            .child(resizable_panel().child(editor_column(shell))),
-    )
+    // IDEA 的岛缝：条纹贴左边和工具栏，侧面板留 6px 顶缝，编辑器上沿
+    // 直接贴住工具栏；右侧和底部各留 6px 帧背景。
+    view()
+        .flex_1()
+        .h_full()
+        .pl(px(island_gap()))
+        .pr(px(island_gap()))
+        .pb(px(island_gap()))
+        .child(
+            h_resizable()
+                .gap(px(island_gap()))
+                .child(
+                    resizable_panel()
+                        .size(px(260.0))
+                        .size_range(px(180.0)..px(460.0))
+                        .visible(move || shell.tools.get())
+                        .child(
+                            view()
+                                .flex_1()
+                                .pt(px(island_gap()))
+                                .child(project_panel::side_panel(shell)),
+                        ),
+                )
+                .child(resizable_panel().child(editor_column(shell))),
+        )
 }
 
 /// 编辑器 + 底部工具窗口（垂直分栏）。
 fn editor_column(shell: Shell) -> impl IntoElement {
     view().flex_1().h_full().child(
         v_resizable()
-            .gap(px(4.0))
-            .handle_class("h-px bg-separator-line")
+            .gap(px(island_gap()))
             .child(resizable_panel().child(editor_area::editor_area(shell)))
             .child(
                 resizable_panel()

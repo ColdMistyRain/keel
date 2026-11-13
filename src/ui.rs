@@ -260,29 +260,107 @@ fn rgb_parts(hex: u32) -> (u8, u8, u8) {
     )
 }
 
+fn light_tokens() -> &'static keel_theme::Tokens {
+    keel_theme::theme(keel_theme::ThemeKind::Light).tokens()
+}
+
+/// 岛屿圆角：IDEA `Island.arc=20`（非紧凑）。
+pub fn island_radius() -> f32 {
+    light_tokens().island_radius
+}
+
+/// 岛屿之间的帧背景间隙：IDEA `Island.borderWidth=6`。
+pub fn island_gap() -> f32 {
+    light_tokens().island_gap
+}
+
+/// 编辑器标签条高度：IDEA `ToolWindowHeader` 高度 41。
+pub fn tab_height() -> f32 {
+    light_tokens().tab_height
+}
+
+/// 工具窗口头部的 24×24 图标按钮（无动作，供菜单触发器使用）。
+pub fn header_action(icon: ImageAsset, label: &'static str) -> View {
+    view()
+        .w(px(24.0))
+        .h(px(24.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(4.0))
+        .role(AccessibilityRole::Button)
+        .label(label)
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .child(
+            svg(icon)
+                .w(px(16.0))
+                .h(px(16.0))
+                .text_color(move || color_of("muted-fg")),
+        )
+}
+
 /// 工具窗口条 / 底部条上的方形按钮。
+///
+/// IDEA `SquareStripeButtonLook`：聚焦且选中的工具窗口用蓝底白图标；
+/// 工具窗口可见但没有焦点时用按下态叠加色 + 深色图标；其余用普通图标。
 pub fn stripe_button(
     icon: ImageAsset,
     label: &'static str,
     active: impl Fn() -> bool + 'static,
+    focused: impl Fn() -> bool + 'static,
     action: impl Fn() + 'static,
 ) -> View {
     let active: Rc<dyn Fn() -> bool> = Rc::new(active);
-    let (bg_active, fg_active) = (active.clone(), active.clone());
+    let focused: Rc<dyn Fn() -> bool> = Rc::new(focused);
+    let bg_focused = {
+        let (active, focused) = (active.clone(), focused.clone());
+        move || active() && focused()
+    };
+    let bg_pressed = {
+        let (active, focused) = (active.clone(), focused.clone());
+        move || active() && !focused()
+    };
+    let fg_focused = {
+        let (active, focused) = (active.clone(), focused.clone());
+        move || active() && focused()
+    };
+    let fg_pressed = {
+        let (active, focused) = (active.clone(), focused.clone());
+        move || active() && !focused()
+    };
+    let hover_bg = {
+        let (active, focused) = (active.clone(), focused.clone());
+        move || {
+            if active() {
+                if focused() {
+                    theme().primary
+                } else {
+                    color_of("control-pressed")
+                }
+            } else {
+                color_of("control-hover")
+            }
+        }
+    };
     view()
-        .w(px(36.0))
-        .h(px(36.0))
+        .w(px(37.0))
+        .h(px(40.0))
         .items_center()
         .justify_center()
         .rounded(px(6.0))
         .role(AccessibilityRole::Button)
         .label(label)
-        .style_when(move || bg_active(), |s| s.bg(move || theme().primary))
-        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .style_when(bg_focused, |s| s.bg(move || theme().primary))
+        .style_when(bg_pressed, |s| s.bg(move || color_of("control-pressed")))
+        .hover({
+            let hover_bg = hover_bg.clone();
+            move |s| s.bg(hover_bg.clone())
+        })
         .on_press(action)
-        .child(svg(icon).w(px(16.0)).h(px(16.0)).text_color(move || {
-            if fg_active() {
+        .child(svg(icon).w(px(20.0)).h(px(20.0)).text_color(move || {
+            if fg_focused() {
                 theme().primary_foreground
+            } else if fg_pressed() {
+                theme().foreground
             } else {
                 color_of("muted-fg")
             }

@@ -8,6 +8,8 @@ use nsh_core::prelude::*;
 
 pub const APP: ImageAsset = asset!("icons/app.svg");
 pub const MENU: ImageAsset = asset!("icons/menu.svg");
+pub const MORE: ImageAsset = asset!("icons/more.svg");
+pub const HIDE: ImageAsset = asset!("icons/hide.svg");
 pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
 pub const FILE: ImageAsset = asset!("icons/file.svg");
 pub const JAVA: ImageAsset = asset!("icons/java.svg");

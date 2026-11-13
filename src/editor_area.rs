@@ -11,7 +11,7 @@ use nsh_core::prelude::*;
 
 use crate::icons;
 use crate::shell::Shell;
-use crate::ui::{color_of, menu_action, popup_style};
+use crate::ui::{color_of, island_radius, menu_action, popup_style, tab_height};
 use crate::workspace::{Doc, Workspace, language_of};
 
 /// 编辑器区（岛屿容器）。
@@ -19,7 +19,7 @@ pub fn editor_area(shell: Shell) -> impl IntoElement {
     view()
         .flex_1()
         .min_h(px(0.0))
-        .rounded(px(8.0))
+        .rounded(px(island_radius()))
         .bg(move || color_of("editor-bg"))
         .child(tab_strip(shell))
         .child(view().h(px(1.0)).bg(move || color_of("editor-border")))
@@ -35,7 +35,7 @@ fn tab_strip(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
     measure_tab_overflow(shell);
     view()
-        .h(px(36.0))
+        .h(px(tab_height()))
         .flex_row()
         .items_center()
         .px(px(4.0))
@@ -43,12 +43,12 @@ fn tab_strip(shell: Shell) -> impl IntoElement {
             scroll()
                 .horizontal()
                 .scrollbar(false)
-                .h(px(36.0))
+                .h(px(tab_height()))
                 .flex_1()
                 .element_ref(&shell.tab_viewport)
                 .child(
                     view()
-                        .h(px(36.0))
+                        .h(px(tab_height()))
                         .flex_row()
                         .items_center()
                         .gap(px(2.0))
@@ -174,7 +174,10 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
     let preview_path = path.clone();
     let others_path = path.clone();
     let reveal_path = path.clone();
-    let selected_bg = move || ws.active.get() == Some(index.get());
+    let selected_bg_active =
+        move || ws.active.get() == Some(index.get()) && shell.editor_focused.get();
+    let selected_bg_inactive =
+        move || ws.active.get() == Some(index.get()) && !shell.editor_focused.get();
     let selected_fg = move || ws.active.get() == Some(index.get());
     let selected_close = move || ws.active.get() == Some(index.get());
     let icon = icons::for_file(
@@ -191,22 +194,29 @@ fn tab(shell: Shell, doc: ReadSignal<Doc>, index: ReadSignal<usize>) -> AnyEleme
         .px(px(10.0))
         .rounded(px(6.0))
         .group_named("keel-tab")
-        .style_when(selected_bg, |s| {
+        .style_when(selected_bg_active, |s| {
             s.bg(move || color_of("tab-selected-bg"))
                 .border_1()
                 .border_color(move || color_of("tab-selected-border"))
         })
-        .hover(|s| s.bg(move || color_of("hover-overlay")))
+        .style_when(selected_bg_inactive, |s| {
+            s.bg(move || color_of("tab-selected-bg-inactive"))
+                .border_1()
+                .border_color(move || color_of("tab-selected-border-inactive"))
+        })
+        .hover(|s| s.bg(move || color_of("control-hover")))
         .role(AccessibilityRole::Button)
         .label(move || doc_name(ws, &label_path))
         .on_press(move || {
             ws.activate_path(&select_path);
+            shell.focus_editor();
         })
         .child(
             svg(icon)
                 .w(px(16.0))
                 .h(px(16.0))
-                .text_color(move || color_of("secondary-fg")),
+                .text_color(move || color_of("secondary-fg"))
+                .opacity(move || if selected_fg() { 1.0_f32 } else { 0.75_f32 }),
         )
         .child(
             text(move || doc_name(ws, &name_path))
@@ -389,7 +399,7 @@ fn editor_pane(shell: Shell) -> impl IntoElement {
             view()
                 .flex_1()
                 .style_when(move || ws.active.get().is_none(), |s| s.hidden())
-                .child(code_editor(ws)),
+                .child(code_editor(shell)),
         )
         .child(
             view()
@@ -399,7 +409,8 @@ fn editor_pane(shell: Shell) -> impl IntoElement {
         )
 }
 
-fn code_editor(ws: Workspace) -> impl IntoElement {
+fn code_editor(shell: Shell) -> impl IntoElement {
+    let ws = shell.ws;
     let text = computed(move || {
         ws.active.with(|active| {
             active.and_then(|index| {
@@ -426,6 +437,7 @@ fn code_editor(ws: Workspace) -> impl IntoElement {
         .classes(idea_editor_classes())
         .on_change(move |value: &SharedString| ws.update_active_text(value))
         .on_selection_change(move |selections: &Vec<nsh_base::EditorSelection>| {
+            shell.focus_editor();
             if let Some(selection) = selections.last() {
                 ws.cursor.set(
                     format!("{}:{}", selection.head.line + 1, selection.head.column + 1).into(),

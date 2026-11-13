@@ -3,18 +3,20 @@
 //! 问题 / 运行 / 终端在 P2 只是外壳占位；内容迁移在 P3/P4（诊断、运行配置、
 //! `nsh_base::terminal`）。切换按钮在左侧条纹的下半区。
 
-use nsh_base::theme;
+use nsh_base::{menu, theme};
 use nsh_core::prelude::*;
 
 use crate::icons;
 use crate::shell::{Bottom, Shell};
-use crate::ui::{color_of, icon_button};
+use crate::ui::{
+    color_of, header_action, icon_button, island_radius, menu_action, menu_separator, popup_style,
+};
 
 /// 底部工具窗口面板。
 pub fn bottom_panel(shell: Shell) -> impl IntoElement {
     view()
         .flex_1()
-        .rounded(px(8.0))
+        .rounded(px(island_radius()))
         .bg(move || color_of("island-bg"))
         .child(panel_header(shell))
         .child(view().h(px(1.0)).bg(move || color_of("separator-line")))
@@ -32,7 +34,7 @@ fn panel_header(shell: Shell) -> impl IntoElement {
             view()
                 .flex_row()
                 .items_center()
-                .gap(px(2.0))
+                .gap(px(4.0))
                 .flex_1()
                 .children(
                     Bottom::ALL
@@ -40,53 +42,78 @@ fn panel_header(shell: Shell) -> impl IntoElement {
                         .map(move |bottom| tab_button(shell, bottom)),
                 ),
         )
-        .child(icon_button(icons::SETTINGS, "运行配置", move || {
-            shell.ws.say("运行配置将在 P4 迁移")
+        .child(bottom_more(shell))
+        .child(icon_button(icons::HIDE, "隐藏底部窗口", move || {
+            shell.hide_bottom()
         }))
-        .child(icon_button(icons::CLOSE, "关闭底部窗口", move || {
-            shell.bottom.set(None)
-        }))
+}
+
+/// 「更多」菜单：运行配置入口和隐藏底部窗口。
+fn bottom_more(shell: Shell) -> impl IntoElement {
+    menu()
+        .offset(px(4.0))
+        .popup_style(popup_style)
+        .trigger(header_action(icons::MORE, "更多底部窗口操作"))
+        .child(menu_action(
+            Some(icons::SETTINGS),
+            "运行配置",
+            Some('E'),
+            None,
+            move || shell.ws.say("运行配置将在 P4 迁移"),
+        ))
+        .child(menu_separator())
+        .child(menu_action(
+            Some(icons::HIDE),
+            "隐藏底部窗口",
+            Some('H'),
+            None,
+            move || shell.hide_bottom(),
+        ))
 }
 
 /// 面板标题栏里的标签（问题 / 运行 / 终端）。
 ///
-/// IDEA 底部工具窗口的选中标签没有底色，只有 3px 下划线
-/// （`DefaultTabs.underlineHeight = 3`、颜色 `#4083C9`）。
+/// 2026.2 的底部工具窗口和编辑器标签一样用 Islands 胶囊：
+/// 高 28、圆角 6；聚焦且选中时 `#E3EBFE/#A7C5FF`，未聚焦时
+/// `#E9EAEE/gray-130`。
 fn tab_button(shell: Shell, bottom: Bottom) -> View {
     let active = move || shell.bottom.get() == Some(bottom);
-    let underline = move || shell.bottom.get() == Some(bottom);
+    let active_focused = move || shell.bottom.get() == Some(bottom) && shell.bottom_focused.get();
+    let active_inactive = move || shell.bottom.get() == Some(bottom) && !shell.bottom_focused.get();
     view()
-        .h(px(30.0))
-        .flex_col()
+        .h(px(28.0))
+        .px(px(10.0))
+        .flex_row()
         .items_center()
+        .justify_center()
+        .rounded(px(6.0))
         .role(AccessibilityRole::Button)
         .label(bottom.label())
-        .hover(|s| s.bg(move || color_of("hover-overlay")))
-        .on_press(move || shell.bottom.set(Some(bottom)))
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .on_press(move || {
+            shell.bottom.set(Some(bottom));
+            shell.focus_bottom();
+        })
+        .style_when(active_focused, |s| {
+            s.bg(move || color_of("tab-selected-bg"))
+                .border_1()
+                .border_color(move || color_of("tab-selected-border"))
+        })
+        .style_when(active_inactive, |s| {
+            s.bg(move || color_of("tab-selected-bg-inactive"))
+                .border_1()
+                .border_color(move || color_of("tab-selected-border-inactive"))
+        })
         .child(
-            view()
-                .flex_1()
-                .px(px(8.0))
-                .items_center()
-                .justify_center()
-                .child(
-                    text(bottom.label())
-                        .text_size(px(12.0))
-                        .text_color(move || {
-                            if active() {
-                                theme().foreground
-                            } else {
-                                color_of("muted-fg")
-                            }
-                        }),
-                ),
-        )
-        .child(
-            view()
-                .h(px(3.0))
-                .w_full()
-                .bg(move || color_of("tool-window-tab-underline"))
-                .style_when(move || !underline(), |s| s.hidden()),
+            text(bottom.label())
+                .text_size(px(13.0))
+                .text_color(move || {
+                    if active() {
+                        theme().foreground
+                    } else {
+                        color_of("muted-fg")
+                    }
+                }),
         )
 }
 
