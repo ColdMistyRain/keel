@@ -29,6 +29,7 @@ actions!(
         ReplaceInFile,
         ToggleComment,
         ReloadFromDisk,
+        UnfoldAll,
         Run,
         Stop,
         Debug,

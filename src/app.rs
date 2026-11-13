@@ -18,7 +18,7 @@ use crate::actions::{
     FindInFile, LocateInProject, NextTab, OpenProject, PaletteCancel, PaletteConfirm, PaletteDown,
     PaletteUp, PreviousTab, RefreshProjectTree, ReloadFromDisk, ReplaceInFile, Run, SaveFile,
     ShowAbout, ShowCommandPalette, ShowSettings, Stop, ToggleBottomPanel, ToggleBreadcrumbs,
-    ToggleComment, ToggleProjectPanel, ToggleTheme,
+    ToggleComment, ToggleProjectPanel, ToggleTheme, UnfoldAll,
 };
 use crate::editor::Document;
 use crate::external::ExternalConflict;
@@ -2917,6 +2917,7 @@ impl Render for KeelApp {
             .on_action(cx.listener(Self::on_replace_in_file))
             .on_action(cx.listener(Self::on_toggle_comment))
             .on_action(cx.listener(Self::on_reload_from_disk))
+            .on_action(cx.listener(Self::on_unfold_all))
             .on_action(cx.listener(Self::on_run))
             .on_action(cx.listener(Self::on_stop))
             .on_action(cx.listener(Self::on_debug))
@@ -3180,6 +3181,7 @@ fn build_main_menu(
             .menu("全选", Box::new(SelectAll))
             .item(crate::menu::separator(separator))
             .menu("切换行注释", Box::new(ToggleComment))
+            .menu("展开全部折叠", Box::new(UnfoldAll))
             .item(crate::menu::separator(separator))
             .menu("查找…", Box::new(FindInFile))
             .menu("替换…", Box::new(ReplaceInFile))

@@ -5,6 +5,7 @@ mod comment;
 mod editor;
 mod external;
 mod file_icons;
+mod folding;
 mod idea_theme;
 mod menu;
 mod model;
