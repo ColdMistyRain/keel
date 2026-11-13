@@ -11,7 +11,7 @@
     "secondary": "#73767C",
     "selection": "#D0DFFE",
     "selection_fg": "#000000",
-    "hover": "#00000008",
+    "hover": "#00000012",
     "control_hover": "#00000012",
     "control_pressed": "#00000020",
     "tool_window_header": "#FFFFFF",
@@ -38,7 +38,7 @@
     "popover": "#FFFFFF",
     "popup_border": "#D1D3D9",
     "separator": "#00000020",
-    "separator_line": "#CDCDCD",
+    "separator_line": "#D9D9D9",
     "overlay": "#00000040",
     "feedback": "#FFFFFF",
     "feedback_border": "#D1D3D9",
@@ -55,6 +55,7 @@
     "island_arc": 20.0,
     "dark_icons": false,
     "radius": 4.0,
+    "popup_radius": 8.0,
     "island_radius": 10.0,
     "island_gap": 6.0,
     "tab_height": 41.0,
@@ -66,8 +67,12 @@
       "#ECD3F5", "#E4D3F5", "#CEF0E9", "#CEEDD4"
     ],
     "project_badge": [
-      "#DB3D3C", "#F57236", "#2BC8BB", "#359AF2", "#8379FB",
-      "#7E54B5", "#D63CC8", "#954294", "#E75371"
+      "#E08855", "#B08B14", "#A1A359", "#3B92B8", "#3574F0",
+      "#C84D8F", "#955AE0", "#24A394", "#5FAD65"
+    ],
+    "project_badge_end": [
+      "#E9806F", "#BB7F19", "#87AA59", "#6183EC", "#7A64F0",
+      "#A956CF", "#A84DE0", "#279CCD", "#3D968B"
     ]
   },
   "syntax": {

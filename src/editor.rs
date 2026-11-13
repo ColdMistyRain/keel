@@ -149,7 +149,7 @@ impl KeelApp {
                     .w(panel_width)
                     .h_full()
                     .flex_shrink_0()
-                    .rounded(chrome.island_arc)
+                    .rounded(chrome.island_radius)
                     .overflow_hidden()
                     .bg(chrome.panel)
                     .child(project_panel),
@@ -190,7 +190,7 @@ impl KeelApp {
                 .flex()
                 .flex_col()
                 .bg(chrome.bg)
-                .rounded(chrome.island_arc)
+                .rounded(chrome.island_radius)
                 .overflow_hidden()
                 .child(empty_editor_state(chrome))
                 .into_any_element();
@@ -206,7 +206,7 @@ impl KeelApp {
             .flex()
             .flex_col()
             .bg(chrome.bg)
-            .rounded(chrome.island_arc)
+            .rounded(chrome.island_radius)
             .overflow_hidden()
             .child(tab_bar)
             .child(editor)

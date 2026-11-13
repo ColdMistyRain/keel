@@ -7,11 +7,11 @@
 
 use gpui::{prelude::*, *};
 use gpui_component::Sizable as _;
-use gpui_component::button::{Button, ButtonVariants as _};
+use gpui_component::button::{Button, ButtonCustomVariant, ButtonVariants as _};
 use gpui_component::menu::PopupMenuItem;
 
 use crate::actions::{Debug, Run, Stop};
-use crate::app::{BottomTab, Chrome, KeelApp, StatusMessage, icon_button};
+use crate::app::{BottomTab, Chrome, KeelApp, StatusMessage};
 use crate::idea_theme::color;
 
 /// run widget 的高度与按钮边长（`RunWidget.toolbarHeight / actionButtonWidth`）。
@@ -82,12 +82,18 @@ impl KeelApp {
         let name = self.run_config_name();
         let running = self.running;
         let separator = chrome.separator_line;
+        // 与主工具栏一致：悬停/按下用 `MainToolbar.Icon.*` 的灰色覆盖色；
+        // 文字色取 `RunWidget.foreground`（#000000），不是次要文字色。
+        let run_variant = ButtonCustomVariant::new(cx)
+            .foreground(chrome.fg)
+            .hover(chrome.control_hover)
+            .active(chrome.control_pressed);
 
         let config_selector = crate::menu::dropdown_menu(
             "run-config",
             chrome.popup_border,
             Button::new("run-config")
-                .ghost()
+                .custom(run_variant)
                 .small()
                 .h(px(HEIGHT))
                 .pl(px(10.))
@@ -155,10 +161,27 @@ impl KeelApp {
             .child(img("icons/debug.svg").size(px(16.)))
             .on_click(cx.listener(|this, _event, _window, cx| this.toggle_debug(cx)));
 
+        // “更多”也是 `RunWidget.actionButtonWidth`（30×30）的按钮，
+        // 之前用 24×24 的 `icon_button`，与左右两个 30px 按钮不一致。
+        let more_button = Button::new("run-more")
+            .custom(run_variant)
+            .small()
+            .w(px(BUTTON))
+            .h(px(BUTTON))
+            .p_0()
+            .rounded(px(6.))
+            .child(
+                svg()
+                    .path("icons/more_vertical.svg")
+                    // `RedesignedRunWidget` 的 `iconSize = { 16 }`。
+                    .size(px(16.))
+                    .text_color(chrome.muted_fg),
+            );
+
         let more = crate::menu::dropdown_menu(
             "run-more",
             chrome.popup_border,
-            icon_button("run-more", "icons/more_vertical.svg", chrome.muted_fg),
+            more_button,
             move |menu, _, _| {
                 menu.menu("运行", Box::new(Run))
                     .menu("停止", Box::new(Stop))

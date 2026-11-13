@@ -132,7 +132,9 @@ pub struct Tokens {
     pub island_arc: f32,
     /// 控件圆角（按钮、输入框）。
     pub radius: f32,
-    /// 岛屿 / 弹层圆角。
+    /// 弹层/对话框圆角（`PopupMenu.borderCornerRadius` = 8，本身已是半径）。
+    pub popup_radius: f32,
+    /// 岛屿圆角半径（`Island.arc` 是弧直径，这里是弧的一半）。
     pub island_radius: f32,
     /// 岛屿之间的帧背景间隙。
     pub island_gap: f32,
@@ -141,7 +143,10 @@ pub struct Tokens {
     pub dark_icons: bool,
     /// 最近项目工具栏渐变与徽标的备选色。
     pub project_gradient: Vec<u32>,
+    /// 项目头像渐变的起始色（`RecentProject.ColorN.Avatar.Start`）。
     pub project_badge: Vec<u32>,
+    /// 项目头像渐变的结束色（`RecentProject.ColorN.Avatar.End`）。
+    pub project_badge_end: Vec<u32>,
 }
 
 static LIGHT: OnceLock<Theme> = OnceLock::new();
@@ -238,6 +243,7 @@ fn parse(json: &str) -> Theme {
         unselected_alpha: number("unselected_alpha"),
         island_arc: number("island_arc"),
         radius: number("radius"),
+        popup_radius: number("popup_radius"),
         island_radius: number("island_radius"),
         island_gap: number("island_gap"),
         tab_height: number("tab_height"),
@@ -245,6 +251,7 @@ fn parse(json: &str) -> Theme {
         dark_icons: flag("dark_icons"),
         project_gradient: palette("project_gradient"),
         project_badge: palette("project_badge"),
+        project_badge_end: palette("project_badge_end"),
     };
 
     Theme {
@@ -383,11 +390,13 @@ mod tests {
         assert_eq!(light.tokens().brand, 0x3871E1);
         assert!(dark.tokens().dark_icons);
         assert_eq!(light.tokens().island_radius, 10.0);
+        assert_eq!(light.tokens().popup_radius, 8.0);
         assert_eq!(light.tokens().island_gap, 6.0);
         assert_eq!(light.tokens().tab_height, 41.0);
         assert_eq!(light.tokens().tab_selected_background_inactive, 0xE9EAEE);
         assert_eq!(light.tokens().project_gradient.len(), 9);
         assert_eq!(dark.tokens().project_badge.len(), 9);
+        assert_eq!(dark.tokens().project_badge_end.len(), 9);
         assert!(light.syntax_json().contains("keyword"));
     }
 

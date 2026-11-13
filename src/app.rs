@@ -6,7 +6,7 @@ use std::time::Duration;
 use gpui::{prelude::*, *};
 use gpui_component::ActiveTheme;
 use gpui_component::Sizable as _;
-use gpui_component::button::{Button, ButtonVariants as _};
+use gpui_component::button::{Button, ButtonCustomVariant, ButtonVariants as _};
 use gpui_component::input::{
     Copy, Cut, EditorState, Input, InputEvent, InputState, Paste, Redo, SelectAll, TabSize, Undo,
 };
@@ -50,6 +50,8 @@ pub struct Chrome {
     pub hover_bg: Hsla,
     /// 控件的中性悬停底色。
     pub control_hover: Hsla,
+    /// 控件的按下底色（`ActionButton.pressedBackground`）。
+    pub control_pressed: Hsla,
     /// 侧边条分组、工具栏分隔线（`toolbar-border`）。
     pub separator: Hsla,
     /// 菜单等弹层里的单线分隔条（`Separator.separatorColor`）。
@@ -73,8 +75,8 @@ pub struct Chrome {
     /// 未选中标签的图标透明度（`EditorTabs.unselectedAlpha`）。
     pub tab_icon_alpha: f32,
     pub status_bg: Hsla,
-    /// 岛屿卡片的圆角半径（`Island.arc`）。
-    pub island_arc: Pixels,
+    /// 岛屿卡片的圆角半径（`Island.arc` = 20 是**弧直径**，半径 = arc / 2 = 10）。
+    pub island_radius: Pixels,
     /// 图标资源的主题后缀：`""` 或 `"_dark"`。
     pub icon_suffix: &'static str,
     pub mono_font: SharedString,
@@ -100,6 +102,7 @@ impl Chrome {
             header: crate::idea_theme::color(tokens.tool_window_header),
             hover_bg: crate::idea_theme::color_rgba(tokens.hover),
             control_hover: crate::idea_theme::color_rgba(tokens.control_hover),
+            control_pressed: crate::idea_theme::color_rgba(tokens.control_pressed),
             separator: crate::idea_theme::color_rgba(tokens.separator),
             separator_line: crate::idea_theme::color(tokens.separator_line),
             feedback: crate::idea_theme::color(tokens.feedback),
@@ -121,7 +124,7 @@ impl Chrome {
             },
             tab_icon_alpha: tokens.unselected_alpha,
             status_bg: crate::idea_theme::color(tokens.status_bar),
-            island_arc: px(tokens.island_arc),
+            island_radius: px(tokens.island_radius),
             icon_suffix: if tokens.dark_icons { "_dark" } else { "" },
             mono_font: theme.mono_font_family.clone(),
             mono_size: theme.mono_font_size,
@@ -1948,7 +1951,8 @@ impl KeelApp {
             .and_then(|path| path.file_name())
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| "Keel".to_string());
-        let initials: String = project_name.chars().take(2).collect();
+        // IDEA `AvatarUtils.initials`：驼峰取两个大写，否则取分隔词的首尾首字母。
+        let initials = avatar_initials(&project_name);
         let branch = self.git_branch();
         // IDEA 用项目路径派生的项目色（`RecentProject.ColorN`）给徽标和工具栏着色。
         let seed = self
@@ -1957,8 +1961,17 @@ impl KeelApp {
             .as_deref()
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "Keel".to_string());
-        let badge_color = crate::idea_theme::project_badge(self.theme_kind, &seed);
+        let (badge_end, badge_start) =
+            crate::idea_theme::project_badge_gradient(self.theme_kind, &seed);
         let menu_separator = chrome.separator_line;
+
+        // IDEA 主工具栏按钮的悬停/按下是灰色覆盖色（`MainToolbar.Icon.hoverBackground`
+        // = #00000012 / `pressedBackground` = #00000020）；组件库的 ghost 变体默认拿
+        // `tokens.accent`（选中蓝）当悬停底色，放在工具栏上颜色不对。
+        let toolbar_variant = ButtonCustomVariant::new(cx)
+            .foreground(chrome.muted_fg)
+            .hover(chrome.control_hover)
+            .active(chrome.control_pressed);
 
         let menu = crate::tooltip::with_tooltip(
             "tip-main-menu",
@@ -1969,11 +1982,14 @@ impl KeelApp {
                 // `MainToolbar.Button.size` = 30、`iconSize` = 20、`arc` = 12（半径 6）；
                 // Windows 上的汉堡图标是 expUI 的 `windowsMenu@20x20`（四条横线）。
                 Button::new("main-menu")
-                    .ghost()
+                    .custom(toolbar_variant)
                     .small()
                     .w(px(30.))
                     .h(px(30.))
                     .p_0()
+                    // 同样按 `MainToolbar.Icon.insets`（6,5,4,5）让 20px 图标上 6 下 4。
+                    .pt(px(6.))
+                    .pb(px(4.))
                     .rounded(px(6.))
                     .child(
                         svg()
@@ -2005,13 +2021,25 @@ impl KeelApp {
             .child(
                 div()
                     .size(px(20.))
-                    .rounded(px(6.))
-                    .bg(badge_color)
+                    // IDEA `AvatarIcon(targetSize = 20, arcRatio = 0.4)`：
+                    // 弧直径 0.4 × 20 = 8 ⇒ 半径 4。
+                    .rounded(px(4.))
+                    // `GradientPaint(0, size, End, size, 0, Start)`：左下 End → 右上 Start。
+                    // Java 在 sRGB 空间插值，这里也指定 sRGB（GPUI 默认是 Oklab）。
+                    .bg(linear_gradient(
+                        45.,
+                        linear_color_stop(badge_end, 0.),
+                        linear_color_stop(badge_start, 1.),
+                    )
+                    .color_space(ColorSpace::Srgb))
                     .flex()
                     .items_center()
                     .justify_center()
                     .text_color(hsla(0., 0., 1., 1.))
-                    .text_xs()
+                    // `AvatarUtils.getNewUiFont`：JetBrains Mono DEMIBOLD，13 × 20 / 20 = 13px。
+                    .font_family("JetBrains Mono")
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(px(13.))
                     .child(initials),
             )
             // `iconTextGap` 默认 6，箭头前另有 `BEFORE_CHEVRON_GAP` = 2。
@@ -2105,11 +2133,15 @@ impl KeelApp {
         // 图标内边距取主题里的 `MainToolbar.Icon.insets` = "6,5,4,5"。
         let toolbar_button = |id: &'static str, icon_path: String| {
             Button::new(id)
+                .custom(toolbar_variant)
                 .small()
-                .ghost()
                 .w(px(30.))
                 .h(px(30.))
                 .p_0()
+                // `MainToolbar.Icon.insets` = 6,5,4,5：30px 按钮里的 20px 图标不是
+                // 垂直居中，而是上 6 / 下 4（比居中下移 1px）。
+                .pt(px(6.))
+                .pb(px(4.))
                 .rounded(px(6.))
                 .child(
                     svg()
@@ -2131,13 +2163,23 @@ impl KeelApp {
             .gap_0()
             .pl(px(7.))
             .bg(chrome.canvas)
-            .window_control_area(WindowControlArea::Drag)
             .child(gradient)
             .child(menu)
             .child(project_widget)
             .children(branch_widget)
             .child(external)
-            .child(div().flex_1())
+            // 拖拽区只能放在**不覆盖任何按钮**的空白段上。
+            // 平台侧 `hit_test_window_control` 按命中框注册顺序返回第一个匹配的区域，
+            // 若把 `Drag` 挂在整条标题栏（它是所有按钮的祖先），它先注册就会永远胜出，
+            // 最小化/最大化/关闭永远拿不到 HTMINBUTTON/HTMAXBUTTON/HTCLOSE。
+            .child(
+                div()
+                    .id("title-drag")
+                    .flex_1()
+                    // 父行是 `items_center`，不给高度的话命中框高度是 0，拖拽区会失效。
+                    .h_full()
+                    .window_control_area(WindowControlArea::Drag),
+            )
             .child(self.render_run_widget(chrome, cx))
             .child(crate::tooltip::with_tooltip(
                 "tip-title-search",
@@ -3076,6 +3118,43 @@ pub fn icon_button(id: impl Into<ElementId>, icon: impl Into<SharedString>, colo
         .h(px(24.))
         .p_0()
         .child(svg().path(icon.into()).size(px(16.)).text_color(color))
+}
+
+/// IDEA `AvatarUtils.initials(name)` 的移植：
+///
+/// - `"MyProject"` → `"MP"`（驼峰：首字母 + 后续大写字母，最多 2 个）
+/// - `"My-Project"` / `"demo app"` → 分隔词的首、尾两段首字母
+/// - `"demo"` → `"D"`
+fn avatar_initials(name: &str) -> String {
+    let filtered = name.trim();
+
+    let camel: String = filtered
+        .trim_start_matches(|c: char| !c.is_alphabetic())
+        .chars()
+        .take_while(|c: &char| c.is_alphanumeric())
+        .enumerate()
+        .filter(|(index, c)| *index == 0 || c.is_uppercase())
+        .map(|(_, c)| c)
+        .take(2)
+        .collect();
+    if camel.chars().count() == 2 {
+        return camel.to_uppercase();
+    }
+
+    for separator in [' ', ',', '-', '_', '.', '`', '\'', '"'] {
+        let parts: Vec<&str> = filtered
+            .split(separator)
+            .map(|part| part.trim_matches(|c: char| !c.is_alphanumeric()))
+            .filter(|part| !part.is_empty())
+            .collect();
+        if parts.len() >= 2 {
+            let first = parts[0].chars().next().unwrap_or_default();
+            let last = parts[parts.len() - 1].chars().next().unwrap_or_default();
+            return format!("{first}{last}").to_uppercase();
+        }
+    }
+
+    camel.to_uppercase()
 }
 
 /// 状态栏右端的一个部件，悬停时前景变正文色并给出轻微底色。

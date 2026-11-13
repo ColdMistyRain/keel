@@ -1,4 +1,5 @@
 use gpui::{prelude::*, *};
+use gpui_component::Icon;
 use gpui_component_assets::IconName;
 
 use crate::app::{BottomTab, Chrome, CommandId, KeelApp, StatusMessage};
@@ -144,8 +145,12 @@ impl KeelApp {
             .w(px(STRIPE_WIDTH))
             .h(px(40.))
             .flex()
-            .items_center()
-            .justify_center()
+            // `StripeToolbar.Button.leftStripeIcon.padding = 5,5,5,2`：
+            // 高亮块不居中，而是左上 5px / 右 2px（37 - 5 - 2 = 30，40 - 5 - 5 = 30）。
+            .items_start()
+            .justify_start()
+            .pt(px(5.))
+            .pl(px(5.))
             .cursor_pointer()
             .child(
                 div()
@@ -195,13 +200,15 @@ impl KeelApp {
             .w(px(STRIPE_WIDTH))
             .h(px(40.))
             .flex()
-            .items_center()
-            .justify_center()
+            .items_start()
+            .justify_start()
+            .pt(px(5.))
+            .pl(px(5.))
             .cursor_pointer()
             .child(
                 div()
                     // 与侧边条图标按钮同一套度量（`StripeToolbar.Button` 37×40、
-                    // 高亮块 30×30、圆角半径 6）。
+                    // 高亮块 30×30、左上 5px、圆角半径 6）。
                     .w(px(30.))
                     .h(px(30.))
                     .flex()
@@ -211,7 +218,9 @@ impl KeelApp {
                     .when(active, |item| item.bg(chrome.accent))
                     .hover(|style| style.bg(chrome.control_hover))
                     .text_color(icon_color)
-                    .child(icon),
+                    // 侧边条图标统一 20px（`StripeToolbar.Button.iconSize` 缺省 20）；
+                    // `IconName` 默认跟随文字尺寸（13px），直接放会比其他九个图标小一圈。
+                    .child(Icon::default().path(icon.path()).size(px(20.))),
             )
             .on_click(cx.listener(move |this, _event, _window, cx| {
                 if this.bottom_panel_visible && this.bottom_tab == tab {

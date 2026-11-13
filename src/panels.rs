@@ -73,7 +73,7 @@ impl KeelApp {
             .flex_col()
             .bg(chrome.panel)
             .text_color(chrome.panel_fg)
-            .rounded(chrome.island_arc)
+            .rounded(chrome.island_radius)
             .overflow_hidden()
             .mt(px(6.))
             .child(

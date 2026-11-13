@@ -82,9 +82,9 @@ pub fn apply(cx: &mut App, kind: ThemeKind) {
         // 组件库的 `radius` 是半径，直接取 4 才能和 IDEA 的按钮、输入框、
         // 菜单选中块一致。
         theme.radius = px(tokens.radius);
-        // 弹层/对话框表面的圆角仍是 8（`PopupMenu.borderCornerRadius`），
-        // 与控件内部高亮的 4 区分开。
-        theme.radius_lg = px(tokens.island_radius);
+        // 弹层/对话框表面的圆角是 `PopupMenu.borderCornerRadius` = 8（已经是半径，
+        // 不是弧直径），与控件内部高亮的 4 区分开。
+        theme.radius_lg = px(tokens.popup_radius);
 
         theme.background = color(tokens.canvas);
         theme.foreground = color(tokens.foreground);
@@ -161,15 +161,22 @@ pub fn project_gradient(kind: ThemeKind, seed: &str) -> Hsla {
     )
 }
 
-/// 项目徽标的底色，来自 `RecentProjectColorPalette`。
-pub fn project_badge(kind: ThemeKind, seed: &str) -> Hsla {
-    let palette = &kind.tokens().project_badge;
-    color(
-        palette
-            .get(project_color_index(seed))
-            .copied()
-            .unwrap_or(kind.tokens().brand),
-    )
+/// 项目头像的渐变两端，对应 IDEA `AvatarUtils` 的 `GradientPaint(0, size, End,
+/// size, 0, Start)`：从**左下（End）**到**右上（Start）**。
+pub fn project_badge_gradient(kind: ThemeKind, seed: &str) -> (Hsla, Hsla) {
+    let tokens = kind.tokens();
+    let index = project_color_index(seed);
+    let start = tokens
+        .project_badge
+        .get(index)
+        .copied()
+        .unwrap_or(tokens.brand);
+    let end = tokens
+        .project_badge_end
+        .get(index)
+        .copied()
+        .unwrap_or(start);
+    (color(end), color(start))
 }
 
 /// 由项目路径算出的调色板下标，同一项目在工具栏渐变与徽标上保持一致。

@@ -11,7 +11,7 @@
     "secondary": "#73767C",
     "selection": "#2A4371",
     "selection_fg": "#D1D3D9",
-    "hover": "#FFFFFF10",
+    "hover": "#FFFFFF17",
     "control_hover": "#FFFFFF17",
     "control_pressed": "#FFFFFF29",
     "tool_window_header": "#191A1C",
@@ -55,6 +55,7 @@
     "island_arc": 20.0,
     "dark_icons": true,
     "radius": 4.0,
+    "popup_radius": 8.0,
     "island_radius": 10.0,
     "island_gap": 6.0,
     "tab_height": 41.0,
@@ -66,8 +67,12 @@
       "#613861", "#503D70", "#325959", "#365439"
     ],
     "project_badge": [
-      "#CE443C", "#E27237", "#2DBCAD", "#3895E1", "#7B75E8",
-      "#7854AD", "#8F4593", "#C840B9", "#D75370"
+      "#E08855", "#B08B14", "#A1A359", "#3B92B8", "#3574F0",
+      "#C84D8F", "#955AE0", "#24A394", "#5FAD65"
+    ],
+    "project_badge_end": [
+      "#E9806F", "#BB7F19", "#87AA59", "#6183EC", "#7A64F0",
+      "#A956CF", "#A84DE0", "#279CCD", "#3D968B"
     ]
   },
   "syntax": {
