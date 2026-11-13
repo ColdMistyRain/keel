@@ -2161,7 +2161,8 @@ impl KeelApp {
             .items_center()
             // 工具栏内的按钮/部件相邻排列（`ToolBar.horizontalToolbarInsets` 只给两侧留白）。
             .gap_0()
-            .pl(px(7.))
+            // 无边框窗口的标题栏左边距取 4（与侧边条按钮的左内边距同轴）。
+            .pl(px(4.))
             .bg(chrome.canvas)
             .child(gradient)
             .child(menu)
@@ -2925,8 +2926,7 @@ impl Render for KeelApp {
             .pt(px(6.))
             .pb(px(6.))
             .child(stripe)
-            // 侧边条与工具窗口岛屿之间同样留 6px 的岛屿间距。
-            .child(div().w(px(6.)).flex_shrink_0())
+            // 侧边条自身已经包含与工具窗口岛屿之间的 6px 缝（`STRIPE_WIDTH` = 30 + 4 + 6）。
             .child(workspace);
 
         let mut root = div()

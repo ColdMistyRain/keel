@@ -4,9 +4,15 @@ use gpui_component_assets::IconName;
 
 use crate::app::{BottomTab, Chrome, CommandId, KeelApp, StatusMessage};
 
-/// 左侧工具窗口侧边条的宽度，项目面板的拖拽计算也依赖它。
-/// 取自 `StripeToolbar.Button.size` 的 37px。
-pub const STRIPE_WIDTH: f32 = 37.;
+/// 左侧工具窗口侧边条的总宽，项目面板的拖拽计算也依赖它。
+///
+/// 与 openidea/IDEA 的 Islands 布局一致：`30`（`StripeToolbar.Button.size`）
+/// + 左内边距 `4`（`stripe-outer-padding`）+ 右侧 `6`（`Island.borderWidth`，
+/// 即侧边条与工具窗口岛屿之间的缝）。总宽 40。
+pub const STRIPE_WIDTH: f32 = 40.;
+
+/// 侧边条按钮左侧的内边距（`stripe-outer-padding`）。
+const STRIPE_LEFT_PADDING: f32 = 4.;
 
 impl KeelApp {
     /// IDEA 风格的左侧工具窗口侧边条：图标来自 expUI 图标集。
@@ -97,7 +103,9 @@ impl KeelApp {
             .flex()
             .flex_col()
             .items_center()
-            .py_1()
+            // 顶部 5、底部 6（openidea `.stripe` 的 `padding: 5px 0 6px`）。
+            .pt(px(5.))
+            .pb(px(6.))
             .bg(chrome.canvas)
             .child(project)
             .child(commit)
@@ -145,17 +153,16 @@ impl KeelApp {
             .w(px(STRIPE_WIDTH))
             .h(px(40.))
             .flex()
-            // `StripeToolbar.Button.leftStripeIcon.padding = 5,5,5,2`：
-            // 高亮块不居中，而是左上 5px / 右 2px（37 - 5 - 2 = 30，40 - 5 - 5 = 30）。
+            // 高亮块靠左：40 - 4（左内边距）- 6（岛屿缝）= 30，40 - 5 - 5 = 30。
             .items_start()
             .justify_start()
             .pt(px(5.))
-            .pl(px(5.))
+            .pl(px(STRIPE_LEFT_PADDING))
             .cursor_pointer()
             .child(
                 div()
-                    // 高亮块 = 按钮尺寸减去 `StripeToolbar.Button.leftStripeIcon.padding`
-                    // "5,5,5,2"：37-5-2 = 30、40-5-5 = 30；圆角半径 =
+                    // 高亮块 = 按钮尺寸减去左侧内边距与岛屿缝：
+                    // 40 - 4 - 6 = 30、40 - 5 - 5 = 30；圆角半径 =
                     // `Button.ToolWindow.arc`(12) / 2 = 6。
                     .w(px(30.))
                     .h(px(30.))
@@ -203,12 +210,11 @@ impl KeelApp {
             .items_start()
             .justify_start()
             .pt(px(5.))
-            .pl(px(5.))
+            .pl(px(STRIPE_LEFT_PADDING))
             .cursor_pointer()
             .child(
                 div()
-                    // 与侧边条图标按钮同一套度量（`StripeToolbar.Button` 37×40、
-                    // 高亮块 30×30、左上 5px、圆角半径 6）。
+                    // 与侧边条图标按钮同一套度量（高亮块 30×30、圆角半径 6）。
                     .w(px(30.))
                     .h(px(30.))
                     .flex()
@@ -281,8 +287,10 @@ impl KeelApp {
             .w(px(STRIPE_WIDTH))
             .h(px(40.))
             .flex()
-            .items_center()
-            .justify_center()
+            .items_start()
+            .justify_start()
+            .pt(px(5.))
+            .pl(px(STRIPE_LEFT_PADDING))
             .cursor_pointer()
             .child(
                 div()
