@@ -54,6 +54,25 @@ test("opens the project widget menu", async () => {
   await app.keyboard.press("escape");
 });
 
+test("opens the encoding status menu", async () => {
+  const app = await open(".");
+  await app.press("label:文件编码");
+  await app.waitFor("text:GBK");
+  await app.press("text:GBK");
+  await app.waitFor("text:编码：GBK（设置将在 P3 接入）");
+});
+
+test("navigates from a breadcrumb", async () => {
+  const app = await open(".");
+  // 没有打开示例项目时没有面包屑；启动提示会先占用状态栏 4 秒。
+  if (app.count("text:demo") === 0) {
+    return;
+  }
+  await app.wait(4500);
+  await app.press("label:面包屑 src");
+  await app.waitFor("text:已在项目中定位 src");
+});
+
 test("opens the project tree context menu", async () => {
   const app = await open(".");
   // 没有打开示例项目时跳过。

@@ -57,6 +57,8 @@ test("captures a preview tab", async () => {
   }
   await app.press("text:Greeter.java");
   await app.waitFor("text:预览 Greeter.java");
+  // 等图标在下一帧重绘完成，避免截到只画了文字的中间帧。
+  await app.wait(300);
   await app.screenshot("docs/screenshots/nsh-p2-preview.png");
 });
 

@@ -21,8 +21,8 @@ pub fn run_widget(shell: Shell) -> impl IntoElement {
         .flex_row()
         .items_center()
         .gap(px(2.0))
-        .child(run_button(shell))
         .child(config_selector(shell))
+        .child(run_button(shell))
         .child(debug_button(shell))
 }
 

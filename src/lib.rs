@@ -79,15 +79,34 @@ fn title_bar_row(shell: Shell) -> impl IntoElement {
             let top = title_bar().top;
             if top > px(0.0) { top } else { px(40.0) }
         })
-        .pl(move || title_bar().left + px(8.0))
+        .pl(move || title_bar().left + px(12.0))
         .pr(move || title_bar().right + px(8.0))
+        .flex_row()
+        .items_center()
+        .gap(px(10.0))
+        .child(svg(icons::APP).w(px(16.0)).h(px(16.0)))
+        .child(left_tools(shell))
+        .child(view().flex_1())
+        .child(right_tools(shell))
+}
+
+/// 标题栏左组：主菜单、项目控件、分支控件（组内间距 4，组间距 10）。
+fn left_tools(shell: Shell) -> impl IntoElement {
+    view()
         .flex_row()
         .items_center()
         .gap(px(4.0))
         .child(commands::main_menu(shell))
         .child(project_widget(shell))
         .child(branch_widget(shell))
-        .child(view().flex_1())
+}
+
+/// 标题栏右组：run widget、搜索、设置。
+fn right_tools(shell: Shell) -> impl IntoElement {
+    view()
+        .flex_row()
+        .items_center()
+        .gap(px(4.0))
         .child(run_widget::run_widget(shell))
         .child(toolbar_button(icons::SEARCH, "搜索操作", move || {
             shell.open_palette()
@@ -280,10 +299,11 @@ fn editor_column(shell: Shell) -> impl IntoElement {
     )
 }
 
-/// 状态栏：左侧面包屑（临时提示优先），右侧行列 / 换行 / 编码 / 缩进。
+/// 状态栏：左侧面包屑（临时提示优先），右侧位置 / 换行 / 编码 / 缩进。
 ///
-/// IDEA 默认把导航栏（面包屑）放在状态栏左侧，状态项从位置开始依次为
-/// `行:列`、换行符、编码、缩进；分支在标题栏，不再重复显示。
+/// IDEA 默认把导航栏（面包屑）放在状态栏左侧；右侧每个状态项都是独立
+/// widget，内边距 6,8、hover 圆角块，点击弹出对应菜单。分支在标题栏，
+/// 不再重复显示。
 fn status_bar(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
     view()
@@ -291,7 +311,7 @@ fn status_bar(shell: Shell) -> impl IntoElement {
         .px(px(10.0))
         .flex_row()
         .items_center()
-        .gap(px(10.0))
+        .gap(px(0.0))
         .bg(move || color_of("status-bar"))
         .text_color(move || color_of("muted-fg"))
         .child(
@@ -307,7 +327,7 @@ fn status_bar(shell: Shell) -> impl IntoElement {
                     } else {
                         view()
                             .h(px(22.0))
-                            .px(px(6.0))
+                            .px(px(8.0))
                             .items_center()
                             .child(
                                 text(message)
@@ -319,8 +339,87 @@ fn status_bar(shell: Shell) -> impl IntoElement {
                     }
                 })),
         )
-        .child(text(move || ws.cursor.get()).text_size(px(12.0)))
-        .child(text("LF").text_size(px(12.0)))
-        .child(text("UTF-8").text_size(px(12.0)))
-        .child(text("4 个空格").text_size(px(12.0)))
+        .child(position_status(shell))
+        .child(status_choice(shell, "LF", "换行符", LINE_ENDINGS))
+        .child(status_choice(shell, "UTF-8", "文件编码", ENCODINGS))
+        .child(status_choice(shell, "4 个空格", "缩进", INDENTS))
+}
+
+const LINE_ENDINGS: &[(&str, &str)] = &[
+    ("LF", "换行符：LF（设置将在 P3 接入）"),
+    ("CRLF", "换行符：CRLF（设置将在 P3 接入）"),
+    ("CR", "换行符：CR（设置将在 P3 接入）"),
+];
+
+const ENCODINGS: &[(&str, &str)] = &[
+    ("UTF-8", "编码：UTF-8（设置将在 P3 接入）"),
+    ("GBK", "编码：GBK（设置将在 P3 接入）"),
+    ("ISO-8859-1", "编码：ISO-8859-1（设置将在 P3 接入）"),
+];
+
+const INDENTS: &[(&str, &str)] = &[
+    ("4 个空格", "缩进：4 个空格（设置将在 P3 接入）"),
+    ("2 个空格", "缩进：2 个空格（设置将在 P3 接入）"),
+    ("制表符", "缩进：制表符（设置将在 P3 接入）"),
+];
+
+/// 光标位置 widget：点击弹出“转到行/列…”。
+fn position_status(shell: Shell) -> impl IntoElement {
+    let ws = shell.ws;
+    let trigger = status_trigger(
+        "光标位置",
+        text(move || ws.cursor.get())
+            .text_size(px(12.0))
+            .text_color(move || color_of("muted-fg")),
+    );
+    menu()
+        .offset(px(4.0))
+        .popup_style(popup_style)
+        .trigger(trigger)
+        .child(menu_action(
+            None,
+            "转到行/列…",
+            None,
+            None,
+            move || shell.ws.say("转到行/列将在 P3 接入"),
+        ))
+}
+
+/// 带弹层的状态项：当前值 + 备选项菜单。
+fn status_choice(
+    shell: Shell,
+    current: &'static str,
+    accessible: &'static str,
+    options: &'static [(&'static str, &'static str)],
+) -> impl IntoElement {
+    let trigger = status_trigger(
+        accessible,
+        text(current)
+            .text_size(px(12.0))
+            .text_color(move || color_of("muted-fg")),
+    );
+    let mut element = menu()
+        .offset(px(4.0))
+        .popup_style(popup_style)
+        .trigger(trigger);
+    for (option, hint) in options {
+        let hint = *hint;
+        element = element.child(menu_action(None, *option, None, None, move || {
+            shell.ws.say(hint)
+        }));
+    }
+    element
+}
+
+fn status_trigger(accessible: &'static str, content: impl IntoElement) -> View {
+    view()
+        .h(px(22.0))
+        .px(px(8.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(2.0))
+        .role(AccessibilityRole::Button)
+        .label(accessible)
+        .hover(|s| s.bg(move || color_of("control-hover")))
+        .child(content)
 }

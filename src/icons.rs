@@ -6,6 +6,7 @@
 
 use nsh_core::prelude::*;
 
+pub const APP: ImageAsset = asset!("icons/app.svg");
 pub const MENU: ImageAsset = asset!("icons/menu.svg");
 pub const FOLDER: ImageAsset = asset!("icons/folder.svg");
 pub const FILE: ImageAsset = asset!("icons/file.svg");

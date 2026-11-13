@@ -308,6 +308,9 @@ pub fn breadcrumbs(shell: Shell) -> impl IntoElement {
     let ws = shell.ws;
     dynamic(move || {
         let root = ws.root_name();
+        let Some(root_path) = ws.root.get() else {
+            return view().into_element();
+        };
         let parts = ws.breadcrumbs();
         if root.is_empty() && parts.is_empty() {
             return view().into_element();
@@ -315,13 +318,18 @@ pub fn breadcrumbs(shell: Shell) -> impl IntoElement {
         let dark = shell.appearance.get() == Appearance::Dark;
         let active_path = ws.active_path();
         let mut row = view().h(px(22.0)).flex_row().items_center().gap(px(2.0));
+        let mut accumulated = root_path;
         let mut has_previous = false;
         if !root.is_empty() {
-            row = row.child(crumb(root, icons::FOLDER));
+            let reveal = accumulated.clone();
+            row = row.child(crumb(root, icons::FOLDER, move || {
+                shell.reveal_path(&reveal)
+            }));
             has_previous = true;
         }
         let last = parts.len().saturating_sub(1);
         for (index, part) in parts.into_iter().enumerate() {
+            accumulated.push(part.as_ref());
             if has_previous {
                 row = row.child(
                     svg(icons::CHEVRON_RIGHT)
@@ -338,14 +346,16 @@ pub fn breadcrumbs(shell: Shell) -> impl IntoElement {
             } else {
                 icons::FOLDER
             };
-            row = row.child(crumb(part, icon));
+            let reveal = accumulated.clone();
+            row = row.child(crumb(part, icon, move || shell.reveal_path(&reveal)));
             has_previous = true;
         }
         row.into_element()
     })
 }
 
-fn crumb(label: SharedString, icon: ImageAsset) -> View {
+fn crumb(label: SharedString, icon: ImageAsset, action: impl Fn() + 'static) -> View {
+    let accessible = format!("面包屑 {label}");
     view()
         .h(px(22.0))
         .px(px(6.0))
@@ -353,7 +363,10 @@ fn crumb(label: SharedString, icon: ImageAsset) -> View {
         .items_center()
         .gap(px(4.0))
         .rounded(px(2.0))
+        .role(AccessibilityRole::Button)
+        .label(accessible)
         .hover(|s| s.bg(move || color_of("control-hover")))
+        .on_press(action)
         .child(
             svg(icon)
                 .w(px(16.0))
