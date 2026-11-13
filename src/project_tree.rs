@@ -281,9 +281,11 @@ impl KeelApp {
                     if is_dir {
                         this.toggle_dir(left_path.clone(), cx);
                     } else if event.click_count >= 2 {
+                        // 双击把预览标签固定为普通标签。
                         this.open_file(left_path.clone(), window, cx);
                     } else {
-                        cx.notify();
+                        // 单击预览（IDEA 的 preview tab）。
+                        this.preview_file(left_path.clone(), window, cx);
                     }
                 }),
             )

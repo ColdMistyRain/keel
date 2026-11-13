@@ -399,6 +399,7 @@ cargo clippy --no-deps
 - [x] Phase 1 · UI-46：菜单分隔线——(1) 组件库 `PopupMenu::separator()` 画的是 2px `theme.border`（`#EBECF0`）且上下各带 2px 间隙，与 IDEA 的 `DarculaSeparatorUI` 不符；新增 `Tokens.separator_line`（浅色 `#CDCDCD`、深色 `popup-border` `#33353B`）与 `Chrome.separator_line`；(2) `menu::separator(color)` 用禁用的 `ElementItem` 画 1px 线，负外边距抵消菜单项 8px 内边距与 2px 行间距，分隔块总高回到 IDEA 的 3px、接近通栏；(3) 主菜单、项目面板标题/更多、项目树右键、编辑器标签右键共 14 处 `.separator()` 全部替换。子菜单表面仍由组件库内部直接渲染（4px 圆角、无描边），需要改写依赖或自绘子菜单后才能对齐 8px + `Popup.borderColor`
 - [x] 2026-11-13：平台回退——nsh 0.5.0 的成熟度不足，GPUI（gpui-ce 0.3.0 + gpui-component）恢复为仓库根目录主线；nsh 工作台（src、assets、nsh.json、测试）整体归档到 `legacy/nsh/`，构建缓存与 Cargo.lock 同步交换；README 与本文档改回 GPUI 口径
 - [x] Phase 1 · UI-47：主工具栏 run widget 与底部工具窗口动作——(1) 标题栏右侧按 IDEA `RedesignedRunWidget` 补运行配置选择器（当前文件名，缺省 `main`）、绿色运行按钮（运行中变红色停止）、调试按钮与竖排「更多」菜单，布局在搜索/设置/窗口按钮之前；(2) `Shift+F10` 运行、`Ctrl+F2` 停止、`Shift+F9` 调试，运行/停止同步打开「运行」工具窗口并写入状态栏提示，主菜单补「运行」子菜单；(3) 底部工具窗口标题栏按工具窗口规范补右侧「更多 / 隐藏」动作，隐藏图标用 IDEA 的横线 `hide.svg`；(4) 新增 expUI `run/stop/debug/moreVertical` 图标并登记到 `assets.rs`，截图见 `docs/screenshots/ui-run-widget.png` 与 `ui-run-widget-running.png`
+- [x] Phase 1 · UI-48：预览标签——(1) `Document` 增加 `preview` 字段，项目树单击文件以预览标签打开（斜体、替换上一个预览标签、不新增标签位），双击固定为普通标签，与 IDEA 的 preview tab 一致；(2) 编辑预览标签内容后自动固定（`InputEvent::Change` 时清除 `preview`），标签栏双击预览标签也可固定；(3) `open_file` 与 `preview_file` 共用 `open_document(path, preview)`，已打开的文件直接激活，显式打开时顺带取消预览态；(4) 标签文字按 `preview` 加斜体。截图见 `docs/screenshots/ui-preview-tab.png`（main.rs 普通、README.md 斜体）
 - [ ] Phase 2：ED-02 ~ ED-06
 - [ ] Phase 3：项目模型
 - [ ] Phase 4：Maven

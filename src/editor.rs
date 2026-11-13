@@ -15,6 +15,8 @@ pub struct Document {
     pub path: PathBuf,
     pub state: Entity<EditorState>,
     pub dirty: bool,
+    /// 预览标签（IDEA 的 preview tab）：斜体显示，下一次预览会替换它。
+    pub preview: bool,
     pub eol: &'static str,
     pub _changes: Subscription,
     /// 编辑器每次重绘（含光标移动）都会触发，用来刷新状态栏的行列号。
@@ -33,6 +35,7 @@ impl Document {
             path,
             state,
             dirty: false,
+            preview: false,
             eol,
             _changes: changes,
             _observe: observe,
@@ -315,11 +318,11 @@ impl KeelApp {
         let active = self.active;
         let drag = self.tab_drag.clone();
         let tab_scroll = self.tab_scroll.clone();
-        let tabs: Vec<(usize, String, bool, PathBuf)> = self
+        let tabs: Vec<(usize, String, bool, bool, PathBuf)> = self
             .documents
             .iter()
             .enumerate()
-            .map(|(ix, doc)| (ix, doc.title(), doc.dirty, doc.path.clone()))
+            .map(|(ix, doc)| (ix, doc.title(), doc.dirty, doc.preview, doc.path.clone()))
             .collect();
         let documents: Vec<(PathBuf, String, bool)> = self
             .documents
@@ -329,7 +332,7 @@ impl KeelApp {
 
         let app = cx.entity().downgrade();
         let mut children = Vec::new();
-        for (ix, title, dirty, path) in tabs {
+        for (ix, title, dirty, preview, path) in tabs {
             let is_active = active == Some(ix);
             let is_drop_target = drag
                 .as_ref()
@@ -385,12 +388,22 @@ impl KeelApp {
                             chrome.tab_icon_alpha
                         }),
                 )
-                .child(div().whitespace_nowrap().child(title))
+                // 预览标签用斜体区分（`EditorTabbedContainer` 的 preview 样式）。
+                .child(
+                    div()
+                        .whitespace_nowrap()
+                        .when(preview, |label| label.italic())
+                        .child(title),
+                )
                 .on_mouse_down(
                     MouseButton::Left,
-                    cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
+                    cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                         this.begin_tab_drag(activate_path.clone());
                         if let Some(idx) = this.index_of(&activate_path) {
+                            // 双击预览标签把它固定为普通标签。
+                            if event.click_count >= 2 {
+                                this.documents[idx].preview = false;
+                            }
                             this.activate_document(idx, window, cx);
                         }
                     }),

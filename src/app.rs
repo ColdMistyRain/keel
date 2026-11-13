@@ -681,7 +681,27 @@ impl KeelApp {
     }
 
     pub fn open_file(&mut self, path: PathBuf, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_document(path, false, window, cx);
+    }
+
+    /// 打开预览标签（IDEA 的 preview tab）：标签斜体显示，下一次预览会替换它；
+    /// 编辑内容或双击项目树中的文件后固定为普通标签。
+    pub fn preview_file(&mut self, path: PathBuf, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_document(path, true, window, cx);
+    }
+
+    fn open_document(
+        &mut self,
+        path: PathBuf,
+        preview: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(idx) = self.index_of(&path) {
+            // 已经打开的文件直接切换过去；显式打开时顺带把它从预览态固定下来。
+            if !preview {
+                self.documents[idx].preview = false;
+            }
             self.active = Some(idx);
             self.tab_scroll.scroll_to_item(idx);
             self.request_focus(FocusTarget::Document(path));
@@ -698,7 +718,7 @@ impl KeelApp {
                 .await;
             this.update_in(cx, |app, window, cx| {
                 match loaded {
-                    Ok(text) => app.insert_document(path, text, window, cx),
+                    Ok(text) => app.insert_document(path, text, preview, window, cx),
                     Err(err) => {
                         app.status = StatusMessage::error(format!("打开文件失败：{err}"));
                     }
@@ -714,6 +734,7 @@ impl KeelApp {
         &mut self,
         path: PathBuf,
         text: String,
+        preview: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -743,9 +764,12 @@ impl KeelApp {
             move |this: &mut KeelApp, _state, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::Change)
                     && let Some(idx) = this.index_of(&changed_path)
-                    && !this.documents[idx].dirty
                 {
-                    this.documents[idx].dirty = true;
+                    // 开始编辑后预览标签固定为普通标签（IDEA 的 preview tab 行为）。
+                    this.documents[idx].preview = false;
+                    if !this.documents[idx].dirty {
+                        this.documents[idx].dirty = true;
+                    }
                     cx.notify();
                 }
             },
@@ -762,15 +786,26 @@ impl KeelApp {
         // 换行符以文件实际内容为准，保存时不会悄悄改写已有文件的风格。
         let eol = if text.contains("\r\n") { "CRLF" } else { "LF" };
 
-        self.documents.push(Document::new(
-            path.clone(),
-            state,
-            eol,
-            subscription,
-            observe,
-        ));
-        self.active = Some(self.documents.len() - 1);
-        self.tab_scroll.scroll_to_item(self.documents.len() - 1);
+        let mut doc = Document::new(path.clone(), state, eol, subscription, observe);
+        doc.preview = preview;
+        // 预览标签替换已有的预览标签，不额外占用标签位。
+        let preview_slot = if preview {
+            self.documents.iter().position(|doc| doc.preview)
+        } else {
+            None
+        };
+        let index = match preview_slot {
+            Some(ix) => {
+                self.documents[ix] = doc;
+                ix
+            }
+            None => {
+                self.documents.push(doc);
+                self.documents.len() - 1
+            }
+        };
+        self.active = Some(index);
+        self.tab_scroll.scroll_to_item(index);
         self.request_focus(FocusTarget::Document(path.clone()));
     }
 
